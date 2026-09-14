@@ -2635,7 +2635,7 @@ wheels = [
 ]
 
 [[package]]
-name = "nvidia-em"
+name = "nvidia-gtc-berlin-2026-stormscope-eu-booth"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

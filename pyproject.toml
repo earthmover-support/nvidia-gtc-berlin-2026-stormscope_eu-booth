@@ -1,5 +1,5 @@
 [project]
-name = "nvidia-em"
+name = "nvidia-gtc-berlin-2026-stormscope_eu-booth"
 version = "0.1.0"
 description = "StormScope-EU nowcasting on MTG-I1 FCI -> Arraylake/Icechunk (GTC Berlin demo)"
 requires-python = "==3.12.*"
