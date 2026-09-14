@@ -1,0 +1,28 @@
+# Prebuilt NATTEN wheels (built against a specific torch+CUDA pair).
+# Coiled builds software envs on CPU machines, so NATTEN must NOT be built
+# from the PyPI sdist -- that silently produces a package without libnatten.
+--find-links https://whl.natten.org/
+
+# --- core stack -------------------------------------------------------------
+# torch 2.10.0 default PyPI wheel == cu128 (nvidia-cuda-runtime-cu12==12.8.90)
+torch==2.10.0
+natten==0.21.6+torch2100cu128
+
+# earth2studio: StormScopeMeteosatEU + MeteosatFCI are main-only (not in 0.17.0)
+earth2studio[data] @ git+https://github.com/NVIDIA/earth2studio.git
+
+# --- contents of the `stormscope` extra, minus earth2studio[utils] ----------
+# [utils] pulls earth2grid, which is not on PyPI (git-only, source build).
+# stormscope_meteosat.py does not import it, so we install the rest directly.
+nvidia-physicsnemo>=2.1.0
+nvtx>=0.2.11
+omegaconf>=2.3.0
+scipy>=1.15.2
+
+# --- notebook / plotting ----------------------------------------------------
+cartopy
+matplotlib
+jupyterlab
+ipywidgets
+python-dotenv
+tqdm
