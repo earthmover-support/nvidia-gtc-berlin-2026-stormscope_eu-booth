@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "arraylake": {
+      "type": "http",
+      "url": "https://app.earthmover.io/mcp"
+    }
+  }
+}
