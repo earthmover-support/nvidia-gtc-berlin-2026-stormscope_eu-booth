@@ -1,0 +1,9 @@
+{
+  "name": "gtc-berlin-booth",
+  "private": true,
+  "description": "Vendored front-end libraries for the booth page (served offline by server.py)",
+  "dependencies": {
+    "cesium": "1.145.0",
+    "qrcode-generator": "2.0.4"
+  }
+}

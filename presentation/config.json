@@ -1,0 +1,44 @@
+{
+  "org": "gtc-berlin",
+  "repo": "gtc-berlin/stormscope-eu",
+  "branch": "main",
+  "init": "2026-06-30T12:00",
+
+  "tile_base": "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu",
+  "tile_ref_mode": "branch",
+  "data_bounds": [-63.76155, 29.80654, 72.30417, 75.78313],
+  "max_tile_level": 7,
+
+  "variables": {
+    "true_color": { "style": "raster/rgb", "colorscalerange": "0,12", "available": true },
+    "cloud_mass": { "style": "raster/viridis", "colorscalerange": "0,1", "available": false }
+  },
+
+  "lead_steps": 12,
+  "run_interval_min": 10,
+  "max_runs": 6,
+  "poll_seconds": 5,
+  "history_depth": 120,
+
+  "panel_seconds": 25,
+  "playback_speed": "normal",
+  "hold_ms": 2500,
+
+  "station": { "name": "STATION Berlin", "lat": 52.4999581, "lon": 13.3757385 },
+  "camera": { "lon": 10.0, "lat": 47.0, "range_km": 4200, "pitch_deg": -58, "sway_deg": 10, "sway_period_s": 120 },
+
+  "viewer_url": "",
+  "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
+
+  "sql": {
+    "host": "",
+    "refresh_seconds": 60,
+    "query": [
+      "SELECT lead_time, AVG(true_color) AS brightness",
+      "FROM \"stormscope-eu\".\"root\"",
+      "WHERE time = TIMESTAMP '{init}'",
+      "  AND lat = 52.4999 AND lon = 13.3757",
+      "GROUP BY lead_time ORDER BY lead_time;"
+    ]
+  }
+}
