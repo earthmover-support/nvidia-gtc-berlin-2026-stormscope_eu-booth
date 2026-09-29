@@ -38,9 +38,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 /* ---------------- header ---------------- */
 .top { display: flex; align-items: center; gap: 20px; min-width: 0; }
 .logos { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.logo-slot { width: 132px; height: 40px; border: 1px dashed var(--faint); border-radius: 6px; display: flex; align-items: center; justify-content: center; font: 12px var(--mono); color: var(--muted); }
-.logo-slot.wide { width: 156px; }
-.logos img { height: 36px; width: auto; display: block; }
+.logos img { width: auto; display: block; }
+.logos .nv-logo { height: 30px; }
+.logos .em-logo { height: 26px; }
 .x { color: #6B7280; font-size: 18px; }
 .headline { flex: 1; min-width: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .live { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 999px; background: #1B1F10; color: var(--lime); font: 600 14px var(--mono); flex-shrink: 0; }
