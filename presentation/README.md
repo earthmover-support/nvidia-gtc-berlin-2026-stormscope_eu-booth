@@ -1,6 +1,6 @@
 # Booth screen
 
-Local web app for the GTC Berlin booth: a Cesium globe fixed on Europe showing the
+Local web app for the GTC Berlin booth: a MapLibre globe fixed on Europe showing the
 latest StormScope-EU run from Arraylake, rotating explainer panels, a live ingest strip,
 QR codes and a live Zax-SQL query. The Slack app runs in its own window next to it.
 
@@ -8,14 +8,15 @@ QR codes and a live Zax-SQL query. The Slack app runs in its own window next to 
 presentation/
   server.py      stdlib HTTP server + Arraylake/SQL pollers (uv inline deps)
   config.json    everything tunable: tile service, variables, timings, station, SQL
-  package.json   Cesium + qrcode-generator, vendored so the booth runs without CDNs
+  package.json   MapLibre GL + qrcode-generator, vendored so the booth runs without CDNs
+                 (the dark CARTO basemap and the Flux tiles still need the network)
   web/           index.html, app.css, app.js
 ```
 
 ## Run
 
 ```bash
-cd presentation && npm install && cd ..        # once: vendors Cesium into node_modules
+cd presentation && npm install && cd ..        # once: vendors MapLibre into node_modules
 uv run presentation/server.py                  # live → http://127.0.0.1:8000
 uv run presentation/server.py --demo           # rehearsal: fake commits + SQL, no Arraylake
 ```

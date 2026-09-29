@@ -4,8 +4,8 @@
  *   /api/config  -> static settings (config.json)
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
  *   /api/sql     -> latest live Zax-SQL result (polled every 10 s)
- * Tiles are fetched by Cesium straight from the public Flux tiles service,
- * one imagery layer per (init time, lead time) selected with the `time` and
+ * Tiles are fetched by MapLibre straight from the public Flux tiles service,
+ * one raster layer per (init time, lead time) selected with the `time` and
  * `lead_time` query parameters on the branch (or pinned to a snapshot id).
  */
 (() => {
@@ -82,90 +82,71 @@
   }
 
   // ------------------------------------------------------------------ globe
-  let viewer = null;
+  const BASEMAP = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+  const FORECAST_ATTR = "EUMETSAT MTG-I1 FCI · StormScope-EU · Arraylake Flux";
+  const TILE_SIZE = 512;
+
+  let map = null;
+  let mapReady = false;
+  let labelsLayer; // forecast frames go under the basemap's first label layer
   let layerKey = "";
-  const layers = new Map(); // lead -> ImageryLayer
+  const layers = new Map(); // lead -> MapLibre source/layer id
 
   function initGlobe() {
     const c = S.cfg;
     try {
-      viewer = new Cesium.Viewer("globe", {
-        baseLayer: Cesium.ImageryLayer.fromProviderAsync(
-          Cesium.TileMapServiceImageryProvider.fromUrl(Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"))
-        ),
-        animation: false,
-        timeline: false,
-        baseLayerPicker: false,
-        geocoder: false,
-        homeButton: false,
-        sceneModePicker: false,
-        navigationHelpButton: false,
-        fullscreenButton: false,
-        infoBox: false,
-        selectionIndicator: false,
-        creditContainer: el("div"),
+      map = new maplibregl.Map({
+        container: "globe",
+        style: BASEMAP,
+        center: [c.camera.lon, c.camera.lat],
+        zoom: c.camera.zoom,
+        pitch: c.camera.pitch,
+        interactive: false, // booth: nobody can drag it away
+        attributionControl: { compact: true, customAttribution: FORECAST_ATTR },
+        fadeDuration: 0,
       });
     } catch (e) {
       showNotice(`Globe failed to start (WebGL?): ${e.message}`);
       return;
     }
-    const scene = viewer.scene;
-    scene.skyBox.show = false;
-    if (scene.sun) scene.sun.show = false;
-    if (scene.moon) scene.moon.show = false;
-    scene.backgroundColor = Cesium.Color.fromCssColorString("#05070A");
-    scene.globe.baseColor = Cesium.Color.fromCssColorString("#0B0F14");
-    scene.globe.enableLighting = false;
-    scene.globe.showGroundAtmosphere = false;
-    scene.screenSpaceCameraController.enableInputs = false; // booth: nobody can drag it away
-    const base = viewer.imageryLayers.get(0);
-    if (base) { base.brightness = 0.55; base.saturation = 0.6; }
-
-    // Camera: always looking at Europe, gentle sway around a fixed centre.
-    // lookAt() every frame means the view can never drift towards the pole.
-    const cam = c.camera;
-    const centre = Cesium.Cartesian3.fromDegrees(cam.lon, cam.lat);
-    const pitch = Cesium.Math.toRadians(cam.pitch_deg);
-    const t0 = performance.now();
-    scene.preRender.addEventListener(() => {
-      const t = (performance.now() - t0) / 1000;
-      const heading = Cesium.Math.toRadians(cam.sway_deg * Math.sin((2 * Math.PI * t) / cam.sway_period_s));
-      viewer.camera.lookAt(centre, new Cesium.HeadingPitchRange(heading, pitch, cam.range_km * 1000));
+    map.on("style.load", () => {
+      map.setProjection({ type: "globe" });
+      labelsLayer = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
     });
+    map.on("load", () => {
+      mapReady = true;
+      syncLayers();
+      showFrame();
+    });
+
+    // Camera: always looking at Europe, gentle sway of the bearing around a fixed centre.
+    const cam = c.camera;
+    const t0 = performance.now();
+    const sway = () => {
+      const t = (performance.now() - t0) / 1000;
+      map.jumpTo({ bearing: cam.sway_deg * Math.sin((2 * Math.PI * t) / cam.sway_period_s) });
+      requestAnimationFrame(sway);
+    };
+    requestAnimationFrame(sway);
 
     // Station marker
     const st = c.station;
-    viewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(st.lon, st.lat),
-      point: {
-        pixelSize: 11,
-        color: Cesium.Color.fromCssColorString("#B7E400"),
-        outlineColor: Cesium.Color.BLACK,
-        outlineWidth: 2,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      },
-      label: {
-        text: `${st.name}\nyou are here`,
-        font: "600 15px Geist, system-ui, sans-serif",
-        fillColor: Cesium.Color.fromCssColorString("#EDEDED"),
-        showBackground: true,
-        backgroundColor: Cesium.Color.fromCssColorString("#0A0A0C").withAlpha(0.8),
-        backgroundPadding: new Cesium.Cartesian2(8, 5),
-        horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
-        verticalOrigin: Cesium.VerticalOrigin.CENTER,
-        pixelOffset: new Cesium.Cartesian2(14, 0),
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      },
-    });
+    const m = el("div", "station");
+    m.append(el("i"), el("span", null, `${st.name}\nyou are here`));
+    new maplibregl.Marker({ element: m, anchor: "left", offset: [-5, 0] }).setLngLat([st.lon, st.lat]).addTo(map);
   }
 
   function clearLayers() {
-    for (const layer of layers.values()) viewer.imageryLayers.remove(layer, true);
+    for (const id of layers.values()) {
+      map.removeLayer(id);
+      map.removeSource(id);
+    }
     layers.clear();
   }
 
+  // One raster source per lead time, all loaded up front at opacity 0 so the loop never waits on tiles.
   function syncLayers() {
-    if (!viewer) return;
+    if (!mapReady) return;
     const run = selectedRun();
     if (!run) return;
     const key = `${run.init}|${S.variable}`;
@@ -174,19 +155,21 @@
       layerKey = key;
       S.frame = 0;
     }
-    const b = S.cfg.data_bounds;
-    const rect = Cesium.Rectangle.fromDegrees(b[0], b[1], b[2], b[3]);
     for (const lead of run.leads) {
       if (layers.has(lead)) continue;
-      const provider = new Cesium.UrlTemplateImageryProvider({
-        url: tileTemplate(run, S.variable, lead),
-        rectangle: rect,
-        maximumLevel: S.cfg.max_tile_level,
-        credit: "EUMETSAT MTG-I1 FCI · StormScope-EU · Arraylake Flux",
+      const id = `lead-${lead}`;
+      map.addSource(id, {
+        type: "raster",
+        tiles: [tileTemplate(run, S.variable, lead, TILE_SIZE)],
+        tileSize: TILE_SIZE,
+        bounds: S.cfg.data_bounds,
+        maxzoom: S.cfg.max_tile_level,
       });
-      const layer = viewer.imageryLayers.addImageryProvider(provider);
-      layer.alpha = 0;
-      layers.set(lead, layer);
+      map.addLayer(
+        { id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-fade-duration": 0 } },
+        labelsLayer
+      );
+      layers.set(lead, id);
     }
   }
 
@@ -195,7 +178,7 @@
     const leads = run ? run.leads : [];
     if (S.frame >= leads.length) S.frame = 0;
     const lead = leads[S.frame];
-    for (const [l, layer] of layers) layer.alpha = l === lead ? 1 : 0;
+    for (const [l, id] of layers) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
     renderTicks(run, lead);
     renderValid(run, lead);
   }

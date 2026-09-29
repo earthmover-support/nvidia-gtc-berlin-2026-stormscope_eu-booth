@@ -56,7 +56,7 @@ MSG_RE = re.compile(
 
 # URL prefix -> directory for vendored front-end libraries (npm install in ./presentation)
 VENDOR = {
-    "/vendor/cesium/": NODE / "cesium" / "Build" / "Cesium",
+    "/vendor/maplibre/": NODE / "maplibre-gl" / "dist",
     "/vendor/qrcode/": NODE / "qrcode-generator" / "dist",
 }
 
@@ -373,7 +373,7 @@ def main() -> None:
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    if not (NODE / "cesium").exists():
+    if not (NODE / "maplibre-gl").exists():
         log.warning("presentation/node_modules missing: run `npm install` in presentation/ first")
     if not args.demo and not os.environ.get("ARRAYLAKE_TOKEN"):
         log.warning("ARRAYLAKE_TOKEN not set: commit polling will fail (use --demo to rehearse)")

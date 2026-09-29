@@ -53,9 +53,10 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .main { display: grid; grid-template-columns: minmax(0, 1fr) 480px; gap: 20px; min-height: 0; }
 
 .viz { position: relative; background: var(--viz); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; min-height: 0; }
-#globe { position: absolute; inset: 0; }
-#globe .cesium-viewer, #globe .cesium-widget { width: 100%; height: 100%; }
-#globe .cesium-viewer-bottom, #globe .cesium-widget-credits { display: none !important; }
+#globe { position: absolute; inset: 0; background: #05070A; }
+.station { display: flex; align-items: center; gap: 12px; pointer-events: none; }
+.station i { width: 11px; height: 11px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 2px #000; }
+.station span { padding: 5px 8px; border-radius: 4px; background: rgba(10, 10, 12, .8); color: #EDEDED; font: 600 15px/1.25 Geist, system-ui, sans-serif; white-space: pre; }
 
 .viz-top, .viz-bottom { position: absolute; left: 0; right: 0; z-index: 2; padding: 18px 22px; }
 .viz-top { top: 0; display: flex; justify-content: space-between; align-items: flex-start; background: rgba(5, 7, 10, .72); }
