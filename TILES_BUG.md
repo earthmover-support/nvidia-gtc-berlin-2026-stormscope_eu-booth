@@ -82,3 +82,19 @@ Then compare against a tile over Berlin. It comes back fully transparent:
   aligned), so always pass `group=stormscope_v2`.
 - `/_meta/datasets/stormscope-eu/main/stormscope_v2/info` crashes the XS
   (2 GiB) service, which then restarts. Tile rendering itself is fine.
+
+## Result: geostationary grid mapping fixes it (2026-09-29)
+
+`tiles_geostationary.ipynb` writes `true_color` (lead 0 and +10 min) to
+`stormscope_v2` on branch `tiles_drop_rows`. The group has a CF `geostationary` grid
+mapping variable `fci_geos_projection`, and the 2-D `lat`/`lon` are dropped.
+The Berlin tile `WebMercatorQuad/7/41/68` with `style=raster/rgb`, which is fully
+transparent on `main`, renders 100% opaque from that branch.
+
+The MTG FCI grid mapping differs from GOES in two ways, both checked against the stored lat/lon
+(max error 4e-6°, identical NaN mask):
+
+- `sweep_angle_axis = "y"` (GOES uses `"x"`), with `perspective_point_height = 35786400`,
+  WGS-84, `longitude_of_projection_origin = 0`.
+- earth2studio's `x` is positive to the **west**, but CF/PROJ `geos` expects east. The
+  branch stores `x` negated.
