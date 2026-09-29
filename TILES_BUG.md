@@ -66,8 +66,8 @@ Then compare against a tile over Berlin. It comes back fully transparent:
    still render transparent, and the renderer keeps every row. Existing groups
    only need the two coordinate arrays rewritten, not the data.
 2. **Add a geostationary `grid_mapping`** (CF `geostationary` on the `y`/`x`
-   scan angles) so Flux can use the projection instead of 2-D lat/lon. This is
-   the neater fix, but it's untested whether Flux supports it.
+   scan angles) so Flux can use the projection instead of 2-D lat/lon. **Tested
+   and adopted**; see the result section below.
 3. **Report it to Earthmover.** Dropping a whole row because some of its cells
    have NaN coordinates is a renderer bug, whatever we do on our side.
 
@@ -106,3 +106,16 @@ Follow-up tests on the same branch (details in
   grid-mapping-only. The service prefers the grid mapping, so lat/lon can stay.
 - **2-D lat/lon only** (`stormscope_v2_latlon_only`) still cuts off at ~50°N, with
   `polygons/rgb` as well as `raster/rgb`. The `polygons` style doesn't fix it.
+
+Applying it to `main` (script in the PR that adds this file). Both groups on `main` get the same
+metadata-only change: the grid mapping variable, `x`/`y` attrs, and `grid_mapping` on every data
+variable. The two groups store `x`/`y` differently:
+
+- `stormscope_v2`: scan angle in **radians**, `x` positive west. `x` gets negated.
+- root group: scan angle × H in **metres**, `x` already positive east. Only attrs are added.
+
+Dry run on Arraylake branch `tiles_fix_dryrun`: `stormscope_v2` tiles render north of 50°N at every
+lead time and channel tried. The root group isn't served at all, before or after the fix. Flux
+opens the repo as one datatree, and the root (6 times, 12 lead times, `x`/`y` in metres) isn't
+aligned with `stormscope_v2`, so the request 404s with `group '/stormscope_v2' is not aligned with its
+parents`. Serving the root needs it moved into its own group or repo.
