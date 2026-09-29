@@ -98,3 +98,11 @@ The MTG FCI grid mapping differs from GOES in two ways, both checked against the
   WGS-84, `longitude_of_projection_origin = 0`.
 - earth2studio's `x` is positive to the **west**, but CF/PROJ `geos` expects east. The
   branch stores `x` negated.
+
+Follow-up tests on the same branch (details in
+[docs/WEB_TILES_SERVICE_REQUIREMENTS.md](docs/WEB_TILES_SERVICE_REQUIREMENTS.md)):
+
+- **The grid mapping plus 2-D lat/lon** (`stormscope_v2_gm_latlon`) renders the same as
+  grid-mapping-only. The service prefers the grid mapping, so lat/lon can stay.
+- **2-D lat/lon only** (`stormscope_v2_latlon_only`) still cuts off at ~50°N, with
+  `polygons/rgb` as well as `raster/rgb`. The `polygons` style doesn't fix it.
