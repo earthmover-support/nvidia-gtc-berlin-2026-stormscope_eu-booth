@@ -81,7 +81,9 @@
       height: String(size),
     });
     const r = c.tile_ref_mode === "snapshot" && run.ref ? run.ref : c.branch;
-    return `${c.tile_base}/${encodeURIComponent(r)}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+    // the group goes in the path; a `group=` query parameter still opens the whole (unaligned) repo
+    const g = c.group ? `/${c.group}` : "";
+    return `${c.tile_base}/${encodeURIComponent(r)}${g}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
   }
 
   // ------------------------------------------------------------------ globe

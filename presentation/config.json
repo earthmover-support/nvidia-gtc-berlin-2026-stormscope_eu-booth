@@ -2,7 +2,8 @@
   "org": "gtc-berlin",
   "repo": "gtc-berlin/stormscope-eu",
   "branch": "main",
-  "init": "2026-06-30T12:00",
+  "group": "stormscope_v2",
+  "init": "2026-09-15T11:00",
 
   "tile_base": "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu",
   "tile_ref_mode": "branch",
@@ -10,7 +11,7 @@
   "max_tile_level": 7,
 
   "variables": {
-    "true_color": { "style": "raster/rgb", "colorscalerange": "0,12", "available": true },
+    "true_color": { "style": "raster/rgb", "colorscalerange": "0,1", "available": true },
     "cloud_mass": { "style": "raster/viridis", "colorscalerange": "0,1", "available": false }
   },
 
@@ -45,8 +46,8 @@
     },
     "query": [
       "SELECT lead_time, AVG(true_color) AS brightness",
-      "FROM \"stormscope-eu\".\"root\"",
-      "WHERE time = TIMESTAMP '{init}'",
+      "FROM \"stormscope-eu\".\"stormscope_v2\"",
+      "WHERE time = TIMESTAMP '{init}' AND lead_time > INTERVAL '0 minutes'",
       "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",
       "  AND lon BETWEEN {lon} - {box} AND {lon} + {box}",
       "GROUP BY lead_time ORDER BY lead_time;"

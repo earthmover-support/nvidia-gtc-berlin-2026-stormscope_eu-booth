@@ -354,7 +354,7 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
 
 def public_config() -> dict:
     keys = [
-        "org", "repo", "tile_base", "tile_ref_mode", "data_bounds", "max_tile_level", "variables",
+        "org", "repo", "group", "tile_base", "tile_ref_mode", "data_bounds", "max_tile_level", "variables",
         "lead_steps", "run_interval_min", "max_runs", "panel_seconds", "playback_speed", "hold_ms",
         "station", "camera", "viewer_url", "qr_tile",
     ]
