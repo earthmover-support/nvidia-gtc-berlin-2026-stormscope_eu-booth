@@ -17,6 +17,7 @@ Serves the booth page from ./web and three small JSON endpoints:
   /api/config   public part of config.json (no secrets)
   /api/state    recent Icechunk commits on the repo, grouped into forecast runs
   /api/sql      latest result of the live Zax-SQL query
+                POST {"query": "..."} replaces the query (typed on the page), {"reset": true} restores it
 
 Run from the repo root:
 
@@ -72,6 +73,8 @@ class Shared:
         self.lock = threading.Lock()
         self.state: dict = {"status": "starting", "commits": [], "runs": []}
         self.sql: dict = {"status": "starting"}
+        self.sql_template: str = default_sql()
+        self.sql_wake = threading.Event()  # set to run the query now
 
     def set_state(self, **kw) -> None:
         with self.lock:
@@ -81,9 +84,38 @@ class Shared:
         with self.lock:
             self.sql = {**kw, "updated_at": utcnow().isoformat()}
 
+    def set_sql_template(self, template: str) -> None:
+        with self.lock:
+            self.sql_template = template
+        self.sql_wake.set()
+
     def get(self, name: str) -> dict:
         with self.lock:
             return dict(getattr(self, name))
+
+
+def default_sql() -> str:
+    """config.json query for the first place in sql.places; {init} stays for sql_text()."""
+    sql = CONFIG["sql"]
+    lat, lon = next(iter(sql["places"].values()))
+    return (
+        "\n".join(sql["query"])
+        .replace("{lat}", str(lat))
+        .replace("{lon}", str(lon))
+        .replace("{box}", str(sql["box_deg"]))
+    )
+
+
+def check_sql(query: str) -> str:
+    """A single SELECT/WITH statement from the page, trailing ';' dropped. Raises ValueError."""
+    q = query.strip().rstrip(";").strip()
+    if not q or len(q) > 4000:
+        raise ValueError("empty or too long")
+    if ";" in q:
+        raise ValueError("one statement only")
+    if not re.match(r"(?is)^(select|with)\b", q):
+        raise ValueError("only SELECT / WITH queries")
+    return q + ";"
 
 
 SHARED = Shared()
@@ -229,11 +261,13 @@ def sql_host() -> str:
 
 
 def sql_text() -> str:
-    """The configured query with {init} set to the newest complete run (tz-naive timestamp)."""
+    """The active query with {init} set to the newest complete run (tz-naive timestamp)."""
     runs = SHARED.get("state").get("runs") or []
     done = [r for r in runs if r["complete"]]
     init = (done[0]["time"] if done else (runs[0]["time"] if runs else "1970-01-01T00:00:00")).replace("T", " ")
-    return "\n".join(CONFIG["sql"]["query"]).replace("{init}", init)
+    with SHARED.lock:
+        template = SHARED.sql_template
+    return template.replace("{init}", init)
 
 
 def _jsonable(v):
@@ -268,7 +302,7 @@ def run_sql_once() -> None:
         conn.add_notice_handler(lambda d: notices.append(d.message_primary or ""))
         cur = conn.execute(query)
         cols = [d.name for d in cur.description or []]
-        rows = [[_jsonable(v) for v in row] for row in cur.fetchall()]
+        rows = [[_jsonable(v) for v in row] for row in cur.fetchmany(CONFIG["sql"]["max_rows"])]
     SHARED.set_sql(
         status="ok",
         query=query,
@@ -283,14 +317,18 @@ def run_sql_once() -> None:
 def poll_sql(stop: threading.Event, demo: bool) -> None:
     last_head = None
     last_run = 0.0
+    wake = SHARED.sql_wake
     while not stop.is_set():
+        asked = wake.is_set()
+        wake.clear()
         if demo:
             import math
 
-            rows = [[m * 10, 60 + 25 * math.sin(m / 2 + time.time() / 600)] for m in range(13)]
+            phase = time.time() / 600 + len(sql_text()) % 7
+            rows = [[m * 10, 60 + 25 * math.sin(m / 2 + phase)] for m in range(13)]
             rows = rows[1:]  # leads 10..120
             SHARED.set_sql(status="demo", query=sql_text(), columns=["lead_time", "brightness"], rows=rows, seconds=0.4, ran_at=utcnow().isoformat())
-            stop.wait(CONFIG["sql"]["refresh_seconds"])
+            wake.wait(CONFIG["sql"]["refresh_seconds"])
             continue
         if not sql_host():
             SHARED.set_sql(status="disabled", reason="Set ARRAYLAKE_SQL_HOST in .env (al compute enable gtc-berlin sql)")
@@ -299,14 +337,16 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
         commits = SHARED.get("state").get("commits") or []
         head = commits[0]["id"] if commits else None
         due = time.time() - last_run > CONFIG["sql"]["refresh_seconds"]
-        if head != last_head or due:
+        if head != last_head or due or asked:
+            prev = SHARED.get("sql")
+            SHARED.set_sql(**{**prev, "status": "running", "query": sql_text()})
             try:
                 run_sql_once()
             except Exception as exc:
                 log.warning("sql failed: %s", exc)
-                SHARED.set_sql(status="error", error=str(exc)[:300])
+                SHARED.set_sql(status="error", query=sql_text(), error=str(exc)[:300])
             last_head, last_run = head, time.time()
-        stop.wait(3)
+        wake.wait(3)
 
 
 # --------------------------------------------------------------------------- HTTP
@@ -320,7 +360,10 @@ def public_config() -> dict:
     ]
     cfg = {k: CONFIG[k] for k in keys}
     cfg["branch"] = CONFIG["branch"]
-    cfg["sql_query"] = "\n".join(CONFIG["sql"]["query"])
+    cfg["sql_query"] = default_sql()
+    cfg["sql_template"] = "\n".join(CONFIG["sql"]["query"])
+    cfg["sql_places"] = CONFIG["sql"]["places"]
+    cfg["sql_box"] = CONFIG["sql"]["box_deg"]
     return cfg
 
 
@@ -328,9 +371,9 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(WEB), **kwargs)
 
-    def _json(self, payload: dict) -> None:
+    def _json(self, payload: dict, code: int = 200) -> None:
         body = json.dumps(payload, default=str).encode()
-        self.send_response(200)
+        self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
@@ -346,6 +389,16 @@ class Handler(SimpleHTTPRequestHandler):
         if path == "/api/sql":
             return self._json(SHARED.get("sql"))
         return super().do_GET()
+
+    def do_POST(self):  # noqa: N802
+        if self.path.split("?", 1)[0] != "/api/sql":
+            return self._json({"error": "not found"}, 404)
+        try:
+            body = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 16384)) or b"{}")
+            SHARED.set_sql_template(default_sql() if body.get("reset") else check_sql(str(body.get("query", ""))))
+        except (ValueError, TypeError) as exc:
+            return self._json({"error": str(exc)}, 400)
+        return self._json({"ok": True})
 
     def translate_path(self, path):
         clean = path.split("?", 1)[0].split("#", 1)[0]

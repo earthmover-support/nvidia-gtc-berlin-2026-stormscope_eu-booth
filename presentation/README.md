@@ -56,10 +56,16 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1344,10
    B=https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu
    curl -o t.png -w '%{http_code}\n' "$B/main/tiles/WebMercatorQuad/3/2/4?variables=true_color&style=raster/rgb&colorscalerange=0,0.15&time=<INIT>&lead_time=10%20minutes&ensemble=0&f=png"
    ```
-3. **SQL**: `al compute enable gtc-berlin sql --sku-code xs`, then put the service
-   hostname in `.env` as `ARRAYLAKE_SQL_HOST=...`. The query lives in `config.json`
-   (`sql.query`); `{init}` is replaced by the newest complete init. Equality on `lat`/`lon` is exact: they are 2-D pixel coordinates, so
-   `lat = 52.4999 AND lon = 13.3757` only returns rows if a pixel sits exactly there.
+3. **SQL**: `al compute enable gtc-berlin sql --sku-code xs`; its hostname goes in
+   `config.json` (`sql.host`) or `.env` (`ARRAYLAKE_SQL_HOST=...`, wins). The service
+   scales to zero: the first query after a sleep takes ~50 s, later ones ~20 s (each
+   lead reads a full 1120 × 2432 chunk). Fire one query before visitors arrive.
+   Panel 06 is a live editor: click a city chip (`sql.places`) or type any single
+   `SELECT`/`WITH` statement and press Run or ⌘/Ctrl+Enter; Esc leaves the box.
+   The server runs it with the token (the browser never sees it) and keeps refreshing
+   it on every new commit until Reset. `{init}` is replaced by the newest complete
+   init; `{lat}`/`{lon}`/`{box}` in `sql.query` are filled per city. `lat`/`lon` are
+   2-D pixel coordinates, so filter on a `BETWEEN` box, never on equality.
 4. **cloud_mass**: once the variable exists in the repo, set its `style` /
    `colorscalerange` and `"available": true` in `config.json`.
 5. **Run length**: the strip and scrubber assume 12 steps, +10 to +120 min

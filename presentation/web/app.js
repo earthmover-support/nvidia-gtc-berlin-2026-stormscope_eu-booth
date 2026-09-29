@@ -3,7 +3,8 @@
  * Data flow
  *   /api/config  -> static settings (config.json)
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
- *   /api/sql     -> latest live Zax-SQL result (polled every 10 s)
+ *   /api/sql     -> latest live Zax-SQL result (polled every 10 s, 1 s while a query runs)
+ *                   POST {query} runs what was typed on panel 06, {reset: true} restores it
  * Tiles are fetched by MapLibre straight from the public Flux tiles service,
  * one raster layer per (init time, lead time) selected with the `time` and
  * `lead_time` query parameters on the branch (or pinned to a snapshot id).
@@ -34,6 +35,8 @@
     rotatePaused: false,
     manualUntil: 0,
     sql: null,
+    sqlPlace: null, // city chip that produced the query, null once hand-edited
+    sqlDirty: false, // textarea edited but not run yet
     doneLeads: new Set(),
     doneInit: null,
   };
@@ -439,28 +442,140 @@
   }
 
   // ------------------------------------------------------------------ SQL
+  const sqlBox = () => $("#sqlQuery");
+  const holdPanel = () => { S.manualUntil = Math.max(S.manualUntil, Date.now() + 120000); };
+
+  function sqlFor(name) {
+    const [lat, lon] = S.cfg.sql_places[name];
+    return S.cfg.sql_template.replaceAll("{lat}", lat).replaceAll("{lon}", lon).replaceAll("{box}", S.cfg.sql_box);
+  }
+
+  // which city chip produced this server-side query (null = hand-written)
+  const placeOf = (query) => {
+    const q = (query || "").replace(/TIMESTAMP '[^']*'/, "TIMESTAMP '{init}'");
+    return Object.keys(S.cfg.sql_places).find((name) => sqlFor(name) === q) || null;
+  };
+
+  function renderSqlPlaces() {
+    $("#sqlPlaces").replaceChildren(...Object.keys(S.cfg.sql_places).map((name) => {
+      const b = el("button", name === S.sqlPlace ? "on" : "", name);
+      b.type = "button";
+      b.addEventListener("click", () => {
+        S.sqlPlace = name;
+        sqlBox().value = sqlFor(name);
+        renderSqlPlaces();
+        runSql(sqlBox().value);
+      });
+      return b;
+    }));
+    $("#sqlFoot").textContent = S.sqlPlace
+      ? `Brightness over ${S.sqlPlace}, next 2 h · PostgreSQL wire protocol`
+      : "Your query · PostgreSQL wire protocol";
+  }
+
+  async function runSql(query, reset = false) {
+    holdPanel();
+    S.sqlDirty = false;
+    try {
+      const res = await fetch("/api/sql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reset ? { reset: true } : { query }),
+      });
+      const out = await res.json();
+      if (!res.ok) { S.sql = { status: "error", query, error: out.error }; renderSql(); return; }
+    } catch (e) {
+      S.sql = { status: "error", query, error: String(e) };
+      renderSql();
+      return;
+    }
+    S.sql = { ...(S.sql || {}), status: "running", ran_at: null };
+    renderSql();
+    pollSqlFast();
+  }
+
+  // poll every second until the query we just sent has finished
+  let fastTimer = null;
+  function pollSqlFast() {
+    clearTimeout(fastTimer);
+    const started = Date.now();
+    const tick = async () => {
+      await refreshSql();
+      const busy = !S.sql || S.sql.status === "running" || S.sql.status === "starting";
+      if ((busy || Date.now() - started < 4000) && Date.now() - started < 180000) fastTimer = setTimeout(tick, 1000);
+    };
+    fastTimer = setTimeout(tick, 1000);
+  }
+
   function renderSql() {
     const r = S.sql;
     const status = $("#sqlStatus");
     const bars = $("#sqlBars");
+    const box = sqlBox();
+    const running = r && r.status === "running";
     status.classList.remove("err");
-    bars.replaceChildren();
-    const empty = () => { for (let i = 1; i <= S.cfg.lead_steps; i++) bars.append(el("div", "empty")); };
+    status.title = "";
+    $(".sql").classList.toggle("running", !!running);
+    $("#sqlRun").disabled = !!running;
+    if (running) holdPanel();
+    // never overwrite what someone is typing
+    if (r && r.query && !S.sqlDirty && document.activeElement !== box) {
+      box.value = r.query;
+      S.sqlPlace = placeOf(r.query);
+    }
+    const empty = () => { bars.replaceChildren(); for (let i = 1; i <= S.cfg.lead_steps; i++) bars.append(el("div", "empty")); };
     if (!r || r.status === "starting") { status.textContent = "connecting…"; empty(); return; }
     if (r.status === "disabled") { status.textContent = "SQL service off"; status.classList.add("err"); empty(); return; }
-    if (r.status === "error") { status.textContent = "query failed"; status.classList.add("err"); status.title = r.error || ""; empty(); return; }
-    if (r.query) $("#sqlQuery").textContent = r.query;
-    const rows = (r.rows || []).filter((row) => typeof row[1] === "number");
-    status.textContent = `${r.status === "demo" ? "demo · " : ""}ran ${ago(r.ran_at)} ago · ${r.seconds} s · ${rows.length} rows`;
+    if (r.status === "error") {
+      status.textContent = "query failed";
+      status.classList.add("err");
+      status.title = r.error || "";
+      $("#sqlFoot").textContent = (r.error || "query failed").split("\n")[0];
+      empty();
+      return;
+    }
+    if (running) { status.textContent = "running… (a cold start takes ~30 s)"; return; } // keep the old bars, dimmed
+    renderSqlPlaces(); // restores the foot text after an error
+    // first numeric column after the x column, so hand-written queries still plot
+    const yi = (r.rows && r.rows[0] ? r.rows[0].findIndex((v, i) => i > 0 && typeof v === "number") : -1);
+    const rows = yi > 0 ? r.rows.filter((row) => typeof row[yi] === "number") : [];
+    status.textContent = `${r.status === "demo" ? "demo · " : ""}ran ${ago(r.ran_at)} ago · ${r.seconds} s · ${(r.rows || []).length} rows`;
     if (!rows.length) { empty(); return; }
-    const ys = rows.map((row) => row[1]);
+    const ys = rows.map((row) => row[yi]);
     const lo = Math.min(...ys), hi = Math.max(...ys);
-    for (const [x, y] of rows) {
+    bars.replaceChildren();
+    for (const row of rows.slice(0, 60)) {
+      const y = row[yi];
       const d = el("div");
       d.style.height = `${hi > lo ? 15 + (85 * (y - lo)) / (hi - lo) : 60}%`;
-      d.title = `${x}: ${y.toFixed(2)}`;
+      d.title = `${row[0]}: ${y.toFixed(2)}`;
       bars.append(d);
     }
+  }
+
+  function initSqlEditor() {
+    const box = sqlBox();
+    S.sqlPlace = placeOf(S.cfg.sql_query);
+    box.value = S.cfg.sql_query;
+    renderSqlPlaces();
+    box.addEventListener("focus", holdPanel);
+    box.addEventListener("input", () => {
+      holdPanel();
+      S.sqlDirty = true;
+      if (S.sqlPlace) { S.sqlPlace = null; renderSqlPlaces(); }
+    });
+    box.addEventListener("keydown", (e) => {
+      e.stopPropagation(); // typing must not trigger the booth shortcuts
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); runSql(box.value); }
+      else if (e.key === "Escape") box.blur();
+    });
+    $("#sqlRun").addEventListener("click", () => runSql(box.value));
+    $("#sqlReset").addEventListener("click", () => {
+      S.sqlPlace = placeOf(S.cfg.sql_query);
+      box.value = S.cfg.sql_query;
+      renderSqlPlaces();
+      runSql(null, true);
+    });
   }
 
   // ------------------------------------------------------------------ polling
@@ -498,6 +613,7 @@
   function initKeys() {
     window.addEventListener("keydown", (e) => {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.target.closest && e.target.closest("textarea, input, button")) return;
       const k = e.key.toLowerCase();
       if (k === "arrowright" || k === "pagedown") { S.manualUntil = Date.now() + 60000; showPanel(S.panel + 1); }
       else if (k === "arrowleft" || k === "pageup") { S.manualUntil = Date.now() + 60000; showPanel(S.panel - 1); }
@@ -516,7 +632,7 @@
   async function boot() {
     S.cfg = await (await fetch("/api/config")).json();
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
-    $("#sqlQuery").textContent = S.cfg.sql_query;
+    initSqlEditor();
     renderVarToggle();
     renderPlayback();
     $("#playBtn").addEventListener("click", togglePlay);

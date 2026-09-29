@@ -160,7 +160,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .callout { margin-top: auto; padding: 14px 18px; border-radius: 10px; background: var(--em-purple); color: #fff; font-size: 16px; font-weight: 500; }
 
 .qr .qrcard { padding: 12px; background: #F5F5F5; border-radius: 12px; display: flex; flex-direction: column; gap: 6px; color: var(--em-bg); }
-.qrbox { width: 132px; align-self: center; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; font: 12px var(--mono); color: #4E4E4E; }
+.qrbox { width: 116px; align-self: center; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; font: 12px var(--mono); color: #4E4E4E; }
 .qrbox svg { width: 100%; height: 100%; display: block; }
 .qrcard b { font-size: 15px; } .qrcard span { font-size: 12px; line-height: 1.35; color: #4E4E4E; word-break: break-all; }
 
@@ -169,7 +169,16 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .sql-head b { font-size: 15px; color: #F5F5F5; white-space: nowrap; }
 .sql-head span { font: 12px var(--mono); color: var(--lime); text-align: right; }
 .sql-head span.err { color: #FFB86B; }
-.sql pre { margin: 0; font: 12.5px/1.5 var(--mono); color: #E2DFF0; white-space: pre-wrap; }
+.sql textarea { margin: 0; padding: 8px 10px; resize: vertical; min-height: 7.5em; font: 12.5px/1.5 var(--mono); color: #E2DFF0; background: #0E0D16; border: 1px solid #2E2C40; border-radius: 8px; outline: none; }
+.sql textarea:focus { border-color: var(--em-lav); }
+.sql-places { display: flex; flex-wrap: wrap; gap: 6px; }
+.sql-places button, .sql-run button { font: 500 12px var(--mono); padding: 4px 10px; border-radius: 999px; border: 1px solid #3A3852; background: transparent; color: #E2DFF0; cursor: pointer; }
+.sql-places button.on { background: var(--em-lav); border-color: var(--em-lav); color: #15141E; }
+.sql-run { display: flex; align-items: flex-start; gap: 6px; }
+.sql-run .sql-places { flex: 1; }
+.sql-run #sqlRun { background: var(--em-lav); border-color: var(--em-lav); color: #15141E; }
+.sql-run #sqlRun:disabled { opacity: .5; cursor: progress; }
+.sql.running .bars { opacity: .35; }
 .bars { display: flex; align-items: flex-end; gap: 4px; height: 56px; }
 .bars div { flex: 1; min-height: 3px; border-radius: 3px 3px 0 0; background: var(--em-lav); position: relative; }
 .bars div.empty { background: #2E2C40; height: 100%; border-radius: 3px; }

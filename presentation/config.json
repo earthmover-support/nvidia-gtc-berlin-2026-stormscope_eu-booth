@@ -31,13 +31,24 @@
   "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
 
   "sql": {
-    "host": "",
+    "host": "sql-501bbe54f844df18.compute.arraylake.app",
     "refresh_seconds": 60,
+    "max_rows": 200,
+    "box_deg": 0.05,
+    "places": {
+      "Berlin":    [52.4999, 13.3757],
+      "Hamburg":   [53.5511, 9.9937],
+      "München":   [48.1374, 11.5755],
+      "Frankfurt": [50.1109, 8.6821],
+      "Paris":     [48.8566, 2.3522],
+      "London":    [51.5072, -0.1276]
+    },
     "query": [
       "SELECT lead_time, AVG(true_color) AS brightness",
       "FROM \"stormscope-eu\".\"root\"",
       "WHERE time = TIMESTAMP '{init}'",
-      "  AND lat = 52.4999 AND lon = 13.3757",
+      "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",
+      "  AND lon BETWEEN {lon} - {box} AND {lon} + {box}",
       "GROUP BY lead_time ORDER BY lead_time;"
     ]
   }
