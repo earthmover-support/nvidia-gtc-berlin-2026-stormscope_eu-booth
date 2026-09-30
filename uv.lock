@@ -6,6 +6,10 @@ resolution-markers = [
     "sys_platform == 'emscripten'",
     "sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
+required-markers = [
+    "platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "platform_machine == 'x86_64' and sys_platform == 'linux'",
+]
 
 [[package]]
 name = "affine"
@@ -999,23 +1003,27 @@ wheels = [
 
 [[package]]
 name = "eccodeslib"
-version = "2.48.2.27"
+version = "2.49.0.30"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "eckitlib" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6d/8a/5e4c2fe3f9dee45e9a25946abbe90658dce4c5881c7d1fcba94e19efde9d/eccodeslib-2.48.2.27-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:586d958be1367b327b1855b363d8cf99660bdfde7b80497d608c124d6e51d821", size = 9309147, upload-time = "2026-09-08T12:21:44.607Z" },
-    { url = "https://files.pythonhosted.org/packages/90/a1/3fea75ec83b8ae4fb50ed845eba45e6ea463c6fc53c174be07b2d7440562/eccodeslib-2.48.2.27-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:929a3de78d2e9d6a39ae6e8a83f2cf99f5090e627dc9ea810c9a09ebcd296636", size = 9094469, upload-time = "2026-09-08T12:30:30.657Z" },
+    { url = "https://files.pythonhosted.org/packages/98/88/324a4cc61f21c8edc1d51fcef7c12ce1dec2ef6c61b2fe95d9095cbb517c/eccodeslib-2.49.0.30-cp312-cp312-macosx_15_0_arm64.whl", hash = "sha256:dcff25174c2107dbc0ad75f27340494e1c23e20be9d718daeda82c59e32025a2", size = 9130298, upload-time = "2026-09-22T15:30:00.934Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/d7/9fa89e3a0bc763d52358de95052193019fe5c4173c00b7f35d218a8d850c/eccodeslib-2.49.0.30-cp312-cp312-macosx_15_0_x86_64.whl", hash = "sha256:821363a8f9d24626b7c77aa62d6389ccfeb37395767160a7bd8b5d273bd58b89", size = 8919659, upload-time = "2026-09-22T15:10:16.4Z" },
+    { url = "https://files.pythonhosted.org/packages/22/0e/21192510763d35924e1eb326b6e0bef110d660c352a2217ad1bd66fff4d9/eccodeslib-2.49.0.30-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:6dbd6701fee98a9a7ff62ce7708f628ebc00c0910c67aebd2ef639ea2a10dfa8", size = 9313350, upload-time = "2026-09-22T14:55:39.731Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/0c/9a8b3c9e8ef2d9ff4527c5184f346db4626a14978e964a347561c651368e/eccodeslib-2.49.0.30-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:3af3dec6f4e5630dabc8cfa45346b38581ce5bd135944fc2b95d1040b75b5551", size = 9099266, upload-time = "2026-09-22T15:00:02.16Z" },
 ]
 
 [[package]]
 name = "eckitlib"
-version = "2.2.0.27"
+version = "2.3.0.30"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e8/d2/8d02dd3b3b102ab82f01e1d9957bd993ae2a4bdc4c03922462026e240bfd/eckitlib-2.2.0.27-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:df538933fb5c703c4675e106409118f5dd9cebfac6498ab5cae3ddb8d3486ebc", size = 7051376, upload-time = "2026-09-08T12:21:49.362Z" },
-    { url = "https://files.pythonhosted.org/packages/f3/f2/b40e6677d1b205b260d68b373558eee21e59b9ab07b7949c7180223dd17d/eckitlib-2.2.0.27-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5d7bf979cb232f83716624fa7d197a61d1a3cec706ad95889dc3c2f872ceda97", size = 7175819, upload-time = "2026-09-08T12:30:38.268Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/b1/31217e96574d0dc00a7ad33c7e3ae1bb4b18e9c57e5921ddbe78a1dd52a5/eckitlib-2.3.0.30-cp312-cp312-macosx_15_0_arm64.whl", hash = "sha256:5e42276f074a613a068813dda6cc9fe346957e9f4839c1437dc06861239bfb2f", size = 6538694, upload-time = "2026-09-22T15:30:06.029Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/9a/71f1cab65f851e6d83438fbb5fbc84edbcb7c01176b0473d1a3190ec3061/eckitlib-2.3.0.30-cp312-cp312-macosx_15_0_x86_64.whl", hash = "sha256:352045f65066369d539dcc4d8eb12ca6bc53edc09af4fbc6078409597efcf4f9", size = 6683917, upload-time = "2026-09-22T15:10:22.947Z" },
+    { url = "https://files.pythonhosted.org/packages/38/bd/4371a6f7b5be9a7f7fd7debae031c5e8203de172e1f9358f2d4e56651c4a/eckitlib-2.3.0.30-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:d0d9427957efabf90e89df854c027cafe741b9ce45985ab0fb19f675f4527aa7", size = 35166539, upload-time = "2026-09-22T14:55:45.436Z" },
+    { url = "https://files.pythonhosted.org/packages/20/08/bc24e84e0736751ba1b518496755f2f88c748af79bd6d7ad4e954a6dac1a/eckitlib-2.3.0.30-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:71b4059a56d8b35d682b05b0929e848e34750bb4c9e8d7198aa6d0049171c984", size = 35957853, upload-time = "2026-09-22T15:00:12.329Z" },
 ]
 
 [[package]]
