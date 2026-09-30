@@ -449,7 +449,7 @@ def add_grid_mapping(backend: IceChunkBackend, name: str, attrs: dict) -> None:
 
 
 def geozarr_attrs(y, x) -> dict:
-    """GeoZarr `proj` + `spatial` attributes for an array over this `(y, x)` grid.
+    """GeoZarr `proj` + `spatial` attributes for a group over this `(y, x)` grid.
 
     `y`/`x` are the stored (east-positive) scan angles of the pixel centres. The CRS
     is in metres, scan angle times `perspective_point_height`, so the affine transform
@@ -661,9 +661,6 @@ def create_schema(
         dtype="float32", compressors=[LATLON_COMPRESSOR],
     )
     add_grid_mapping(backend, GRID_MAPPING, FCI_GEOS)
-    geozarr = geozarr_attrs(total_coords["y"], total_coords["x"])
-    for name in ("true_color", "airmass", "lat", "lon"):
-        backend.root[name].attrs.update(geozarr)
     for dim, axis, direction in (("x", "X", "east"), ("y", "Y", "north")):
         backend.root[dim].attrs.update(
             {
@@ -703,6 +700,8 @@ def create_schema(
             "model": "StormScopeMeteosatEU",
             "earth2studio_version": earth2studio.__version__,
             "fci_pixel_bbox": str(StormScopeMeteosatEU.Model_FCI_BBox),
+            # GeoZarr proj/spatial conventions describe the group, not each array.
+            **geozarr_attrs(total_coords["y"], total_coords["x"]),
         }
     )
 
