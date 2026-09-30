@@ -68,7 +68,7 @@ Credentials come from a local `.env` (see [`.env.example`](.env.example)):
 
 - `EUMETSAT_CONSUMER_KEY` / `EUMETSAT_CONSUMER_SECRET` — model input, from
   <https://api.eumetsat.int/api-key/>
-- `ARRAYLAKE_API_TOKEN` — ingest target, or `al auth login` (the notebook and the script both read it)
+- `ARRAYLAKE_API_TOKEN` — ingest target (the notebook and the script both read it)
 
 ## Pipeline script
 
@@ -84,8 +84,9 @@ It uses the same freshness search (`MIN_LAG`) and the same one-commit-per-step s
 as `demo.ipynb`. It differs in two ways. It publishes through plain
 `earth2studio.io.IceChunkBackend` with `arraylake.Client.get_icechunk_storage`, so it needs
 no backend subclass. And it writes to the root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026`
-(the default for `--arraylake-repo`), the same repo and group as `demo.ipynb`: each run
-replaces the other's cube.
+(the default for `--arraylake-repo`), the same repo and group as `demo.ipynb`. Each run
+extends the schema by its init time and appends along `time`, keeping earlier inits; every
+run must therefore use the same `--n-steps` (lead-time layout).
 
 ```bash
 uv run python 06_stormscope_eu_pipeline.py --n-steps 3                    # local Icechunk in outputs/
@@ -127,13 +128,13 @@ geostationary grid mapping, `fci_geos_projection` (`sweep_angle_axis="y"`), in t
 west, so it is negated in the schema and in every write. `x`/`y` get CF
 `projection_*_coordinate` attributes, and the 2-D `lat`/`lon` stay as coordinates. `time`, `lead_time` and `ensemble` carry the CF standard names `forecast_reference_time`, `forecast_period` and `realization`. A 2-D `valid_time(time, lead_time)` = `time + lead_time` carries standard name `time`.
 The same CRS is also written with the [GeoZarr](https://geozarr.org/conventions.html) `proj`
-and `spatial` conventions (v0.1) on `true_color`, `airmass`, `lat` and `lon`: `proj:wkt2`,
+and `spatial` conventions (v0.1) on the dataset (root group attributes): `proj:wkt2`,
 `proj:projjson`, and an affine `spatial:transform` in metres (scan angle × satellite height),
 south-up because `y` runs south to north. Chunks
 are one `(ensemble, time, lead_time)` by 560 × 1216 pixels (2 × 2 per frame), all three
 `rgb` bands in one chunk, zstd-compressed; `lat`/`lon` share the y/x chunks, stored as
 float32 with Blosc zstd + byte shuffle.
 
-Each run overwrites the repo's root group. It saves a true-colour PNG of the last step to
+Each run appends its init time to the repo's root group. It saves a true-colour PNG of the last step to
 `<output-dir>/stormscope_eu_latest.png`. The model checkpoint (`nvidia/stormscope-meteosat`
 on Hugging Face) is downloaded on first run.
