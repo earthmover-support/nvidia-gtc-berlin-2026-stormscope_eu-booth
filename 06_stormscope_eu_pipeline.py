@@ -58,9 +58,11 @@ import cartopy.crs as ccrs
 import eumdac
 import matplotlib.pyplot as plt
 import numpy as np
+import pyproj
 import torch
 from dotenv import load_dotenv
 from tqdm import tqdm
+from zarr.codecs import ZstdCodec
 
 import earth2studio
 from earth2studio.data import fetch_data
@@ -103,6 +105,39 @@ WAVELENGTH_CM = {
     "fci133ir": 13.300e-4,
 }
 AIRMASS_CHANNELS = ["fci63wv", "fci73wv", "fci97ir", "fci105ir"]
+
+# 280 x 304 spatial chunks: 4 x 8 = 32 per frame of the default Model_FCI_BBox
+# (y=1120, x=2432). A web map tile over Europe then reads a handful of chunks instead of
+# the whole frame (~33 MB for a composite). `rgb` is absent, and the backend leaves a
+# dimension it has no chunk for unsplit, so a chunk holds all three bands.
+CHUNKS = {"ensemble": 1, "time": 1, "lead_time": 1, "y": 280, "x": 304}
+COMPRESSOR = ZstdCodec(level=3)
+
+# MTG-I1 FCI fixed grid as a CF geostationary projection. `x`/`y` are scan angles in
+# radians; `pyproj.CRS.from_cf` scales them by `perspective_point_height`. Checked against
+# `model.lat`/`model.lon`: max error 4e-6 deg, identical off-disk mask.
+GRID_MAPPING = "fci_geos_projection"
+FCI_GEOS = {
+    "long_name": "MTG-I1 FCI fixed grid projection",
+    "grid_mapping_name": "geostationary",
+    "perspective_point_height": PERSPECTIVE_POINT_HEIGHT,
+    "semi_major_axis": SEMI_MAJOR_AXIS,
+    "semi_minor_axis": SEMI_MINOR_AXIS,
+    "inverse_flattening": 298.257223563,
+    "latitude_of_projection_origin": 0.0,
+    "longitude_of_projection_origin": 0.0,
+    # MTG and SEVIRI sweep about "y", GOES about "x". The wrong axis shifts positions
+    # by up to 0.35 deg, with no error raised.
+    "sweep_angle_axis": "y",
+}
+FCI_GEOS["crs_wkt"] = pyproj.CRS.from_cf(FCI_GEOS).to_wkt()  # for GDAL/rioxarray
+
+# `grid_mapping` is what the Flux tiles service projects with. The 2-D lat/lon alone are
+# not enough: the domain's top corners are off the Earth's disk, so their lat/lon are NaN,
+# and Flux drops every grid row containing one -- everything north of ~50N. `coordinates`
+# points at the lat/lon written by `add_coord`; without it `xr.open_zarr` would read them
+# back as two more data variables instead of coordinates of every field.
+GEOREF = {"coordinates": "lat lon", "grid_mapping": GRID_MAPPING}
 PUBLISH_TARGETS = ["local", "arraylake", "none"]
 # stormscope-eu's root already holds this script's older ring-buffer schema
 # (05_stormscope_eu_pipeline.py's previous version) -- IceChunkBackend's own
@@ -372,6 +407,32 @@ def add_coord(
         backend.root[name].attrs.update(attrs)
 
 
+def add_grid_mapping(backend: IceChunkBackend, name: str, attrs: dict) -> None:
+    """Write a CF grid mapping variable: a scalar whose attributes describe the CRS.
+
+    Data arrays name it in their `grid_mapping` attribute. Its value is never read,
+    so it is a single int32.
+    """
+    if name not in backend.root:
+        array = backend.root.create_array(
+            name, shape=(), dtype="int32", fill_value=0, dimension_names=()
+        )
+        array[...] = 0
+    backend.root[name].attrs.update(attrs)
+
+
+def east_positive(coords) -> OrderedDict:
+    """`coords` with `x` negated to CF's east-positive scan angle.
+
+    earth2studio's FCI `x` is positive west. Stored as is, every CF reader (pyproj, GDAL,
+    Flux) would mirror the image east-west. Applied to the schema *and* to every write,
+    because `write` locates a slice by looking up coordinate values in the stored ones.
+    """
+    out = OrderedDict(coords)
+    out["x"] = -np.asarray(out["x"])
+    return out
+
+
 def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     """EUMETSAT-style "true-colour" RGB composite from the three VIS channels.
 
@@ -434,7 +495,7 @@ def step_writes(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[s
     """
     arr = x_pred.detach().to("cpu", torch.float32, copy=True).numpy()
 
-    rgb_coords_step = OrderedDict(
+    rgb_coords_step = east_positive(
         (dim, values) for dim, values in coords_pred.items() if dim != "variable"
     )
     rgb_coords_step["rgb"] = RGB_VALUES
@@ -453,11 +514,6 @@ def lead_minutes(lead_time: np.ndarray) -> np.ndarray:
 def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
     """Open the Icechunk store to publish into. Returns (backend, location, group_path)."""
     local_icechunk_path = os.path.join(output_dir, "stormscope_eu.icechunk")
-    # One chunk per 2-D field: `y`/`x` are deliberately absent (unsplit, whole-extent),
-    # and the backend leaves any dimension it has no chunk for unsplit too. The domain
-    # is small enough (~11 MB at float32 for the default Model_FCI_BBox) that splitting
-    # it spatially would only add objects.
-    chunks = {"ensemble": 1, "time": 1, "lead_time": 1}
     if publish_target == "arraylake":
         import arraylake
 
@@ -468,13 +524,14 @@ def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
         storage = client.get_icechunk_storage(arraylake_repo)
         group_path = ARRAYLAKE_GROUP_PATH
         backend = IceChunkBackend(
-            storage=storage, chunks=chunks,
+            storage=storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR],
             backend_kwargs={"overwrite": True, "path": group_path},
         )
         location = f"{arraylake_repo}::{group_path}"
     else:
         backend = IceChunkBackend(
-            local_icechunk_path, chunks=chunks, backend_kwargs={"overwrite": True}
+            local_icechunk_path, chunks=CHUNKS, zarr_codecs=[COMPRESSOR],
+            backend_kwargs={"overwrite": True},
         )
         location = local_icechunk_path
         group_path = None
@@ -529,28 +586,29 @@ def main():
         # The cube, allocated once. Only the forecast is stored, so `lead_time` runs
         # from 0 -- the observed analysis frame -- to n_steps * 10 min, and each step
         # below fills its own slice of it.
-        total_coords = OrderedDict(
-            ensemble=coords["ensemble"],
-            time=coords["time"],
-            lead_time=np.arange(args.n_steps + 1) * model.output_times[0],
-            y=coords["y"],
-            x=coords["x"],
+        total_coords = east_positive(
+            OrderedDict(
+                ensemble=coords["ensemble"],
+                time=coords["time"],
+                lead_time=np.arange(args.n_steps + 1) * model.output_times[0],
+                y=coords["y"],
+                x=coords["x"],
+            )
         )
         rgb_coords = OrderedDict(**total_coords, rgb=RGB_VALUES)
-        georef = {"coordinates": "lat lon"}
 
         backend.add_array(total_coords, [])  # coordinate arrays only
         backend.add_array(rgb_coords, ["true_color", "airmass"], fill_value=float("nan"))
         backend.root["true_color"].attrs.update(
             {
-                **georef,
+                **GEOREF,
                 "long_name": "true-colour RGB composite (VIS 0.6/0.5/0.4 um), 0-1",
                 "source_channels": " ".join(RGB_CHANNELS),
             }
         )
         backend.root["airmass"].attrs.update(
             {
-                **georef,
+                **GEOREF,
                 "long_name": "airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, IR 10.5 um "
                              "brightness temperatures), 0-1",
                 "source_channels": " ".join(AIRMASS_CHANNELS),
@@ -564,6 +622,17 @@ def main():
             backend, "lon", model.lon, ("y", "x"),
             {"standard_name": "longitude", "units": "degrees_east"},
         )
+        add_grid_mapping(backend, GRID_MAPPING, FCI_GEOS)
+        for dim, axis, direction in (("x", "X", "east"), ("y", "Y", "north")):
+            backend.root[dim].attrs.update(
+                {
+                    "standard_name": f"projection_{dim}_coordinate",
+                    "units": "rad",
+                    "axis": axis,
+                    "long_name": f"FCI fixed grid projection {dim}-coordinate "
+                                 f"(scan angle, positive {direction})",
+                }
+            )
         backend.root["time"].attrs["long_name"] = "analysis (nowcast initialisation) time"
         backend.root["lead_time"].attrs["long_name"] = (
             "offset from analysis time; 0 = observed analysis frame, > 0 = forecast. "

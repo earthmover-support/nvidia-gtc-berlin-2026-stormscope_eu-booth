@@ -107,6 +107,13 @@ Unlike the notebook, it stores only two RGB composites, not the 16 raw channels.
   `(bt105 - 209.4) / (209.4 - 244.5)`, which clips to 0 above 209.4 K. So only cloud
   tops colder than that get any blue.
 
+Georeference follows #3, so Flux tiles render north of ~50°N. Both composites name a CF
+geostationary grid mapping, `fci_geos_projection` (`sweep_angle_axis="y"`), in their
+`grid_mapping` attribute. `x` is stored positive east: earth2studio's FCI `x` is positive
+west, so it is negated in the schema and in every write. `x`/`y` get CF
+`projection_*_coordinate` attributes, and the 2-D `lat`/`lon` stay as coordinates. Chunks
+are one `(ensemble, time, lead_time)` by 280 × 304 pixels, zstd-compressed.
+
 Each run overwrites the group. It saves a true-colour PNG of the last step to
 `<output-dir>/stormscope_eu_latest.png`. The model checkpoint (`nvidia/stormscope-meteosat`
 on Hugging Face) is downloaded on first run.
