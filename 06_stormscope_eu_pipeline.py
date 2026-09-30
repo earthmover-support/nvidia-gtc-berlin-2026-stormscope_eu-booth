@@ -135,9 +135,10 @@ FCI_GEOS["crs_wkt"] = pyproj.CRS.from_cf(FCI_GEOS).to_wkt()  # for GDAL/rioxarra
 # `grid_mapping` is what the Flux tiles service projects with. The 2-D lat/lon alone are
 # not enough: the domain's top corners are off the Earth's disk, so their lat/lon are NaN,
 # and Flux drops every grid row containing one -- everything north of ~50N. `coordinates`
-# points at the lat/lon written by `add_coord`; without it `xr.open_zarr` would read them
-# back as two more data variables instead of coordinates of every field.
-GEOREF = {"coordinates": "lat lon", "grid_mapping": GRID_MAPPING}
+# points at the non-dimension coordinates written by `add_coord`; without it
+# `xr.open_zarr` would read them back as data variables instead of coordinates of every
+# field.
+GEOREF = {"coordinates": "lat lon valid_time", "grid_mapping": GRID_MAPPING}
 PUBLISH_TARGETS = ["local", "arraylake", "none"]
 # stormscope-eu's root already holds this script's older ring-buffer schema
 # (05_stormscope_eu_pipeline.py's previous version) -- IceChunkBackend's own
@@ -633,10 +634,28 @@ def main():
                                  f"(scan angle, positive {direction})",
                 }
             )
-        backend.root["time"].attrs["long_name"] = "analysis (nowcast initialisation) time"
-        backend.root["lead_time"].attrs["long_name"] = (
-            "offset from analysis time; 0 = observed analysis frame, > 0 = forecast. "
-            "Earlier observed frames are model input and are not stored."
+        # valid_time is 2-D: one run per `time`, each with its own `lead_time` offsets.
+        add_coord(
+            backend, "valid_time",
+            total_coords["time"][:, None] + total_coords["lead_time"][None, :],
+            ("time", "lead_time"),
+            {"standard_name": "time", "long_name": "valid time (time + lead_time)"},
+        )
+        backend.root["time"].attrs.update(
+            {
+                "standard_name": "forecast_reference_time",
+                "long_name": "analysis (nowcast initialisation) time",
+            }
+        )
+        backend.root["lead_time"].attrs.update(
+            {
+                "standard_name": "forecast_period",
+                "long_name": "offset from analysis time; 0 = observed analysis frame, > 0 = "
+                             "forecast. Earlier observed frames are model input and are not stored.",
+            }
+        )
+        backend.root["ensemble"].attrs.update(
+            {"standard_name": "realization", "long_name": "ensemble member"}
         )
         backend.root.attrs.update(
             {
