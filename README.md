@@ -120,7 +120,11 @@ Georeference follows #3, so Flux tiles render north of ~50°N. Both composites n
 geostationary grid mapping, `fci_geos_projection` (`sweep_angle_axis="y"`), in their
 `grid_mapping` attribute. `x` is stored positive east: earth2studio's FCI `x` is positive
 west, so it is negated in the schema and in every write. `x`/`y` get CF
-`projection_*_coordinate` attributes, and the 2-D `lat`/`lon` stay as coordinates. `time`, `lead_time` and `ensemble` carry the CF standard names `forecast_reference_time`, `forecast_period` and `realization`. A 2-D `valid_time(time, lead_time)` = `time + lead_time` carries standard name `time`. Chunks
+`projection_*_coordinate` attributes, and the 2-D `lat`/`lon` stay as coordinates. `time`, `lead_time` and `ensemble` carry the CF standard names `forecast_reference_time`, `forecast_period` and `realization`. A 2-D `valid_time(time, lead_time)` = `time + lead_time` carries standard name `time`.
+The same CRS is also written with the [GeoZarr](https://geozarr.org/conventions.html) `proj`
+and `spatial` conventions (v0.1) on `true_color`, `airmass`, `lat` and `lon`: `proj:wkt2`,
+`proj:projjson`, and an affine `spatial:transform` in metres (scan angle × satellite height),
+south-up because `y` runs south to north. Chunks
 are one `(ensemble, time, lead_time)` by 280 × 304 pixels, zstd-compressed.
 
 Each run overwrites the group. It saves a true-colour PNG of the last step to

@@ -133,7 +133,27 @@ FCI_GEOS = {
     # by up to 0.35 deg, with no error raised.
     "sweep_angle_axis": "y",
 }
-FCI_GEOS["crs_wkt"] = pyproj.CRS.from_cf(FCI_GEOS).to_wkt()  # for GDAL/rioxarray
+FCI_CRS = pyproj.CRS.from_cf(FCI_GEOS)
+FCI_GEOS["crs_wkt"] = FCI_CRS.to_wkt()  # for GDAL/rioxarray
+
+# GeoZarr `proj` and `spatial` conventions (https://geozarr.org/conventions.html), the
+# same CRS for readers that do not follow CF grid mappings. See geozarr_attrs.
+ZARR_CONVENTIONS = [
+    {
+        "schema_url": "https://raw.githubusercontent.com/zarr-conventions/proj/refs/tags/v0.1/schema.json",
+        "spec_url": "https://github.com/zarr-conventions/proj/blob/v0.1/README.md",
+        "uuid": "f17cb550-5864-4468-aeb7-f3180cfb622f",
+        "name": "proj",
+        "description": "Coordinate reference system information for geospatial data",
+    },
+    {
+        "schema_url": "https://raw.githubusercontent.com/zarr-conventions/spatial/refs/tags/v0.1/schema.json",
+        "spec_url": "https://github.com/zarr-conventions/spatial/blob/v0.1/README.md",
+        "uuid": "689b58e2-cf7b-45e0-9fff-9cfc0883d6b4",
+        "name": "spatial",
+        "description": "Spatial coordinate information",
+    },
+]
 
 # `grid_mapping` is what the Flux tiles service projects with. The 2-D lat/lon alone are
 # not enough: the domain's top corners are off the Earth's disk, so their lat/lon are NaN,
@@ -431,6 +451,34 @@ def add_grid_mapping(backend: IceChunkBackend, name: str, attrs: dict) -> None:
     backend.root[name].attrs.update(attrs)
 
 
+def geozarr_attrs(y, x) -> dict:
+    """GeoZarr `proj` + `spatial` attributes for an array over this `(y, x)` grid.
+
+    `y`/`x` are the stored (east-positive) scan angles of the pixel centres. The CRS
+    is in metres, scan angle times `perspective_point_height`, so the affine transform
+    is too. Its origin is the corner of pixel (0, 0); `y` runs south to north here, so
+    the transform is south-up (`e > 0`).
+    """
+    y_m = np.asarray(y, dtype="float64") * PERSPECTIVE_POINT_HEIGHT
+    x_m = np.asarray(x, dtype="float64") * PERSPECTIVE_POINT_HEIGHT
+    dy, dx = y_m[1] - y_m[0], x_m[1] - x_m[0]
+    if not (np.allclose(np.diff(y_m), dy) and np.allclose(np.diff(x_m), dx)):
+        raise ValueError("y/x are not evenly spaced; no affine transform describes them")
+    x0, y0 = x_m[0] - dx / 2, y_m[0] - dy / 2
+    x1, y1 = x0 + dx * len(x_m), y0 + dy * len(y_m)
+    return {
+        "zarr_conventions": ZARR_CONVENTIONS,
+        "proj:wkt2": FCI_CRS.to_wkt(),
+        "proj:projjson": FCI_CRS.to_json_dict(),
+        "spatial:dimensions": ["y", "x"],
+        "spatial:shape": [len(y_m), len(x_m)],
+        "spatial:transform": [float(dx), 0.0, float(x0), 0.0, float(dy), float(y0)],
+        "spatial:bbox": [float(min(x0, x1)), float(min(y0, y1)),
+                         float(max(x0, x1)), float(max(y0, y1))],
+        "spatial:registration": "pixel",
+    }
+
+
 def east_positive(coords) -> OrderedDict:
     """`coords` with `x` negated to CF's east-positive scan angle.
 
@@ -639,6 +687,9 @@ def main():
             dtype="float32", compressors=[LATLON_COMPRESSOR],
         )
         add_grid_mapping(backend, GRID_MAPPING, FCI_GEOS)
+        geozarr = geozarr_attrs(total_coords["y"], total_coords["x"])
+        for name in ("true_color", "airmass", "lat", "lon"):
+            backend.root[name].attrs.update(geozarr)
         for dim, axis, direction in (("x", "X", "east"), ("y", "Y", "north")):
             backend.root[dim].attrs.update(
                 {
