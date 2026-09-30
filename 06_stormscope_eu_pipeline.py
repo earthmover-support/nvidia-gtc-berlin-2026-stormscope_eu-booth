@@ -59,6 +59,7 @@ from datetime import datetime, timedelta, timezone
 
 import cartopy.crs as ccrs
 import eumdac
+import icechunk
 import matplotlib.pyplot as plt
 import numpy as np
 import pyproj
@@ -809,9 +810,15 @@ def main():
             else:
                 message = f"stormscope-eu {init} +{lead[-1]} min"
             # commit flushes the background writes above, then opens a fresh session --
-            # an Icechunk session is spent once committed.
+            # an Icechunk session is spent once committed. `rebase_with` lets the step
+            # land on top of a commit made meanwhile by another writer (another init's
+            # chunks, say); it still fails on a real conflict, such as that commit
+            # changing the metadata of an array this step writes.
             metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
-            tqdm.write(f"{message} -> {backend.commit(message, metadata=metadata)}")
+            snapshot = backend.commit(
+                message, metadata=metadata, rebase_with=icechunk.ConflictDetector()
+            )
+            tqdm.write(f"{message} -> {snapshot}")
 
         if step == args.n_steps:
             break
