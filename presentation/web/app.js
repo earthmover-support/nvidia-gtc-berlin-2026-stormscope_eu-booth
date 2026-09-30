@@ -623,7 +623,7 @@
       else if (k === "p") togglePlay();
       else if (k === "s") { const names = Object.keys(SPEEDS); setSpeed(names[(names.indexOf(S.speed) + 1) % names.length]); }
       else if (k === "t") setVariable("true_color");
-      else if (k === "c") setVariable("cloud_mass");
+      else if (k === "a") setVariable("airmass");
       else if (k === "l") selectInit(0);
       else if (/^[1-9]$/.test(k)) selectInit(Number(k) - 1);
       else return;

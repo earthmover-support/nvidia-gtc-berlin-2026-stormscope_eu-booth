@@ -21,7 +21,7 @@ Serves the booth page from ./web and three small JSON endpoints:
 
 Run from the repo root:
 
-    uv run presentation/server.py            # live, needs ARRAYLAKE_TOKEN in .env
+    uv run presentation/server.py            # live, needs ARRAYLAKE_API_TOKEN in .env
     uv run presentation/server.py --demo     # fake commits, no network needed
 """
 
@@ -181,7 +181,7 @@ def read_times(repo) -> list[str]:
 def poll_arraylake(stop: threading.Event) -> None:
     from arraylake import Client
 
-    client = Client()  # reads ARRAYLAKE_TOKEN
+    client = Client(token=os.environ.get("ARRAYLAKE_API_TOKEN"))  # falls back to `arraylake auth login`
     repo = None
     head, times = None, []
     while not stop.is_set():
@@ -295,7 +295,7 @@ def run_sql_once() -> None:
         sslmode="require",
         user="arraylake",
         dbname=CONFIG["org"],
-        password=os.environ["ARRAYLAKE_TOKEN"],
+        password=os.environ["ARRAYLAKE_API_TOKEN"],
         autocommit=True,
         connect_timeout=15,
     ) as conn:
@@ -428,8 +428,8 @@ def main() -> None:
 
     if not (NODE / "maplibre-gl").exists():
         log.warning("presentation/node_modules missing: run `npm install` in presentation/ first")
-    if not args.demo and not os.environ.get("ARRAYLAKE_TOKEN"):
-        log.warning("ARRAYLAKE_TOKEN not set: commit polling will fail (use --demo to rehearse)")
+    if not args.demo and not os.environ.get("ARRAYLAKE_API_TOKEN"):
+        log.warning("ARRAYLAKE_API_TOKEN not set: commit polling will fail (use --demo to rehearse)")
 
     stop = threading.Event()
     poller = poll_demo if args.demo else poll_arraylake

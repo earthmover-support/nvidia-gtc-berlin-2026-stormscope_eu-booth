@@ -11,7 +11,7 @@
 
   "variables": {
     "true_color": { "style": "raster/rgb", "colorscalerange": "0,1", "available": true },
-    "cloud_mass": { "style": "raster/viridis", "colorscalerange": "0,1", "available": false }
+    "airmass":    { "style": "raster/rgb", "colorscalerange": "0,1", "available": true }
   },
 
   "lead_steps": 12,

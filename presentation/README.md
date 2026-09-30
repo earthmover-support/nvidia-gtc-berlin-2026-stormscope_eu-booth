@@ -21,7 +21,7 @@ uv run presentation/server.py                  # live → http://127.0.0.1:8000
 uv run presentation/server.py --demo           # rehearsal: fake commits + SQL, no Arraylake
 ```
 
-`server.py` reads `ARRAYLAKE_TOKEN` (and optionally `ARRAYLAKE_SQL_HOST`) from the repo's
+`server.py` reads `ARRAYLAKE_API_TOKEN` (and optionally `ARRAYLAKE_SQL_HOST`) from the repo's
 `.env`. The token stays on the server; the browser only gets `/api/*` JSON and public tile URLs.
 
 Booth window (Slack takes the right ~30 %):
@@ -38,7 +38,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1344,10
 | ← / → | previous / next panel (auto-rotation resumes after 60 s) |
 | Space | pause / resume panel rotation |
 | P | pause / resume the forecast loop |
-| T / C | `true_color` / `cloud_mass` |
+| T / A | `true_color` / `airmass` |
 | 1–6, L | pick an initialisation (1 = L = latest) |
 
 ## Before the event
@@ -66,8 +66,8 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1344,10
    it on every new commit until Reset. `{init}` is replaced by the newest complete
    init; `{lat}`/`{lon}`/`{box}` in `sql.query` are filled per city. `lat`/`lon` are
    2-D pixel coordinates, so filter on a `BETWEEN` box, never on equality.
-4. **cloud_mass**: once the variable exists in the repo, set its `style` /
-   `colorscalerange` and `"available": true` in `config.json`.
+4. **Variables**: `true_color` and `airmass` are both 0-1 RGB composites
+   (`raster/rgb`, `colorscalerange` `0,1`). Add more under `variables` in `config.json`.
 5. **Run length**: the strip and scrubber assume 12 steps, +10 to +120 min
    (`lead_steps`). Keep the commit-message format in the ingest: `... schema`,
    `... analysis frame (lead 0 min)`, `... +N min`.
