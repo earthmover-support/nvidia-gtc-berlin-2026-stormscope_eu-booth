@@ -783,7 +783,14 @@ def main():
         else:
             message = extend_schema(backend, coords["time"], lead_time)
         if message is not None:
-            print("schema ->", backend.commit(message))
+            # Commit metadata makes `repo.ancestry()` filterable without reading data:
+            # `time` is the init, `lead_time` the minutes the commit covers.
+            metadata = {
+                "time": init,
+                "lead_time": lead_minutes(lead_time).tolist(),
+                "status": "schema_extended",
+            }
+            print("schema ->", backend.commit(message, metadata=metadata))
 
     rgb_last = coords_last = None
     for step, (x_pred, coords_pred) in enumerate(
@@ -804,7 +811,8 @@ def main():
                 message = f"stormscope-eu {init} +{lead[-1]} min"
             # commit flushes the background writes above, then opens a fresh session --
             # an Icechunk session is spent once committed.
-            tqdm.write(f"{message} -> {backend.commit(message)}")
+            metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
+            tqdm.write(f"{message} -> {backend.commit(message, metadata=metadata)}")
 
         if step == args.n_steps:
             break
