@@ -5,7 +5,8 @@ MTG/FCI observations (EUMETSAT) -> Earth2Studio inference (StormScopeMeteosatEU)
 
 This mirrors the official booth demo notebook (demo.ipynb):
 `resolve_start_time()`'s EUMETSAT-Data-Store freshness search, the full
-16-channel + `true_color` schema, and writing one Icechunk commit per
+streaming schema (reduced here to the two composites, `true_color` and
+`airmass`), and writing one Icechunk commit per
 10-minute rollout step as it is produced, rather than computing the whole
 forecast first and publishing once. Unlike the official demo, this writes to
 the `stormscope_v2` group of `gtc-berlin/stormscope-eu` (a personal/test
@@ -69,6 +70,7 @@ from earth2studio.data.meteosat_fci import (
     SEMI_MINOR_AXIS,
     MeteosatFCI,
 )
+from earth2studio.data.utils import radiance_to_bt
 from earth2studio.data.utils_eumetsat import eumetsat_credentials
 from earth2studio.io import IceChunkBackend
 from earth2studio.models.px.stormscope_meteosat import StormScopeMeteosatEU
@@ -81,13 +83,33 @@ load_dotenv()
 # ============================================================================
 RGB_CHANNELS = ["fci06vis", "fci05vis", "fci04vis"]  # VIS 0.6 / 0.5 / 0.4 um
 RGB_VALUES = np.array(["red", "green", "blue"])
+# FCI central wavelengths; `radiance_to_bt` takes their reciprocal, the wavenumber in cm-1.
+WAVELENGTH_CM = {
+    "fci04vis": 0.444e-4,
+    "fci05vis": 0.510e-4,
+    "fci06vis": 0.640e-4,
+    "fci08vis": 0.865e-4,
+    "fci09vis": 0.914e-4,
+    "fci13nir": 1.380e-4,
+    "fci16nir": 1.610e-4,
+    "fci22nir": 2.250e-4,
+    "fci38ir": 3.800e-4,
+    "fci63wv": 6.300e-4,
+    "fci73wv": 7.350e-4,
+    "fci87ir": 8.700e-4,
+    "fci97ir": 9.660e-4,
+    "fci105ir": 10.500e-4,
+    "fci123ir": 12.300e-4,
+    "fci133ir": 13.300e-4,
+}
+AIRMASS_CHANNELS = ["fci63wv", "fci73wv", "fci97ir", "fci105ir"]
 PUBLISH_TARGETS = ["local", "arraylake", "none"]
 # stormscope-eu's root already holds this script's older ring-buffer schema
 # (05_stormscope_eu_pipeline.py's previous version) -- IceChunkBackend's own
 # root-member scan breaks the moment it finds a subgroup instead of an array
 # while listing, so root and any subgroup are mutually exclusive for it, not
 # just a style choice. This notebook-mirroring, single-cube-per-run schema
-# is fundamentally different (16 raw channel arrays, no ring buffer) and
+# is fundamentally different (no ring buffer) and
 # needs its own group.
 ARRAYLAKE_GROUP_PATH = "stormscope_v2"
 
@@ -366,6 +388,23 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     return np.moveaxis(rgb, -3, -1).astype("float32")
 
 
+def airmass(arr: np.ndarray, variables: list[str]) -> np.ndarray:
+    """Airmass RGB composite from the WV 6.3/7.3 and IR 9.7/10.5 um channels.
+
+    Same (..., variable, y, x) -> (..., y, x, rgb) 0..1 contract as `true_color`. The
+    radiances are converted to brightness temperatures (K) first. Off-disk pixels stay
+    NaN.
+    """
+    bt = {
+        var: radiance_to_bt(arr[..., list(variables).index(var), :, :], 1.0 / WAVELENGTH_CM[var])
+        for var in AIRMASS_CHANNELS
+    }
+    r = ((bt["fci63wv"] - bt["fci73wv"]) - (-23.8)) / (1.4 - (-23.8))
+    g = ((bt["fci97ir"] - bt["fci105ir"]) - (-39.7)) / (4.1 - (-39.7))
+    b = (bt["fci105ir"] - 209.4) / (209.4 - 244.5)
+    return np.clip(np.stack([r, g, b], axis=-1), 0, 1).astype("float32")
+
+
 def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
     """Trim a rollout step to `lead_time >= 0` -- the forecast, analysis frame included.
 
@@ -384,32 +423,27 @@ def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
 
 
 def step_writes(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[str]):
-    """One rollout step -> the `(tensors, coords, names)` triples to hand `write`.
+    """One rollout step -> the `(tensors, coords, names)` to hand `write`.
 
-    Two of them, because one `write` call applies a single coordinate selection to
-    every array it is given: the per-channel arrays are `(ensemble, time, lead_time,
-    y, x)`, while `true_color` carries the extra `rgb` dim. The `variable` dim is
-    unstacked into one named array per FCI channel, which is what a tile service
-    addresses.
+    Only the two composites are stored, not the raw channels. Both are `(ensemble,
+    time, lead_time, y, x, rgb)`, so one `write` call covers them.
 
     `copy=True` because the generator keeps writing into its own buffers between
     yields -- and with non-blocking writes, the store write for this step may still be
     reading the array after the loop has moved on.
     """
-    arr = x_pred.detach().to("cpu", torch.float32, copy=True)
+    arr = x_pred.detach().to("cpu", torch.float32, copy=True).numpy()
 
-    coords_step = OrderedDict(
+    rgb_coords_step = OrderedDict(
         (dim, values) for dim, values in coords_pred.items() if dim != "variable"
     )
-    rgb_coords_step = OrderedDict(coords_step)
     rgb_coords_step["rgb"] = RGB_VALUES
 
-    rgb = true_color(arr.numpy(), channels)
-
-    return [
-        ([arr[:, :, :, i] for i in range(len(channels))], coords_step, channels),
-        ([torch.from_numpy(rgb)], rgb_coords_step, ["true_color"]),
-    ]
+    return (
+        [torch.from_numpy(true_color(arr, channels)), torch.from_numpy(airmass(arr, channels))],
+        rgb_coords_step,
+        ["true_color", "airmass"],
+    )
 
 
 def lead_minutes(lead_time: np.ndarray) -> np.ndarray:
@@ -506,17 +540,20 @@ def main():
         georef = {"coordinates": "lat lon"}
 
         backend.add_array(total_coords, [])  # coordinate arrays only
-        backend.add_array(total_coords, channels, fill_value=float("nan"))
-        for ch in channels:
-            backend.root[ch].attrs.update(
-                {**georef, "units": "mW m-2 sr-1 (cm-1)-1"}  # FCI spectral radiance, not brightness temp
-            )
-        backend.add_array(rgb_coords, "true_color", fill_value=float("nan"))
+        backend.add_array(rgb_coords, ["true_color", "airmass"], fill_value=float("nan"))
         backend.root["true_color"].attrs.update(
             {
                 **georef,
                 "long_name": "true-colour RGB composite (VIS 0.6/0.5/0.4 um), 0-1",
                 "source_channels": " ".join(RGB_CHANNELS),
+            }
+        )
+        backend.root["airmass"].attrs.update(
+            {
+                **georef,
+                "long_name": "airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, IR 10.5 um "
+                             "brightness temperatures), 0-1",
+                "source_channels": " ".join(AIRMASS_CHANNELS),
             }
         )
         add_coord(
@@ -553,8 +590,7 @@ def main():
         if backend is not None:
             # Forecast only: step 0's five past observed frames are model input, not output.
             x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
-            for tensors, coords_step, names in step_writes(x_pred_out, coords_pred_out, channels):
-                backend.write(tensors, coords_step, names)
+            backend.write(*step_writes(x_pred_out, coords_pred_out, channels))
 
             lead = lead_minutes(coords_pred_out["lead_time"])
             if step == 0:

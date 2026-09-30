@@ -98,6 +98,15 @@ uv run python 06_stormscope_eu_pipeline.py --publish-target none          # PNG 
 | `--arraylake-repo` | `$ARRAYLAKE_REPO` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` (not `ARRAYLAKE_TOKEN`) |
 | `--device` | `auto` | `auto` \| `cuda` \| `cpu` |
 
+Unlike the notebook, it stores only two RGB composites, not the 16 raw channels. Both are
+`(ensemble, time, lead_time, y, x, rgb)` float32 in 0–1:
+
+- `true_color`: the VIS 0.6/0.5/0.4 µm recipe, as in the notebook.
+- `airmass`: WV 6.3−7.3, IR 9.7−10.5 and IR 10.5 µm brightness temperatures, converted
+  from radiance with `earth2studio.data.utils.radiance_to_bt`. Blue uses
+  `(bt105 - 209.4) / (209.4 - 244.5)`, which clips to 0 above 209.4 K. So only cloud
+  tops colder than that get any blue.
+
 Each run overwrites the group. It saves a true-colour PNG of the last step to
 `<output-dir>/stormscope_eu_latest.png`. The model checkpoint (`nvidia/stormscope-meteosat`
 on Hugging Face) is downloaded on first run.
