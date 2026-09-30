@@ -62,7 +62,7 @@ import pyproj
 import torch
 from dotenv import load_dotenv
 from tqdm import tqdm
-from zarr.codecs import BloscCodec
+from zarr.codecs import BloscCodec, ZstdCodec
 
 import earth2studio
 from earth2studio.data import fetch_data
@@ -111,9 +111,10 @@ AIRMASS_CHANNELS = ["fci63wv", "fci73wv", "fci97ir", "fci105ir"]
 # is absent, and the backend leaves a dimension it has no chunk for unsplit, so a chunk
 # holds all three bands. `lat`/`lon` use the same y/x chunks (see add_coord).
 CHUNKS = {"ensemble": 1, "time": 1, "lead_time": 1, "y": 560, "x": 1216}
-# Blosc byte-shuffle groups each value's bytes (exponents together, mantissas together)
-# before zstd, which compresses smooth float fields such as lat/lon much better.
-COMPRESSOR = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
+COMPRESSOR = ZstdCodec(level=3)
+# lat/lon only: Blosc byte-shuffle groups each value's bytes (exponents together,
+# mantissas together) before zstd, which compresses smooth float fields much better.
+LATLON_COMPRESSOR = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
 
 # MTG-I1 FCI fixed grid as a CF geostationary projection. `x`/`y` are scan angles in
 # radians; `pyproj.CRS.from_cf` scales them by `perspective_point_height`. Checked against
@@ -385,6 +386,7 @@ def add_coord(
     dims: tuple[str, ...],
     attrs: dict | None = None,
     dtype=None,
+    compressors=None,
 ) -> None:
     """Write a non-dimension coordinate, e.g. 2-D `lat`/`lon` over `(y, x)`.
 
@@ -408,7 +410,7 @@ def add_coord(
             chunks=chunks,
             dtype=values.dtype,
             dimension_names=list(dims),
-            compressors=backend.zarr_codecs,
+            compressors=compressors or backend.zarr_codecs,
         )
         array[:] = values
     if attrs:
@@ -628,11 +630,13 @@ def main():
         )
         add_coord(
             backend, "lat", model.lat, ("y", "x"),
-            {"standard_name": "latitude", "units": "degrees_north"}, dtype="float32",
+            {"standard_name": "latitude", "units": "degrees_north"},
+            dtype="float32", compressors=[LATLON_COMPRESSOR],
         )
         add_coord(
             backend, "lon", model.lon, ("y", "x"),
-            {"standard_name": "longitude", "units": "degrees_east"}, dtype="float32",
+            {"standard_name": "longitude", "units": "degrees_east"},
+            dtype="float32", compressors=[LATLON_COMPRESSOR],
         )
         add_grid_mapping(backend, GRID_MAPPING, FCI_GEOS)
         for dim, axis, direction in (("x", "X", "east"), ("y", "Y", "north")):
