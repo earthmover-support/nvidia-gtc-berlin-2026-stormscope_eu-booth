@@ -10,7 +10,8 @@ streaming schema (reduced here to the two composites, `true_color` and
 10-minute rollout step as it is produced, rather than computing the whole
 forecast first and publishing once. Unlike the official demo, this writes to
 the root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026` (see ARRAYLAKE_REPO
-below), the same repo and group as demo.ipynb: each run replaces the other's cube.
+below), the same repo and group as demo.ipynb. Runs accumulate: each one appends
+its init to `time` in a schema commit of its own, then fills it step by step.
 
 Publishing goes through Earth2Studio's `earth2studio.io.IceChunkBackend`
 directly, rather than the official demo's `ArraylakeBackend(IceChunkBackend)`
@@ -19,7 +20,10 @@ subclass: `arraylake.Client.get_icechunk_storage(name)` returns a plain
 `storage` parameter already accepts -- it calls
 `icechunk.Repository.open_or_create(storage, ...)` internally either way, so
 the hosted-vs-local choice is just which `storage` object gets passed in,
-and no subclass is needed. `add_coord()` below is the one piece of the
+and no Arraylake subclass is needed. The one subclass here,
+`ReopenableIceChunkBackend`, only works around base `IceChunkBackend` failing
+to reopen a repo that holds a scalar array (the CF grid mapping), which
+appending to an existing cube requires. `add_coord()` below is the one piece of the
 official demo's subclass that base `IceChunkBackend` genuinely lacks --
 writing a non-dimension 2-D coordinate (`lat`/`lon`) without it being taken
 for a new index dimension -- ported as a plain function against
@@ -566,8 +570,31 @@ def lead_minutes(lead_time: np.ndarray) -> np.ndarray:
     return (lead_time / np.timedelta64(1, "m")).astype(int)
 
 
+class ReopenableIceChunkBackend(IceChunkBackend):
+    """`IceChunkBackend` that can reopen a repo holding a scalar array.
+
+    Runs append to the existing cube, so the repo is reopened on every run. Base
+    `_read_store_state` iterates each array's `dimension_names`, and zarr stores a
+    scalar's `()` as None -- the CF grid mapping (see add_grid_mapping) is a scalar,
+    so opening fails with a TypeError. Scalars have no dims or chunks to record, so
+    this version of the scan just skips them.
+    """
+
+    def _read_store_state(self, chunks: dict[str, int]) -> None:
+        self.coords = OrderedDict()
+        self.chunks = chunks.copy()
+        arrays = [(name, array) for name, array in self.root.arrays() if array.ndim > 0]
+        for _, array in arrays:
+            for dim in array.metadata.dimension_names:
+                if dim not in self.coords:
+                    self.coords[dim] = self.root[dim][:]
+        for name, array in arrays:
+            if name not in self.coords:
+                self.chunks.update(zip(array.metadata.dimension_names, array.chunks))
+
+
 def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
-    """Open the Icechunk store to publish into. Returns (backend, location)."""
+    """Open the Icechunk store to publish into, keeping earlier runs. Returns (backend, location)."""
     local_icechunk_path = os.path.join(output_dir, "stormscope_eu.icechunk")
     if publish_target == "arraylake":
         import arraylake
@@ -577,18 +604,145 @@ def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
         # subclass is needed (see module docstring).
         client = arraylake.Client(token=os.environ["ARRAYLAKE_API_TOKEN"])
         storage = client.get_icechunk_storage(arraylake_repo)
-        backend = IceChunkBackend(
-            storage=storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR],
-            backend_kwargs={"overwrite": True},
-        )
+        backend = ReopenableIceChunkBackend(storage=storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR])
         location = arraylake_repo
     else:
-        backend = IceChunkBackend(
-            local_icechunk_path, chunks=CHUNKS, zarr_codecs=[COMPRESSOR],
-            backend_kwargs={"overwrite": True},
-        )
+        backend = ReopenableIceChunkBackend(local_icechunk_path, chunks=CHUNKS, zarr_codecs=[COMPRESSOR])
         location = local_icechunk_path
     return backend, location
+
+
+def create_schema(
+    backend: IceChunkBackend, model: StormScopeMeteosatEU, coords: OrderedDict, lead_time: np.ndarray
+) -> None:
+    """Allocate the cube in an empty repo, sized for this run's init alone.
+
+    Only the forecast is stored, so `lead_time` runs from 0 -- the observed analysis
+    frame -- to n_steps * 10 min, and each rollout step fills its own slice. Later
+    runs grow `time` by their own init (see `extend_schema`), so `time` only ever
+    lists inits that were actually generated.
+    """
+    total_coords = east_positive(
+        OrderedDict(
+            ensemble=coords["ensemble"],
+            time=coords["time"],
+            lead_time=lead_time,
+            y=coords["y"],
+            x=coords["x"],
+        )
+    )
+    rgb_coords = OrderedDict(**total_coords, rgb=RGB_VALUES)
+
+    backend.add_array(total_coords, [])  # coordinate arrays only
+    backend.add_array(rgb_coords, ["true_color", "airmass"], fill_value=float("nan"))
+    backend.root["true_color"].attrs.update(
+        {
+            **GEOREF,
+            "long_name": "true-colour RGB composite (VIS 0.6/0.5/0.4 um), 0-1",
+            "source_channels": " ".join(RGB_CHANNELS),
+        }
+    )
+    backend.root["airmass"].attrs.update(
+        {
+            **GEOREF,
+            "long_name": "EUMETSAT airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, "
+                         "WV 6.3 um inverted brightness temperatures), 0-1",
+            "source_channels": " ".join(AIRMASS_CHANNELS),
+        }
+    )
+    add_coord(
+        backend, "lat", model.lat, ("y", "x"),
+        {"standard_name": "latitude", "units": "degrees_north"},
+        dtype="float32", compressors=[LATLON_COMPRESSOR],
+    )
+    add_coord(
+        backend, "lon", model.lon, ("y", "x"),
+        {"standard_name": "longitude", "units": "degrees_east"},
+        dtype="float32", compressors=[LATLON_COMPRESSOR],
+    )
+    add_grid_mapping(backend, GRID_MAPPING, FCI_GEOS)
+    geozarr = geozarr_attrs(total_coords["y"], total_coords["x"])
+    for name in ("true_color", "airmass", "lat", "lon"):
+        backend.root[name].attrs.update(geozarr)
+    for dim, axis, direction in (("x", "X", "east"), ("y", "Y", "north")):
+        backend.root[dim].attrs.update(
+            {
+                "standard_name": f"projection_{dim}_coordinate",
+                "units": "rad",
+                "axis": axis,
+                "long_name": f"FCI fixed grid projection {dim}-coordinate "
+                             f"(scan angle, positive {direction})",
+            }
+        )
+    # valid_time is 2-D: one run per `time`, each with its own `lead_time` offsets.
+    add_coord(
+        backend, "valid_time",
+        total_coords["time"][:, None] + total_coords["lead_time"][None, :],
+        ("time", "lead_time"),
+        {"standard_name": "time", "long_name": "valid time (time + lead_time)"},
+    )
+    backend.root["time"].attrs.update(
+        {
+            "standard_name": "forecast_reference_time",
+            "long_name": "analysis (nowcast initialisation) time",
+        }
+    )
+    backend.root["lead_time"].attrs.update(
+        {
+            "standard_name": "forecast_period",
+            "long_name": "offset from analysis time; 0 = observed analysis frame, > 0 = "
+                         "forecast. Earlier observed frames are model input and are not stored.",
+        }
+    )
+    backend.root["ensemble"].attrs.update(
+        {"standard_name": "realization", "long_name": "ensemble member"}
+    )
+    backend.root.attrs.update(
+        {
+            "title": "StormScope-EU nowcast on MTG-I1 FCI",
+            "model": "StormScopeMeteosatEU",
+            "earth2studio_version": earth2studio.__version__,
+            "fci_pixel_bbox": str(StormScopeMeteosatEU.Model_FCI_BBox),
+        }
+    )
+
+
+# Every array with a `time` dimension; `extend_schema` grows them together.
+TIME_ARRAYS = ("time", "valid_time", "true_color", "airmass")
+
+
+def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndarray) -> str | None:
+    """Append this run's init to `time` in an existing cube. Returns the commit message.
+
+    The new `time` slice of every data array reads as NaN (fill value) until the
+    rollout steps write it. An init already in `time` is a rerun: it keeps its slice,
+    which the steps overwrite in place, and there is nothing to commit (returns None).
+    An init older than the newest one is still appended at the end, so `time` is in
+    commit order, not necessarily sorted.
+    """
+    stored_lead = backend.root["lead_time"][:]
+    if not np.array_equal(stored_lead, lead_time):
+        raise ValueError(
+            f"repo has {len(stored_lead)} lead times (--n-steps {len(stored_lead) - 1}), this "
+            f"run has {len(lead_time)} (--n-steps {len(lead_time) - 1}); rerun with the repo's --n-steps"
+        )
+    init = np.datetime_as_string(time[0], unit="m")
+    stored_time = backend.coords["time"]
+    if np.isin(time, stored_time).all():
+        print(f"init {init} already in repo; overwriting its slice")
+        return None
+
+    n = len(stored_time)
+    for name in TIME_ARRAYS:
+        array = backend.root[name]
+        shape = list(array.shape)
+        shape[array.metadata.dimension_names.index("time")] += len(time)
+        array.resize(tuple(shape))
+    backend.root["time"][n:] = time
+    backend.root["valid_time"][n:] = time[:, None] + lead_time[None, :]
+    # `write` locates slices through this in-memory copy, which is read once at open.
+    backend.coords["time"] = np.concatenate([stored_time, time])
+    return f"stormscope-eu {init} extend schema"
 
 
 def main():
@@ -621,94 +775,15 @@ def main():
         backend, location = build_backend(
             args.publish_target, args.output_dir, args.arraylake_repo
         )
-        # The cube, allocated once. Only the forecast is stored, so `lead_time` runs
-        # from 0 -- the observed analysis frame -- to n_steps * 10 min, and each step
-        # below fills its own slice of it.
-        total_coords = east_positive(
-            OrderedDict(
-                ensemble=coords["ensemble"],
-                time=coords["time"],
-                lead_time=np.arange(args.n_steps + 1) * model.output_times[0],
-                y=coords["y"],
-                x=coords["x"],
-            )
-        )
-        rgb_coords = OrderedDict(**total_coords, rgb=RGB_VALUES)
-
-        backend.add_array(total_coords, [])  # coordinate arrays only
-        backend.add_array(rgb_coords, ["true_color", "airmass"], fill_value=float("nan"))
-        backend.root["true_color"].attrs.update(
-            {
-                **GEOREF,
-                "long_name": "true-colour RGB composite (VIS 0.6/0.5/0.4 um), 0-1",
-                "source_channels": " ".join(RGB_CHANNELS),
-            }
-        )
-        backend.root["airmass"].attrs.update(
-            {
-                **GEOREF,
-                "long_name": "EUMETSAT airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, "
-                             "WV 6.3 um inverted brightness temperatures), 0-1",
-                "source_channels": " ".join(AIRMASS_CHANNELS),
-            }
-        )
-        add_coord(
-            backend, "lat", model.lat, ("y", "x"),
-            {"standard_name": "latitude", "units": "degrees_north"},
-            dtype="float32", compressors=[LATLON_COMPRESSOR],
-        )
-        add_coord(
-            backend, "lon", model.lon, ("y", "x"),
-            {"standard_name": "longitude", "units": "degrees_east"},
-            dtype="float32", compressors=[LATLON_COMPRESSOR],
-        )
-        add_grid_mapping(backend, GRID_MAPPING, FCI_GEOS)
-        geozarr = geozarr_attrs(total_coords["y"], total_coords["x"])
-        for name in ("true_color", "airmass", "lat", "lon"):
-            backend.root[name].attrs.update(geozarr)
-        for dim, axis, direction in (("x", "X", "east"), ("y", "Y", "north")):
-            backend.root[dim].attrs.update(
-                {
-                    "standard_name": f"projection_{dim}_coordinate",
-                    "units": "rad",
-                    "axis": axis,
-                    "long_name": f"FCI fixed grid projection {dim}-coordinate "
-                                 f"(scan angle, positive {direction})",
-                }
-            )
-        # valid_time is 2-D: one run per `time`, each with its own `lead_time` offsets.
-        add_coord(
-            backend, "valid_time",
-            total_coords["time"][:, None] + total_coords["lead_time"][None, :],
-            ("time", "lead_time"),
-            {"standard_name": "time", "long_name": "valid time (time + lead_time)"},
-        )
-        backend.root["time"].attrs.update(
-            {
-                "standard_name": "forecast_reference_time",
-                "long_name": "analysis (nowcast initialisation) time",
-            }
-        )
-        backend.root["lead_time"].attrs.update(
-            {
-                "standard_name": "forecast_period",
-                "long_name": "offset from analysis time; 0 = observed analysis frame, > 0 = "
-                             "forecast. Earlier observed frames are model input and are not stored.",
-            }
-        )
-        backend.root["ensemble"].attrs.update(
-            {"standard_name": "realization", "long_name": "ensemble member"}
-        )
-        backend.root.attrs.update(
-            {
-                "title": "StormScope-EU nowcast on MTG-I1 FCI",
-                "model": "StormScopeMeteosatEU",
-                "earth2studio_version": earth2studio.__version__,
-                "fci_pixel_bbox": str(StormScopeMeteosatEU.Model_FCI_BBox),
-            }
-        )
+        lead_time = np.arange(args.n_steps + 1) * model.output_times[0]
         init = np.datetime_as_string(coords["time"][0], unit="m")
-        print("schema ->", backend.commit(f"stormscope-eu {init} schema"))
+        if "true_color" not in backend.root:
+            create_schema(backend, model, coords, lead_time)
+            message = f"stormscope-eu {init} schema"
+        else:
+            message = extend_schema(backend, coords["time"], lead_time)
+        if message is not None:
+            print("schema ->", backend.commit(message))
 
     rgb_last = coords_last = None
     for step, (x_pred, coords_pred) in enumerate(
