@@ -46,7 +46,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1344,10
 1. **Tiles**: `al compute enable gtc-berlin tiles --sku-code xs`. The service is set
    public (`is_public: true`), so browsers and phones fetch tiles without a token.
    Disable it again after booth hours.
-2. **Inits**: the page reads `gtc-berlin/stormscope-eu`, whose `time` dimension is a
+2. **Inits**: the page reads `gtc-berlin/stormscope-eu_gtc_berlin_2026` (root group), whose `time` dimension is a
    rolling window of the last 6 inits. The server re-reads the `time` coordinate whenever
    `main` moves, and each tile picks its frame with `time=` + `lead_time=` on `main`.
    The newest run only offers the leads already committed (parsed from commit messages

@@ -1,11 +1,10 @@
 {
   "org": "gtc-berlin",
-  "repo": "gtc-berlin/stormscope-eu",
+  "repo": "gtc-berlin/stormscope-eu_gtc_berlin_2026",
   "branch": "main",
-  "group": "stormscope_v2",
-  "init": "2026-09-15T11:00",
+  "group": "",
 
-  "tile_base": "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu",
+  "tile_base": "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu_gtc_berlin_2026",
   "tile_ref_mode": "branch",
   "data_bounds": [-63.76155, 29.80654, 72.30417, 75.78313],
   "max_tile_level": 7,
