@@ -9,9 +9,8 @@ streaming schema (reduced here to the two composites, `true_color` and
 `airmass`), and writing one Icechunk commit per
 10-minute rollout step as it is produced, rather than computing the whole
 forecast first and publishing once. Unlike the official demo, this writes to
-the `stormscope_v2` group of `gtc-berlin/stormscope-eu` (a personal/test
-repo), not the shared `gtc-berlin/stormscope_eu_gtc_berlin_2026` target --
-see ARRAYLAKE_GROUP_PATH below.
+the root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026` (see ARRAYLAKE_REPO
+below), not the shared `gtc-berlin/stormscope_eu_gtc_berlin_2026` target.
 
 Publishing goes through Earth2Studio's `earth2studio.io.IceChunkBackend`
 directly, rather than the official demo's `ArraylakeBackend(IceChunkBackend)`
@@ -45,7 +44,7 @@ Install:
 Usage:
     python 06_stormscope_eu_pipeline.py --n-steps 3
     python 06_stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
-    python 06_stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu
+    python 06_stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
     python 06_stormscope_eu_pipeline.py --help
 """
 
@@ -163,14 +162,8 @@ ZARR_CONVENTIONS = [
 # field.
 GEOREF = {"coordinates": "lat lon valid_time", "grid_mapping": GRID_MAPPING}
 PUBLISH_TARGETS = ["local", "arraylake", "none"]
-# stormscope-eu's root already holds this script's older ring-buffer schema
-# (05_stormscope_eu_pipeline.py's previous version) -- IceChunkBackend's own
-# root-member scan breaks the moment it finds a subgroup instead of an array
-# while listing, so root and any subgroup are mutually exclusive for it, not
-# just a style choice. This notebook-mirroring, single-cube-per-run schema
-# is fundamentally different (no ring buffer) and
-# needs its own group.
-ARRAYLAKE_GROUP_PATH = "stormscope_v2"
+# Default --publish-target arraylake destination; the cube goes in its root group.
+ARRAYLAKE_REPO = "gtc-berlin/stormscope-eu_gtc_berlin_2026"
 
 # EUMETSAT Data Store freshness search (see resolve_start_time), matching
 # the official demo's defaults.
@@ -203,7 +196,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--publish-target", choices=PUBLISH_TARGETS, default=None,
                    help="local = Icechunk repo on disk, arraylake = hosted repo (needs ARRAYLAKE_API_TOKEN), "
                         "none = skip publish [env: STORMSCOPE_PUBLISH_TARGET, default local]")
-    p.add_argument("--arraylake-repo", default=os.environ.get("ARRAYLAKE_REPO"),
+    p.add_argument("--arraylake-repo", default=os.environ.get("ARRAYLAKE_REPO", ARRAYLAKE_REPO),
                    help="ArrayLake org/repo when --publish-target arraylake [env: ARRAYLAKE_REPO]")
     p.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
     args = p.parse_args()
@@ -574,7 +567,7 @@ def lead_minutes(lead_time: np.ndarray) -> np.ndarray:
 
 
 def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
-    """Open the Icechunk store to publish into. Returns (backend, location, group_path)."""
+    """Open the Icechunk store to publish into. Returns (backend, location)."""
     local_icechunk_path = os.path.join(output_dir, "stormscope_eu.icechunk")
     if publish_target == "arraylake":
         import arraylake
@@ -584,35 +577,18 @@ def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
         # subclass is needed (see module docstring).
         client = arraylake.Client(token=os.environ["ARRAYLAKE_API_TOKEN"])
         storage = client.get_icechunk_storage(arraylake_repo)
-        group_path = ARRAYLAKE_GROUP_PATH
         backend = IceChunkBackend(
             storage=storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR],
-            backend_kwargs={"overwrite": True, "path": group_path},
+            backend_kwargs={"overwrite": True},
         )
-        location = f"{arraylake_repo}::{group_path}"
+        location = arraylake_repo
     else:
         backend = IceChunkBackend(
             local_icechunk_path, chunks=CHUNKS, zarr_codecs=[COMPRESSOR],
             backend_kwargs={"overwrite": True},
         )
         location = local_icechunk_path
-        group_path = None
-    return backend, location, group_path
-
-
-def commit(backend: IceChunkBackend, message: str, group_path: str | None) -> str:
-    """`backend.commit`, keeping the group this backend was opened on.
-
-    `IceChunkBackend.commit()` re-opens the new session's root as
-    `zarr.group(store)` with no path, so a backend opened on a subgroup
-    would silently drop back to the repo root after its first commit.
-    """
-    import zarr
-
-    snapshot_id = backend.commit(message)
-    if group_path:
-        backend.root = zarr.group(backend.store, overwrite=False, path=group_path)
-    return snapshot_id
+    return backend, location
 
 
 def main():
@@ -640,9 +616,9 @@ def main():
     channels = [str(v) for v in coords["variable"]]
 
     if args.publish_target == "none":
-        backend = group_path = None
+        backend = None
     else:
-        backend, location, group_path = build_backend(
+        backend, location = build_backend(
             args.publish_target, args.output_dir, args.arraylake_repo
         )
         # The cube, allocated once. Only the forecast is stored, so `lead_time` runs
@@ -732,7 +708,7 @@ def main():
             }
         )
         init = np.datetime_as_string(coords["time"][0], unit="m")
-        print("schema ->", commit(backend, f"stormscope-eu {init} schema", group_path))
+        print("schema ->", backend.commit(f"stormscope-eu {init} schema"))
 
     rgb_last = coords_last = None
     for step, (x_pred, coords_pred) in enumerate(
@@ -753,7 +729,7 @@ def main():
                 message = f"stormscope-eu {init} +{lead[-1]} min"
             # commit flushes the background writes above, then opens a fresh session --
             # an Icechunk session is spent once committed.
-            tqdm.write(f"{message} -> {commit(backend, message, group_path)}")
+            tqdm.write(f"{message} -> {backend.commit(message)}")
 
         if step == args.n_steps:
             break

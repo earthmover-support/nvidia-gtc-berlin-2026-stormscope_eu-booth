@@ -79,13 +79,13 @@ MTG observations → Earth2Studio inference → Icechunk/ArrayLake publish → t
 It uses the same freshness search (`MIN_LAG`) and the same one-commit-per-step streaming
 as `demo.ipynb`. It differs in two ways. It publishes through plain
 `earth2studio.io.IceChunkBackend` with `arraylake.Client.get_icechunk_storage`, so it needs
-no backend subclass. And it writes to group `stormscope_v2` of `gtc-berlin/stormscope-eu`,
-not to the booth target.
+no backend subclass. And it writes to the root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026`
+(the default for `--arraylake-repo`), not to the booth target.
 
 ```bash
 uv run python 06_stormscope_eu_pipeline.py --n-steps 3                    # local Icechunk in outputs/
 uv run python 06_stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
-uv run python 06_stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu
+uv run python 06_stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
 uv run python 06_stormscope_eu_pipeline.py --publish-target none          # PNG only
 ```
 
@@ -95,7 +95,7 @@ uv run python 06_stormscope_eu_pipeline.py --publish-target none          # PNG 
 | `--n-steps` | `12` | 10-min steps |
 | `--output-dir` | `outputs` | PNG + local Icechunk store |
 | `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` \| `none` |
-| `--arraylake-repo` | `$ARRAYLAKE_REPO` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
+| `--arraylake-repo` | `$ARRAYLAKE_REPO` or `gtc-berlin/stormscope-eu_gtc_berlin_2026` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
 | `--device` | `auto` | `auto` \| `cuda` \| `cpu` |
 
 Unlike the notebook, it stores only two RGB composites, not the 16 raw channels. Both are
@@ -129,6 +129,6 @@ are one `(ensemble, time, lead_time)` by 560 × 1216 pixels (2 × 2 per frame), 
 `rgb` bands in one chunk, zstd-compressed; `lat`/`lon` share the y/x chunks, stored as
 float32 with Blosc zstd + byte shuffle.
 
-Each run overwrites the group. It saves a true-colour PNG of the last step to
+Each run overwrites the repo's root group. It saves a true-colour PNG of the last step to
 `<output-dir>/stormscope_eu_latest.png`. The model checkpoint (`nvidia/stormscope-meteosat`
 on Hugging Face) is downloaded on first run.
