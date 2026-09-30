@@ -10,7 +10,7 @@ streaming schema (reduced here to the two composites, `true_color` and
 10-minute rollout step as it is produced, rather than computing the whole
 forecast first and publishing once. Unlike the official demo, this writes to
 the root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026` (see ARRAYLAKE_REPO
-below), not the shared `gtc-berlin/stormscope_eu_gtc_berlin_2026` target.
+below), the same repo and group as demo.ipynb: each run replaces the other's cube.
 
 Publishing goes through Earth2Studio's `earth2studio.io.IceChunkBackend`
 directly, rather than the official demo's `ArraylakeBackend(IceChunkBackend)`

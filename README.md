@@ -7,7 +7,7 @@ NVIDIA GTC Berlin 2026.
 
 - https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/
 - https://hackmd.io/@ukEyv-C_TnK1RVN9gH211w/BkSIAjzOGl
-- https://app.earthmover.io/gtc-berlin/stormscope_eu_gtc_berlin_2026
+- https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026
 
 [`demo.ipynb`](demo.ipynb) runs
 [`StormScopeMeteosatEU`](https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/)
@@ -18,11 +18,11 @@ it is produced. By default it initialises from the freshest slot this account ma
 see `MIN_LAG` in the notebook), so the notebook can be run on a schedule as is.
 
 **Ingest target:**
-[gtc-berlin/stormscope_eu_gtc_berlin_2026](https://app.earthmover.io/gtc-berlin/stormscope_eu_gtc_berlin_2026)
+[gtc-berlin/stormscope-eu_gtc_berlin_2026](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
 
 ## Viz
 
-[Browse the dataset on Arraylake](https://app.earthmover.io/gtc-berlin/stormscope_eu_gtc_berlin_2026)
+[Browse the dataset on Arraylake](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
 — needs a login with `gtc-berlin` access.
 
 Tiles are served by the org's Flux service `tiles-4f49272b`, which is **private and
@@ -80,7 +80,8 @@ It uses the same freshness search (`MIN_LAG`) and the same one-commit-per-step s
 as `demo.ipynb`. It differs in two ways. It publishes through plain
 `earth2studio.io.IceChunkBackend` with `arraylake.Client.get_icechunk_storage`, so it needs
 no backend subclass. And it writes to the root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026`
-(the default for `--arraylake-repo`), not to the booth target.
+(the default for `--arraylake-repo`), the same repo and group as `demo.ipynb`: each run
+replaces the other's cube.
 
 ```bash
 uv run python 06_stormscope_eu_pipeline.py --n-steps 3                    # local Icechunk in outputs/
