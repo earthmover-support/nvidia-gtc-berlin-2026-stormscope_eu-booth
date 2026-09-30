@@ -125,7 +125,9 @@ The same CRS is also written with the [GeoZarr](https://geozarr.org/conventions.
 and `spatial` conventions (v0.1) on `true_color`, `airmass`, `lat` and `lon`: `proj:wkt2`,
 `proj:projjson`, and an affine `spatial:transform` in metres (scan angle × satellite height),
 south-up because `y` runs south to north. Chunks
-are one `(ensemble, time, lead_time)` by 280 × 304 pixels, zstd-compressed.
+are one `(ensemble, time, lead_time)` by 560 × 1216 pixels (2 × 2 per frame), all three
+`rgb` bands in one chunk, zstd-compressed; `lat`/`lon` share the y/x chunks, stored as
+float32 with Blosc zstd + byte shuffle.
 
 Each run overwrites the group. It saves a true-colour PNG of the last step to
 `<output-dir>/stormscope_eu_latest.png`. The model checkpoint (`nvidia/stormscope-meteosat`
