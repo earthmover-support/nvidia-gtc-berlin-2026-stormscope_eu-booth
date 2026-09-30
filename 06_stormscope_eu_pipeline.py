@@ -451,11 +451,15 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
 
 
 def airmass(arr: np.ndarray, variables: list[str]) -> np.ndarray:
-    """Airmass RGB composite from the WV 6.3/7.3 and IR 9.7/10.5 um channels.
+    """EUMETSAT airmass RGB composite from the WV 6.3/7.3 and IR 9.7/10.5 um channels.
 
     Same (..., variable, y, x) -> (..., y, x, rgb) 0..1 contract as `true_color`. The
     radiances are converted to brightness temperatures (K) first. Off-disk pixels stay
     NaN.
+
+    EUMETSAT recipe (EUMeTrain, "Compilation of RGB Recipes", p. 4): red WV6.2 - WV7.3,
+    green IR9.7 - IR10.8, blue WV6.2 inverted, gamma 1 -- on FCI, WV6.3 and IR10.5. The
+    ranges here are within ~1.5 K of the recipe's (-25..0, -40..+5, 243..208 K).
     """
     bt = {
         var: radiance_to_bt(arr[..., list(variables).index(var), :, :], 1.0 / WAVELENGTH_CM[var])
@@ -463,7 +467,7 @@ def airmass(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     }
     r = ((bt["fci63wv"] - bt["fci73wv"]) - (-23.8)) / (1.4 - (-23.8))
     g = ((bt["fci97ir"] - bt["fci105ir"]) - (-39.7)) / (4.1 - (-39.7))
-    b = (bt["fci105ir"] - 209.4) / (209.4 - 244.5)
+    b = (bt["fci63wv"] - 244.5) / (209.4 - 244.5)  # WV6.3 inverted: dry upper levels -> blue
     return np.clip(np.stack([r, g, b], axis=-1), 0, 1).astype("float32")
 
 
@@ -610,8 +614,8 @@ def main():
         backend.root["airmass"].attrs.update(
             {
                 **GEOREF,
-                "long_name": "airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, IR 10.5 um "
-                             "brightness temperatures), 0-1",
+                "long_name": "EUMETSAT airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, "
+                             "WV 6.3 um inverted brightness temperatures), 0-1",
                 "source_channels": " ".join(AIRMASS_CHANNELS),
             }
         )

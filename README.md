@@ -102,10 +102,19 @@ Unlike the notebook, it stores only two RGB composites, not the 16 raw channels.
 `(ensemble, time, lead_time, y, x, rgb)` float32 in 0–1:
 
 - `true_color`: the VIS 0.6/0.5/0.4 µm recipe, as in the notebook.
-- `airmass`: WV 6.3−7.3, IR 9.7−10.5 and IR 10.5 µm brightness temperatures, converted
-  from radiance with `earth2studio.data.utils.radiance_to_bt`. Blue uses
-  `(bt105 - 209.4) / (209.4 - 244.5)`, which clips to 0 above 209.4 K. So only cloud
-  tops colder than that get any blue.
+- `airmass`: the
+  [EUMETSAT airmass recipe](https://eumetrain.org/sites/default/files/2020-05/RGB_recipes.pdf)
+  (p. 4), on brightness temperatures converted from radiance with
+  `earth2studio.data.utils.radiance_to_bt`:
+
+  ```
+  R = ((bt63 - bt73)  - (-23.8)) / (1.4 - (-23.8))
+  G = ((bt97 - bt105) - (-39.7)) / (4.1 - (-39.7))
+  B = (bt63 - 244.5) / (209.4 - 244.5)   # WV6.3 inverted
+  ```
+
+  Each is clipped to 0–1, gamma 1. The ranges are within ~1.5 K of EUMETSAT's (−25…0 K,
+  −40…+5 K, 243→208 K).
 
 Georeference follows #3, so Flux tiles render north of ~50°N. Both composites name a CF
 geostationary grid mapping, `fci_geos_projection` (`sweep_angle_axis="y"`), in their
