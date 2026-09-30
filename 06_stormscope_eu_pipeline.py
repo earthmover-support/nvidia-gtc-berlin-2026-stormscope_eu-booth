@@ -106,11 +106,11 @@ WAVELENGTH_CM = {
 }
 AIRMASS_CHANNELS = ["fci63wv", "fci73wv", "fci97ir", "fci105ir"]
 
-# 280 x 304 spatial chunks: 4 x 8 = 32 per frame of the default Model_FCI_BBox
-# (y=1120, x=2432). A web map tile over Europe then reads a handful of chunks instead of
-# the whole frame (~33 MB for a composite). `rgb` is absent, and the backend leaves a
-# dimension it has no chunk for unsplit, so a chunk holds all three bands.
-CHUNKS = {"ensemble": 1, "time": 1, "lead_time": 1, "y": 280, "x": 304}
+# 560 x 1216 spatial chunks: 2 x 2 = 4 per frame of the default Model_FCI_BBox
+# (y=1120, x=2432), ~8 MB per composite chunk instead of the whole frame (~33 MB). `rgb`
+# is absent, and the backend leaves a dimension it has no chunk for unsplit, so a chunk
+# holds all three bands. `lat`/`lon` use the same y/x chunks (see add_coord).
+CHUNKS = {"ensemble": 1, "time": 1, "lead_time": 1, "y": 560, "x": 1216}
 COMPRESSOR = ZstdCodec(level=3)
 
 # MTG-I1 FCI fixed grid as a CF geostationary projection. `x`/`y` are scan angles in
@@ -394,11 +394,15 @@ def add_coord(
     `backend.root` without needing a backend subclass.
     """
     values = np.asarray(values.detach().cpu() if torch.is_tensor(values) else values)
+    # y/x split like the data arrays; any other dim stays whole
+    chunks = tuple(
+        CHUNKS[dim] if dim in ("y", "x") else size for dim, size in zip(dims, values.shape)
+    )
     if name not in backend.root:
         array = backend.root.create_array(
             name,
             shape=values.shape,
-            chunks=values.shape,
+            chunks=chunks,
             dtype=values.dtype,
             dimension_names=list(dims),
             compressors=backend.zarr_codecs,
