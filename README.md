@@ -17,6 +17,10 @@ it is produced. By default it initialises from the freshest slot this account ma
 (~80–90 min behind real time — downloading anything fresher needs the EUMETSAT NRT licence;
 see `MIN_LAG` in the notebook), so the notebook can be run on a schedule as is.
 
+> **Note:** `demo.ipynb` is only here for debugging on Coiled. The pipeline script
+> ([`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py), see
+> [Pipeline script](#pipeline-script)) is what produces the dataset.
+
 **Ingest target:**
 [gtc-berlin/stormscope-eu_gtc_berlin_2026](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
 
