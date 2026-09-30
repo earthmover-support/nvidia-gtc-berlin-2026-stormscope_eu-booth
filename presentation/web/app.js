@@ -42,7 +42,7 @@
   };
 
   // seconds each forecast frame stays on screen
-  const SPEEDS = { slow: 1.5, normal: 1, fast: 0.5 };
+  const SPEEDS = { slow: 0.75, normal: 0.5, fast: 0.25 };
 
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
@@ -97,6 +97,25 @@
   let layerKey = "";
   const layers = new Map(); // lead -> MapLibre source/layer id
 
+  // Smallest zoom at which the whole panel, swayed and pitched, stays inside
+  // camera.cover [west, south, east, north]: the part of Europe the forecast always fills.
+  function coverZoom(cam, box) {
+    if (!cam.cover) return cam.zoom;
+    const mx = (lon) => (lon + 180) / 360;
+    const my = (lat) => (1 - Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) / Math.PI) / 2;
+    const [w, s, e, n] = cam.cover;
+    const cx = mx(cam.lon), cy = my(cam.lat);
+    const rot = (cam.sway_deg * Math.PI) / 180;
+    const W = box.clientWidth / 2, H = box.clientHeight / 2;
+    const halfX = W * Math.cos(rot) + H * Math.sin(rot);
+    const halfY = W * Math.sin(rot) + H * Math.cos(rot);
+    const far = 1 / Math.cos((cam.pitch * Math.PI) / 180) ** 2; // pitch stretches the top half
+    const zx = Math.log2(halfX / (512 * Math.min(cx - mx(w), mx(e) - cx)));
+    const zn = Math.log2((halfY * far) / (512 * (cy - my(n))));
+    const zs = Math.log2(halfY / (512 * (my(s) - cy)));
+    return Math.max(zx, zn, zs);
+  }
+
   function initGlobe() {
     const c = S.cfg;
     try {
@@ -126,6 +145,9 @@
 
     // Camera: always looking at Europe, gentle sway of the bearing around a fixed centre.
     const cam = c.camera;
+    const fitZoom = () => map.jumpTo({ zoom: Math.max(cam.zoom, coverZoom(cam, map.getContainer())) });
+    fitZoom();
+    map.on("resize", fitZoom);
     const t0 = performance.now();
     const sway = () => {
       const t = (performance.now() - t0) / 1000;

@@ -25,7 +25,8 @@
   "hold_ms": 2500,
 
   "station": { "name": "STATION Berlin", "lat": 52.4999581, "lon": 13.3757385 },
-  "camera": { "lon": 10.0, "lat": 47.0, "zoom": 3.2, "pitch": 32, "sway_deg": 10, "sway_period_s": 120 },
+  "camera": { "lon": 12.0, "lat": 49.0, "zoom": 3.2, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,
+              "cover": [-12, 34, 40, 64] },
 
   "viewer_url": "",
   "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
@@ -45,7 +46,7 @@
     },
     "query": [
       "SELECT lead_time, AVG(true_color) AS brightness",
-      "FROM \"stormscope-eu\".\"stormscope_v2\"",
+      "FROM \"stormscope-eu_gtc_berlin_2026\".\"root\"",
       "WHERE time = TIMESTAMP '{init}' AND lead_time > INTERVAL '0 minutes'",
       "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",
       "  AND lon BETWEEN {lon} - {box} AND {lon} + {box}",
