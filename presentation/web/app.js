@@ -42,7 +42,7 @@
   };
 
   // seconds each forecast frame stays on screen
-  const SPEEDS = { slow: 3, normal: 2, fast: 1 };
+  const SPEEDS = { slow: 1.5, normal: 1, fast: 0.5 };
 
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
