@@ -64,7 +64,7 @@ Credentials come from a local `.env` (see [`.env.example`](.env.example)):
 
 - `EUMETSAT_CONSUMER_KEY` / `EUMETSAT_CONSUMER_SECRET` — model input, from
   <https://api.eumetsat.int/api-key/>
-- `ARRAYLAKE_TOKEN` — ingest target, or `al auth login`
+- `ARRAYLAKE_API_TOKEN` — ingest target, or `al auth login` (the notebook and the script both read it)
 
 ## Pipeline script
 
@@ -95,7 +95,7 @@ uv run python 06_stormscope_eu_pipeline.py --publish-target none          # PNG 
 | `--n-steps` | `12` | 10-min steps |
 | `--output-dir` | `outputs` | PNG + local Icechunk store |
 | `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` \| `none` |
-| `--arraylake-repo` | `$ARRAYLAKE_REPO` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` (not `ARRAYLAKE_TOKEN`) |
+| `--arraylake-repo` | `$ARRAYLAKE_REPO` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
 | `--device` | `auto` | `auto` \| `cuda` \| `cpu` |
 
 Unlike the notebook, it stores only two RGB composites, not the 16 raw channels. Both are
