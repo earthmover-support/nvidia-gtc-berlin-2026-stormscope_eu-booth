@@ -62,7 +62,7 @@ import pyproj
 import torch
 from dotenv import load_dotenv
 from tqdm import tqdm
-from zarr.codecs import ZstdCodec
+from zarr.codecs import BloscCodec
 
 import earth2studio
 from earth2studio.data import fetch_data
@@ -111,7 +111,9 @@ AIRMASS_CHANNELS = ["fci63wv", "fci73wv", "fci97ir", "fci105ir"]
 # is absent, and the backend leaves a dimension it has no chunk for unsplit, so a chunk
 # holds all three bands. `lat`/`lon` use the same y/x chunks (see add_coord).
 CHUNKS = {"ensemble": 1, "time": 1, "lead_time": 1, "y": 560, "x": 1216}
-COMPRESSOR = ZstdCodec(level=3)
+# Blosc byte-shuffle groups each value's bytes (exponents together, mantissas together)
+# before zstd, which compresses smooth float fields such as lat/lon much better.
+COMPRESSOR = BloscCodec(cname="zstd", clevel=3, shuffle="shuffle")
 
 # MTG-I1 FCI fixed grid as a CF geostationary projection. `x`/`y` are scan angles in
 # radians; `pyproj.CRS.from_cf` scales them by `perspective_point_height`. Checked against
