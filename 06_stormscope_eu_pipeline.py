@@ -382,6 +382,7 @@ def add_coord(
     values,
     dims: tuple[str, ...],
     attrs: dict | None = None,
+    dtype=None,
 ) -> None:
     """Write a non-dimension coordinate, e.g. 2-D `lat`/`lon` over `(y, x)`.
 
@@ -393,7 +394,7 @@ def add_coord(
     (a zarr Group), so it works here as a plain function against
     `backend.root` without needing a backend subclass.
     """
-    values = np.asarray(values.detach().cpu() if torch.is_tensor(values) else values)
+    values = np.asarray(values.detach().cpu() if torch.is_tensor(values) else values, dtype=dtype)
     # y/x split like the data arrays; any other dim stays whole
     chunks = tuple(
         CHUNKS[dim] if dim in ("y", "x") else size for dim, size in zip(dims, values.shape)
@@ -625,11 +626,11 @@ def main():
         )
         add_coord(
             backend, "lat", model.lat, ("y", "x"),
-            {"standard_name": "latitude", "units": "degrees_north"},
+            {"standard_name": "latitude", "units": "degrees_north"}, dtype="float32",
         )
         add_coord(
             backend, "lon", model.lon, ("y", "x"),
-            {"standard_name": "longitude", "units": "degrees_east"},
+            {"standard_name": "longitude", "units": "degrees_east"}, dtype="float32",
         )
         add_grid_mapping(backend, GRID_MAPPING, FCI_GEOS)
         for dim, axis, direction in (("x", "X", "east"), ("y", "Y", "north")):
