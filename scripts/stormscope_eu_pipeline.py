@@ -41,10 +41,10 @@ Install:
         cartopy python-dotenv icechunk arraylake xarray zarr eumdac
 
 Usage:
-    python 06_stormscope_eu_pipeline.py --n-steps 3
-    python 06_stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
-    python 06_stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
-    python 06_stormscope_eu_pipeline.py --help
+    python scripts/stormscope_eu_pipeline.py --n-steps 3
+    python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
+    python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
+    python scripts/stormscope_eu_pipeline.py --help
 """
 
 import argparse

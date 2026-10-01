@@ -9,7 +9,7 @@ NVIDIA GTC Berlin 2026.
 - https://hackmd.io/@ukEyv-C_TnK1RVN9gH211w/BkSIAjzOGl
 - https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026
 
-[`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py) runs
+[`scripts/stormscope_eu_pipeline.py`](scripts/stormscope_eu_pipeline.py) runs
 [`StormScopeMeteosatEU`](https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/)
 end to end: fetch six consecutive FCI frames from the EUMETSAT Data Store, roll the model
 forward autoregressively in 10-minute steps, and write each step to Icechunk on Arraylake as
@@ -72,7 +72,7 @@ overwrites its slice.
 
 ## Pipeline script
 
-[`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py) comes from [negin513/GTC-Berlin-EarthMover](https://github.com/negin513/GTC-Berlin-EarthMover)
+[`scripts/stormscope_eu_pipeline.py`](scripts/stormscope_eu_pipeline.py) comes from [negin513/GTC-Berlin-EarthMover](https://github.com/negin513/GTC-Berlin-EarthMover)
 (`gtc-demo/05_stormscope_eu_pipeline.py`):
 
 ```
@@ -87,10 +87,10 @@ extends the schema by its init time and appends along `time`, keeping earlier in
 run must therefore use the same `--n-steps` (lead-time layout).
 
 ```bash
-uv run python 06_stormscope_eu_pipeline.py --n-steps 3                    # local Icechunk in outputs/
-uv run python 06_stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
-uv run python 06_stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
-uv run python 06_stormscope_eu_pipeline.py --publish-target none          # PNG only
+uv run python scripts/stormscope_eu_pipeline.py --n-steps 3                    # local Icechunk in outputs/
+uv run python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
+uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
+uv run python scripts/stormscope_eu_pipeline.py --publish-target none          # PNG only
 ```
 
 | Flag | Default | Notes |
