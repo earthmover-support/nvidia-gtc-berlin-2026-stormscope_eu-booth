@@ -98,6 +98,14 @@ Reference layout: `earthmover-public/goes-16`, group `ABI-L2-MCMIPF/post-2023-04
 - `raster/rgb` renders a 3-band composite from a dimension of length 3 (`rgb` =
   `red`/`green`/`blue`). Pass `variables=true_color` with no band selector.
   `stormscope_v2`'s `true_color` is already stretched to 0-1, so use `colorscalerange=0,1`.
+- `raster/rgb` maps a size-3 dim named `band` or `rgb` to R, G, B **by position**. Every
+  rgb tile logs "Treating dimension as RGB bands in positional R, G, B order; no attributes
+  confirm this." The warning is unconditional: xpublish-tiles (`pipeline.py`, `apply_query`,
+  checked at 7372993, 2026-09-16) reads no attribute for band order, so no metadata of ours
+  silences it (#10). The only attributes the RGB path reads are `valid_min`/`valid_max` on the
+  data variable. They set the byte stretch, and without them float data falls back to 0..1.
+  We write the order anyway, as `color_interpretation = "red green blue"` on the `rgb`
+  coordinate, so a reader (or a later service version) does not have to guess.
 - The service offers two styles, `raster` and `polygons`. A bogus style returns a 422 listing
   the accepted values.
 
@@ -108,6 +116,9 @@ Reference layout: `earthmover-public/goes-16`, group `ABI-L2-MCMIPF/post-2023-04
   `GEOREF`, and `east_positive` negates `x` in the schema and in every `write`. The negation has
   to go in both places, because `write` finds its slice by looking up coordinate values. The
   notebook's last cell asserts on the raw Zarr attributes.
+- **RGB band metadata (#10):** `06_stormscope_eu_pipeline.py` writes it at schema creation.
+  `fix_rgb_band_attrs.py BRANCH [--commit]` adds it to the existing repo in place (metadata
+  only, idempotent, refuses if `rgb` is not red/green/blue).
 - **Existing data:** `fix_grid_mapping.py [BRANCH]` adds the same metadata to the root group
   and `stormscope_v2` in place, without rewriting any chunks. It is idempotent. Applied to
   `main` on 2026-09-29.
@@ -150,7 +161,11 @@ SQL panel (#4) and any partial reads may benefit (not measured).
       afterwards through zarr.
 - [ ] `x`/`y` with `standard_name` and `units`. `x` positive east.
 - [ ] Optional: `valid_min`/`valid_max` on each data variable so tile requests can omit
-      `colorscalerange`.
+      `colorscalerange`. For `raster/rgb` composites they are the byte stretch, so write them:
+      `0`/`1` on `true_color` and `airmass`.
+- [ ] RGB band dim named `rgb` (or `band`), size 3, values in R, G, B order, with
+      `color_interpretation = "red green blue"` on the coordinate. The service still assumes
+      position (see above), so never reorder the bands.
 - [ ] `units` on data variables (used in legends).
 - [ ] If 2-D `lat`/`lon` are kept: `standard_name` and `units` on them. They're harmless next to
       a grid mapping, but they must not be the only georeference while they contain NaNs.

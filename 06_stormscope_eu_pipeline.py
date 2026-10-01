@@ -89,6 +89,12 @@ load_dotenv()
 # ============================================================================
 RGB_CHANNELS = ["fci06vis", "fci05vis", "fci04vis"]  # VIS 0.6 / 0.5 / 0.4 um
 RGB_VALUES = np.array(["red", "green", "blue"])
+# Band metadata for both composites. The tiles service takes the `rgb` dim as R, G, B by
+# position and reads only `valid_min`/`valid_max` (the byte stretch), so the order here
+# is a record for readers, not something the service checks yet (see
+# docs/WEB_TILES_SERVICE_REQUIREMENTS.md). fix_rgb_band_attrs.py writes the same to the repo.
+RGB_BAND_ATTRS = {"long_name": "colour band", "color_interpretation": " ".join(RGB_VALUES)}
+RGB_VALID_RANGE = {"valid_min": 0.0, "valid_max": 1.0}
 # FCI central wavelengths; `radiance_to_bt` takes their reciprocal, the wavenumber in cm-1.
 WAVELENGTH_CM = {
     "fci04vis": 0.444e-4,
@@ -639,6 +645,7 @@ def create_schema(
     backend.root["true_color"].attrs.update(
         {
             **GEOREF,
+            **RGB_VALID_RANGE,
             "long_name": "true-colour RGB composite (VIS 0.6/0.5/0.4 um), 0-1",
             "source_channels": " ".join(RGB_CHANNELS),
         }
@@ -646,11 +653,13 @@ def create_schema(
     backend.root["airmass"].attrs.update(
         {
             **GEOREF,
+            **RGB_VALID_RANGE,
             "long_name": "EUMETSAT airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, "
                          "WV 6.3 um inverted brightness temperatures), 0-1",
             "source_channels": " ".join(AIRMASS_CHANNELS),
         }
     )
+    backend.root["rgb"].attrs.update(RGB_BAND_ATTRS)
     add_coord(
         backend, "lat", model.lat, ("y", "x"),
         {"standard_name": "latitude", "units": "degrees_north"},
