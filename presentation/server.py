@@ -166,8 +166,15 @@ def build_runs(times: list[str], commits: list[dict]) -> list[dict]:
             leads, complete = full, True
         else:
             leads, complete = sorted(rec["leads"]), False
-        runs.append({"init": init, "time": t, "leads": leads, "complete": complete,
-                     "ref": rec["ref"] if rec else oldest})
+        runs.append(
+            {
+                "init": init,
+                "time": t,
+                "leads": leads,
+                "complete": complete,
+                "ref": rec["ref"] if rec else oldest,
+            }
+        )
     return runs
 
 
@@ -193,7 +200,9 @@ def read_times(repo) -> list[str]:
 def poll_arraylake(stop: threading.Event) -> None:
     from arraylake import Client
 
-    client = Client(token=os.environ.get("ARRAYLAKE_API_TOKEN"))  # falls back to `arraylake auth login`
+    client = Client(
+        token=os.environ.get("ARRAYLAKE_API_TOKEN")
+    )  # falls back to `arraylake auth login`
     repo = None
     head, times = None, []
     while not stop.is_set():
@@ -276,7 +285,9 @@ def sql_text() -> str:
     """The active query with {init} set to the newest complete run (tz-naive timestamp)."""
     runs = SHARED.get("state").get("runs") or []
     done = [r for r in runs if r["complete"]]
-    init = (done[0]["time"] if done else (runs[0]["time"] if runs else "1970-01-01T00:00:00")).replace("T", " ")
+    init = (
+        done[0]["time"] if done else (runs[0]["time"] if runs else "1970-01-01T00:00:00")
+    ).replace("T", " ")
     with SHARED.lock:
         template = SHARED.sql_template
     return template.replace("{init}", init)
@@ -331,7 +342,10 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
     wake = SHARED.sql_wake
     while not stop.is_set():
         if not demo and not sql_host():
-            SHARED.set_sql(status="disabled", reason="Set ARRAYLAKE_SQL_HOST in .env (al compute enable gtc-berlin sql)")
+            SHARED.set_sql(
+                status="disabled",
+                reason="Set ARRAYLAKE_SQL_HOST in .env (al compute enable gtc-berlin sql)",
+            )
             stop.wait(30)
             continue
         if not wake.wait(1):
@@ -342,7 +356,14 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
 
             phase = time.time() / 600 + len(sql_text()) % 7
             rows = [[m, 60 + 25 * math.sin(m / 20 + phase)] for m in all_leads()]
-            SHARED.set_sql(status="demo", query=sql_text(), columns=["lead_time", "brightness"], rows=rows, seconds=0.4, ran_at=utcnow().isoformat())
+            SHARED.set_sql(
+                status="demo",
+                query=sql_text(),
+                columns=["lead_time", "brightness"],
+                rows=rows,
+                seconds=0.4,
+                ran_at=utcnow().isoformat(),
+            )
             continue
         prev = SHARED.get("sql")
         SHARED.set_sql(**{**prev, "status": "running", "query": sql_text()})
@@ -358,9 +379,25 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
 
 def public_config() -> dict:
     keys = [
-        "org", "repo", "group", "tile_base", "tile_ref_mode", "data_bounds", "max_tile_level", "variables",
-        "lead_steps", "run_interval_min", "max_runs", "panel_seconds", "playback_speed", "hold_ms",
-        "station", "camera", "viewer_url", "qr_tile", "branch",
+        "org",
+        "repo",
+        "group",
+        "tile_base",
+        "tile_ref_mode",
+        "data_bounds",
+        "max_tile_level",
+        "variables",
+        "lead_steps",
+        "run_interval_min",
+        "max_runs",
+        "panel_seconds",
+        "playback_speed",
+        "hold_ms",
+        "station",
+        "camera",
+        "viewer_url",
+        "qr_tile",
+        "branch",
     ]
     return {k: CONFIG[k] for k in keys} | {"leads": all_leads(), "sql_places": place_queries()}
 
@@ -392,8 +429,12 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.split("?", 1)[0] != "/api/sql":
             return self._json({"error": "not found"}, 404)
         try:
-            body = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 16384)) or b"{}")
-            SHARED.set_sql_template(default_sql() if body.get("reset") else check_sql(str(body.get("query", ""))))
+            body = json.loads(
+                self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 16384)) or b"{}"
+            )
+            SHARED.set_sql_template(
+                default_sql() if body.get("reset") else check_sql(str(body.get("query", "")))
+            )
         except (ValueError, TypeError) as exc:
             return self._json({"error": str(exc)}, 400)
         return self._json({"ok": True})
@@ -402,7 +443,7 @@ class Handler(SimpleHTTPRequestHandler):
         clean = path.split("?", 1)[0].split("#", 1)[0]
         for prefix, root in VENDOR.items():
             if clean.startswith(prefix):
-                rel = Path(clean[len(prefix):])
+                rel = Path(clean[len(prefix) :])
                 target = (root / rel).resolve()
                 if target.is_relative_to(root.resolve()):
                     return str(target)
@@ -423,7 +464,9 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--demo", action="store_true", help="fake commits and SQL, no Arraylake access")
@@ -433,7 +476,9 @@ def main() -> None:
     if not (NODE / "maplibre-gl").exists():
         log.warning("presentation/node_modules missing: run `npm install` in presentation/ first")
     if not args.demo and not os.environ.get("ARRAYLAKE_API_TOKEN"):
-        log.warning("ARRAYLAKE_API_TOKEN not set: commit polling will fail (use --demo to rehearse)")
+        log.warning(
+            "ARRAYLAKE_API_TOKEN not set: commit polling will fail (use --demo to rehearse)"
+        )
 
     stop = threading.Event()
     poller = poll_demo if args.demo else poll_arraylake
@@ -441,7 +486,9 @@ def main() -> None:
     threading.Thread(target=poll_sql, args=(stop, args.demo), daemon=True).start()
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
-    log.info("booth page on http://%s:%d %s", args.host, args.port, "(demo mode)" if args.demo else "")
+    log.info(
+        "booth page on http://%s:%d %s", args.host, args.port, "(demo mode)" if args.demo else ""
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

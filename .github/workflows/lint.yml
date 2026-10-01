@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "**.py"
+      - "**.md"
       - "pyproject.toml"
       - ".github/workflows/lint.yml"
 
@@ -24,3 +25,6 @@ jobs:
       # Same ruff version as the pre-commit hook; settings live in pyproject.toml.
       - name: ruff check
         run: uvx ruff@0.16.10 check --output-format github .
+
+      - name: ruff format
+        run: uvx ruff@0.16.10 format --check --diff .
