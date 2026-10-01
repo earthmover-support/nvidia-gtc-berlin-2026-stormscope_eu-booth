@@ -149,7 +149,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .steps i { font: normal 600 14px var(--mono); width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--nv-green); color: var(--nv-green); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .steps li.violet i { border-color: var(--em-lav); color: var(--em-lav); }
 .steps b { display: block; font-size: 17px; color: #fff; } .steps span { font-size: 14px; color: #BDBDBD; }
-.code { margin: 0; padding: 14px 16px; background: #0D0D0D; border: 1px solid #262626; border-radius: 10px; font: 13px/1.6 var(--mono); color: #D8D8D8; white-space: pre; overflow: hidden; }
 
 .commits { display: flex; flex-direction: column; gap: 8px; }
 .commit { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; background: #27263A; }
