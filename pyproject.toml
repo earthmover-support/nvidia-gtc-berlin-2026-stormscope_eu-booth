@@ -29,12 +29,10 @@ dependencies = [
     # notebook / plotting / misc
     "cartopy",
     "matplotlib",
-    "jupyterlab",
     "ipywidgets",
     "python-dotenv",
     "tqdm",
     "eumdac",
-    "ipykernel>=7.3.0",  # VS Code notebook kernel
     "coiled>=1.135.3",   # launch the GPU runs from here
 ]
 
@@ -49,6 +47,12 @@ gpu = [
 
 [tool.uv.sources]
 earth2studio = { git = "https://github.com/NVIDIA/earth2studio.git" }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",  # VS Code notebook kernel
+    "jupyterlab>=4.6.4",
+]
 
 [tool.uv]
 # eccodeslib (via earth2studio[data]) has released versions with linux-only wheels
