@@ -169,7 +169,7 @@
     const st = c.station;
     const m = el("div", "station");
     m.append(el("i"), el("span", null, `${st.name}\nyou are here`));
-    new maplibregl.Marker({ element: m, anchor: "left", offset: [-5, 0] }).setLngLat([st.lon, st.lat]).addTo(map);
+    new maplibregl.Marker({ element: m, anchor: "left", offset: [-11, 0] }).setLngLat([st.lon, st.lat]).addTo(map);
   }
 
   function clearLayers() {

@@ -55,7 +55,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .viz { position: relative; background: var(--viz); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; min-height: 0; }
 #globe { position: absolute; inset: 0; background: #05070A; }
 .station { display: flex; align-items: center; gap: 12px; pointer-events: none; }
-.station i { width: 11px; height: 11px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 2px #000; }
+.station i { box-sizing: border-box; width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--lime); box-shadow: 0 0 0 1.5px #000, inset 0 0 0 1.5px #000; }
 .station span { padding: 5px 8px; border-radius: 4px; background: rgba(10, 10, 12, .8); color: #EDEDED; font: 600 15px/1.25 Geist, system-ui, sans-serif; white-space: pre; }
 
 .viz-top, .viz-bottom { position: absolute; left: 0; right: 0; z-index: 2; padding: 18px 22px; }
