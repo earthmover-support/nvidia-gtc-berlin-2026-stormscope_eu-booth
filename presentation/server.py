@@ -16,8 +16,8 @@ Serves the booth page from ./web and three small JSON endpoints:
 
   /api/config   public part of config.json (no secrets)
   /api/state    recent Icechunk commits on the repo, grouped into forecast runs
-  /api/sql      latest result of the live Zax-SQL query
-                POST {"query": "..."} replaces the query (typed on the page), {"reset": true} restores it
+  /api/sql      latest result of the Zax-SQL query
+                POST {"query": "..."} runs that query once (Run on the page), {"reset": true} runs the default
 
 Run from the repo root:
 
@@ -72,7 +72,7 @@ class Shared:
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.state: dict = {"status": "starting", "commits": [], "runs": []}
-        self.sql: dict = {"status": "starting"}
+        self.sql: dict = {"status": "idle"}  # nothing runs until someone presses Run
         self.sql_template: str = default_sql()
         self.sql_wake = threading.Event()  # set to run the query now
 
@@ -319,11 +319,15 @@ def run_sql_once() -> None:
 
 
 def poll_sql(stop: threading.Event, demo: bool) -> None:
-    last_head = None
-    last_run = 0.0
+    """Run the query only when the page asks for it (Run on panel 06), never on a timer."""
     wake = SHARED.sql_wake
     while not stop.is_set():
-        asked = wake.is_set()
+        if not demo and not sql_host():
+            SHARED.set_sql(status="disabled", reason="Set ARRAYLAKE_SQL_HOST in .env (al compute enable gtc-berlin sql)")
+            stop.wait(30)
+            continue
+        if not wake.wait(1):
+            continue
         wake.clear()
         if demo:
             import math
@@ -332,25 +336,14 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
             rows = [[m * 10, 60 + 25 * math.sin(m / 2 + phase)] for m in range(13)]
             rows = rows[1:]  # leads 10..120
             SHARED.set_sql(status="demo", query=sql_text(), columns=["lead_time", "brightness"], rows=rows, seconds=0.4, ran_at=utcnow().isoformat())
-            wake.wait(CONFIG["sql"]["refresh_seconds"])
             continue
-        if not sql_host():
-            SHARED.set_sql(status="disabled", reason="Set ARRAYLAKE_SQL_HOST in .env (al compute enable gtc-berlin sql)")
-            stop.wait(30)
-            continue
-        commits = SHARED.get("state").get("commits") or []
-        head = commits[0]["id"] if commits else None
-        due = time.time() - last_run > CONFIG["sql"]["refresh_seconds"]
-        if head != last_head or due or asked:
-            prev = SHARED.get("sql")
-            SHARED.set_sql(**{**prev, "status": "running", "query": sql_text()})
-            try:
-                run_sql_once()
-            except Exception as exc:
-                log.warning("sql failed: %s", exc)
-                SHARED.set_sql(status="error", query=sql_text(), error=str(exc)[:300])
-            last_head, last_run = head, time.time()
-        wake.wait(3)
+        prev = SHARED.get("sql")
+        SHARED.set_sql(**{**prev, "status": "running", "query": sql_text()})
+        try:
+            run_sql_once()
+        except Exception as exc:
+            log.warning("sql failed: %s", exc)
+            SHARED.set_sql(status="error", query=sql_text(), error=str(exc)[:300])
 
 
 # --------------------------------------------------------------------------- HTTP

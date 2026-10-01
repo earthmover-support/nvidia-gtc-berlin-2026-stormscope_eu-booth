@@ -3,8 +3,8 @@
  * Data flow
  *   /api/config  -> static settings (config.json)
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
- *   /api/sql     -> latest live Zax-SQL result (polled every 10 s, 1 s while a query runs)
- *                   POST {query} runs what was typed on panel 06, {reset: true} restores it
+ *   /api/sql     -> latest Zax-SQL result (polled every 10 s, 1 s while a query runs)
+ *                   POST {query} runs what is in the panel 06 editor; only Run sends it
  * Tiles are fetched by MapLibre straight from the public Flux tiles service,
  * one raster layer per (init time, lead time) selected with the `time` and
  * `lead_time` query parameters on the branch (or pinned to a snapshot id).
@@ -501,9 +501,9 @@
       b.type = "button";
       b.addEventListener("click", () => {
         S.sqlPlace = name;
+        S.sqlDirty = true; // filled in, not run: only Run sends a query
         sqlBox().value = sqlFor(name);
         renderSqlPlaces();
-        runSql(sqlBox().value);
       });
       return b;
     }));
@@ -512,14 +512,14 @@
       : "Your query · PostgreSQL wire protocol";
   }
 
-  async function runSql(query, reset = false) {
+  async function runSql(query) {
     holdPanel();
     S.sqlDirty = false;
     try {
       const res = await fetch("/api/sql", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reset ? { reset: true } : { query }),
+        body: JSON.stringify({ query }),
       });
       const out = await res.json();
       if (!res.ok) { S.sql = { status: "error", query, error: out.error }; renderSql(); return; }
@@ -540,7 +540,7 @@
     const started = Date.now();
     const tick = async () => {
       await refreshSql();
-      const busy = !S.sql || S.sql.status === "running" || S.sql.status === "starting";
+      const busy = !S.sql || S.sql.status === "running";
       if ((busy || Date.now() - started < 4000) && Date.now() - started < 180000) fastTimer = setTimeout(tick, 1000);
     };
     fastTimer = setTimeout(tick, 1000);
@@ -563,7 +563,8 @@
       S.sqlPlace = placeOf(r.query);
     }
     const empty = () => { bars.replaceChildren(); for (let i = 1; i <= S.cfg.lead_steps; i++) bars.append(el("div", "empty")); };
-    if (!r || r.status === "starting") { status.textContent = "connecting…"; empty(); return; }
+    if (!r) { status.textContent = "connecting…"; empty(); return; }
+    if (r.status === "idle") { status.textContent = "press Run ▸"; empty(); return; }
     if (r.status === "disabled") { status.textContent = "SQL service off"; status.classList.add("err"); empty(); return; }
     if (r.status === "error") {
       status.textContent = "query failed";
@@ -611,9 +612,9 @@
     $("#sqlRun").addEventListener("click", () => runSql(box.value));
     $("#sqlReset").addEventListener("click", () => {
       S.sqlPlace = placeOf(S.cfg.sql_query);
+      S.sqlDirty = true;
       box.value = S.cfg.sql_query;
       renderSqlPlaces();
-      runSql(null, true);
     });
   }
 
