@@ -50,7 +50,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 @keyframes pulse { 50% { opacity: .35; } }
 
 /* ---------------- main ---------------- */
-.main { display: grid; grid-template-columns: minmax(0, 1fr) 480px; gap: 20px; min-height: 0; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: 20px; min-height: 0; }
 
 .viz { position: relative; background: var(--viz); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; min-height: 0; }
 #globe { position: absolute; inset: 0; background: #05070A; }
