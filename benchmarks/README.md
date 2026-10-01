@@ -129,29 +129,5 @@ N requests in flight (N = 6 is one browser) against snapshot-pinned URLs, and re
 tiles/s, maps/s, latency, bytes read and status codes. Replica counts came from polling
 `al compute status` every ~15 s.
 
-**Answer (2026-10-01): about 1 tile/s per CPU. XS gives 0.05 maps/s to one browser, S 0.10.
-The target is ~20x away, so it needs cheaper tiles (#9), not just a bigger service.**
-
-| config | in flight | tiles/s | maps/s | full run | p50 / p95 tile | 504s | replicas |
-|---|---|---|---|---|---|---|---|
-| XS (1 CPU, 2 Gi) | 6 | 1.0 (0.76¹) | 0.05 (0.04¹) | 232–244 s (315 s¹) | 6.6–6.8 / ~10 s | 0 | 1 |
-| XS | 24 | 1.9–2.4 | 0.10–0.12 | 99–125 s | ~9 / 19–25 s | 0–32 | 2–3 |
-| XS | 96 | 3.0–3.4 | 0.15–0.17 | 70–81 s | ~24 / ~50 s | 57–157 | 4 |
-| S (2 CPU, 4 Gi) | 6 | 2.1 | 0.10 | 114 s | 1.8–2.1 / ~8 s | 0 | 1 |
-
-¹ A third XS run at 6 in flight (`true_color` 09:10) while other clients were loading tiles
-too: the service had scaled to 2 replicas, yet this client got fewer tiles per second.
-
-- **Rendering is CPU-bound, about 1 CPU-second per z4 tile.** Every tile reads ~10 MB
-  (`X-Multiscale-Level: root`), and a repeat pass reads the same bytes again, so nothing is
-  cached between requests. Doubling the CPUs (XS → S) doubled throughput.
-- **One browser never triggers scale-out.** At 6 in flight XS stayed at 1 replica. At 24 and
-  96 it scaled to 3–4 within about a minute and back to 1 about 2 minutes after the load.
-- **Queued requests fail after ~30 s with 504.** Overloading the service turns slow tiles
-  into missing tiles.
-- **One browser over HTTP/1.1 is capped at ~6 tiles in flight.** The service doesn't offer
-  HTTP/2. Reaching ~28 tiles/s from one booth screen would need a per-tile latency of
-  ~0.2 s, about 10x below S's 2 s median. More replicas can't fix per-tile latency; cheaper
-  tiles (pyramids, #9) are the lever for that.
-
-Not measured: `min_replicas: 1`, more than 4 replicas, SKU M.
+**Answer (2026-10-01): about 1 tile/s per CPU. XS gives one browser 0.05 maps/s, S 0.10.
+Results, limits and options: [docs/TILE_SERVER_PERFORMANCE.md](../docs/TILE_SERVER_PERFORMANCE.md).**
