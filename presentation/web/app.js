@@ -99,8 +99,6 @@
   const loaded = new Set(); // leads whose source has finished loading once
   const LOAD_TIMEOUT_MS = 20000; // a stuck lead stops blocking the next one after this
   let addedAt = 0;
-  // frames the loop plays: committed leads that are on screen already
-  const playLeads = (run) => (run ? run.leads.filter((l) => loaded.has(l)) : []);
 
   // Smallest zoom at which the whole panel, swayed and pitched, stays inside
   // camera.cover [west, south, east, north]: the part of Europe the forecast always fills.
@@ -152,8 +150,6 @@
       if (!layers.has(lead) || loaded.has(lead) || !map.isSourceLoaded(e.sourceId)) return;
       loaded.add(lead);
       syncLayers();
-      showFrame();
-      renderInits();
     });
 
     // Camera: always looking at Europe, gentle sway of the bearing around a fixed centre.
@@ -221,7 +217,7 @@
 
   function showFrame() {
     const run = selectedRun();
-    const leads = playLeads(run);
+    const leads = run ? run.leads : [];
     if (S.frame >= leads.length) S.frame = 0;
     const lead = leads[S.frame];
     for (const [l, id] of layers) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
@@ -235,13 +231,13 @@
     clearTimeout(animTimer);
     if (S.animPaused) return;
     const run = selectedRun();
-    const n = playLeads(run).length;
-    const last = n && S.frame === n - 1;
+    const last = run && run.leads.length && S.frame === run.leads.length - 1;
     animTimer = setTimeout(animate, SPEEDS[S.speed] * 1000 + (last ? S.cfg.hold_ms : 0));
   }
 
   function animate() {
-    const n = playLeads(selectedRun()).length;
+    const run = selectedRun();
+    const n = run ? run.leads.length : 0;
     if (n) {
       S.frame = (S.frame + 1) % n;
       showFrame();
@@ -347,7 +343,7 @@
   function renderTicks(run, current) {
     const box = $("#ticks");
     box.replaceChildren();
-    const have = new Set(playLeads(run));
+    const have = new Set(run ? run.leads : []);
     for (let i = 1; i <= S.cfg.lead_steps; i++) {
       const lead = i * 10;
       const d = el("div", null, `+${lead}`);
