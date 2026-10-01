@@ -24,13 +24,12 @@ import json
 import statistics
 import time
 from collections import Counter
+from pathlib import Path
 
 import httpx
 
-BASE = (
-    "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/"
-    "gtc-berlin/stormscope-eu_gtc_berlin_2026"
-)
+# the booth's own endpoint, styles and leads, so the benchmark measures what the page requests
+CONFIG = json.loads((Path(__file__).parent.parent / "presentation" / "config.json").read_text())
 # [z, y, x] in URL path order: the booth frame at camera zoom ~3.2-4
 TILES = [
     [4, 3, 5], [4, 3, 6], [4, 3, 7], [4, 3, 8],
@@ -38,14 +37,15 @@ TILES = [
     [4, 5, 6], [4, 5, 7], [4, 5, 8], [4, 5, 9], [4, 5, 10], [4, 5, 11],
     [4, 6, 7], [4, 6, 8], [4, 6, 9],
 ]
-LEADS = [10 * (i + 1) for i in range(12)]
+LEADS = [CONFIG["lead_step_min"] * (i + 1) for i in range(CONFIG["lead_steps"])]
 
 
 def tile_url(a, lead, z, y, x):
-    q = httpx.QueryParams(variables=a.variable, style="raster/rgb", colorscalerange="0,1",
+    v = CONFIG["variables"][a.variable]
+    q = httpx.QueryParams(variables=a.variable, style=v["style"], colorscalerange=v["colorscalerange"],
                           time=a.time, lead_time=f"{lead} minutes", ensemble="0", f="png",
                           width="512", height="512")
-    return f"{BASE}/{a.snapshot}/tiles/WebMercatorQuad/{z}/{y}/{x}?{q}"
+    return f"{CONFIG['tile_base']}/{a.snapshot}/tiles/WebMercatorQuad/{z}/{y}/{x}?{q}"
 
 
 async def run(a) -> dict:

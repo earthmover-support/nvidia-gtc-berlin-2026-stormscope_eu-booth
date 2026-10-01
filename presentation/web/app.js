@@ -23,7 +23,6 @@
   const S = {
     cfg: null,
     status: "starting",
-    error: null,
     commits: [],
     runs: [],
     selInit: null, // null = follow latest run
@@ -55,16 +54,11 @@
     if (s < 3600) return `${Math.floor(s / 60)} min`;
     return `${Math.floor(s / 3600)} h`;
   };
-  const forecastCount = (run) => (run ? run.leads.filter((l) => l > 0).length : 0);
   const selectableRuns = () => S.runs.slice(0, S.cfg.max_runs);
   // "Latest" = newest init that already has at least one forecast frame
   const latestShown = () => selectableRuns().find((r) => r.leads.length) || null;
-  const selectedRun = () => {
-    const runs = selectableRuns();
-    if (!runs.length) return null;
-    if (S.selInit) return runs.find((r) => r.init === S.selInit) || latestShown();
-    return latestShown();
-  };
+  const selectedRun = () =>
+    (S.selInit && selectableRuns().find((r) => r.init === S.selInit)) || latestShown();
 
   function tileTemplate(run, variable, lead, size = 256) {
     const c = S.cfg;
@@ -346,8 +340,7 @@
     const runs = selectableRuns();
     const sel = selectedRun();
     runs.forEach((run, k) => {
-      const n = forecastCount(run);
-      const status = run.complete ? "" : ` · ${n}/${S.cfg.lead_steps}`;
+      const status = run.complete ? "" : ` · ${run.leads.length}/${S.cfg.lead_steps}`;
       const text = `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${status}`;
       const b = el("button", null, text);
       b.type = "button";
@@ -356,14 +349,11 @@
       b.addEventListener("click", () => selectInit(k));
       box.append(b);
     });
-    const run = sel;
-    const maxLead = run && run.leads.length ? Math.max(...run.leads) : 0;
-    const following = !S.selInit;
-    const minLead = run && run.leads.length ? Math.min(...run.leads) : 0;
-    $("#loopLabel span").textContent = run
-      ? `+${minLead}→+${maxLead}${following && !run.complete ? " · live" : ""}${S.animPaused ? " · paused" : ""}`
+    const [minLead, maxLead] = sel && sel.leads.length ? [Math.min(...sel.leads), Math.max(...sel.leads)] : [0, 0];
+    $("#loopLabel span").textContent = sel
+      ? `+${minLead}→+${maxLead}${!S.selInit && !sel.complete ? " · live" : ""}${S.animPaused ? " · paused" : ""}`
       : "";
-    $("#initTitle").textContent = run ? `${hhmm(run.init)} UTC` : "--:-- UTC";
+    $("#initTitle").textContent = sel ? `${hhmm(sel.init)} UTC` : "--:-- UTC";
   }
 
   function selectInit(k) {
@@ -380,8 +370,7 @@
     const box = $("#ticks");
     box.replaceChildren();
     const have = new Set(run ? run.leads : []);
-    for (let i = 1; i <= S.cfg.lead_steps; i++) {
-      const lead = i * 10;
+    for (const lead of S.cfg.leads) {
       const d = el("div", null, `+${lead}`);
       if (lead === current) d.classList.add("now");
       else if (!have.has(lead)) d.classList.add("pending");
@@ -392,9 +381,7 @@
   function renderValid(run, lead) {
     if (!run || lead == null) { $("#validLabel").textContent = "waiting for the first frame…"; return; }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
-    $("#validLabel").textContent = lead === 0
-      ? `observed ${fmtUTC(t)} UTC`
-      : `valid ${fmtUTC(t)} UTC · +${lead} min forecast`;
+    $("#validLabel").textContent = `valid ${fmtUTC(t)} UTC · +${lead} min forecast`;
   }
 
   function showNotice(text) {
@@ -410,7 +397,7 @@
     const ms = c.run_interval_min * 60000;
     const left = ms - (now.getTime() % ms);
     $("#countdown").textContent = `${pad(Math.floor(left / 60000))}:${pad(Math.floor((left % 60000) / 1000))}`;
-    $("#clock").textContent = `${S.status === "demo" ? "DEMO" : "LIVE"} · ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`;
+    $("#clock").textContent = `${S.status === "demo" ? "DEMO" : "LIVE"} · ${fmtUTC(now)}:${pad(now.getUTCSeconds())} UTC`;
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
@@ -420,26 +407,25 @@
     const cells = $("#cells");
     if (cells.children.length !== c.lead_steps) {
       cells.replaceChildren();
-      for (let i = 1; i <= c.lead_steps; i++) cells.append(el("div", null, `+${i * 10}`));
+      for (const lead of c.leads) cells.append(el("div", null, `+${lead}`));
     }
     if (!latest) { $("#ingestLabel").textContent = "Waiting for Arraylake…"; return; }
     if (S.doneInit !== latest.init) { S.doneInit = latest.init; S.doneLeads = new Set(); }
     const have = new Set(latest.leads);
-    const maxLead = latest.leads.length ? Math.max(...latest.leads) : 0;
+    const next = c.leads.find((l) => !have.has(l));
     const recent = head && Date.now() - new Date(head.written_at).getTime() < 5 * 60000;
     [...cells.children].forEach((d, idx) => {
-      const lead = (idx + 1) * 10;
+      const lead = c.leads[idx];
       const done = have.has(lead);
       d.classList.toggle("done", done);
-      d.classList.toggle("writing", !done && !latest.complete && recent && lead === maxLead + 10);
+      d.classList.toggle("writing", !done && !latest.complete && recent && lead === next);
       if (done && !S.doneLeads.has(lead)) {
         S.doneLeads.add(lead);
         d.classList.remove("flash"); void d.offsetWidth; d.classList.add("flash");
       }
     });
-    const n = forecastCount(latest);
     $("#ingestLabel").textContent =
-      `Run ${hhmm(latest.init)} · ${latest.complete ? "complete in Arraylake" : "ingesting to Arraylake"} · ${n} of ${c.lead_steps} steps committed`;
+      `Run ${hhmm(latest.init)} · ${latest.complete ? "complete in Arraylake" : "ingesting to Arraylake"} · ${latest.leads.length} of ${c.lead_steps} steps committed`;
   }
 
   // ------------------------------------------------------------------ panels
@@ -520,10 +506,9 @@
   const sqlBox = () => $("#sqlQuery");
   const holdPanel = () => { S.manualUntil = Math.max(S.manualUntil, Date.now() + 120000); };
 
-  function sqlFor(name) {
-    const [lat, lon] = S.cfg.sql_places[name];
-    return S.cfg.sql_template.replaceAll("{lat}", lat).replaceAll("{lon}", lon).replaceAll("{box}", S.cfg.sql_box);
-  }
+  // server-filled query per city chip, {init} left in; the first one is the default
+  const sqlFor = (name) => S.cfg.sql_places[name];
+  const defaultSql = () => Object.values(S.cfg.sql_places)[0];
 
   // which city chip produced this server-side query (null = hand-written)
   const placeOf = (query) => {
@@ -598,7 +583,7 @@
       box.value = r.query;
       S.sqlPlace = placeOf(r.query);
     }
-    const empty = () => { bars.replaceChildren(); for (let i = 1; i <= S.cfg.lead_steps; i++) bars.append(el("div", "empty")); };
+    const empty = () => { bars.replaceChildren(); for (const _ of S.cfg.leads) bars.append(el("div", "empty")); };
     if (!r) { status.textContent = "connecting…"; empty(); return; }
     if (r.status === "idle") { status.textContent = "press Run ▸"; empty(); return; }
     if (r.status === "disabled") { status.textContent = "SQL service off"; status.classList.add("err"); empty(); return; }
@@ -631,8 +616,8 @@
 
   function initSqlEditor() {
     const box = sqlBox();
-    S.sqlPlace = placeOf(S.cfg.sql_query);
-    box.value = S.cfg.sql_query;
+    S.sqlPlace = placeOf(defaultSql());
+    box.value = defaultSql();
     renderSqlPlaces();
     box.addEventListener("focus", holdPanel);
     box.addEventListener("input", () => {
@@ -647,9 +632,9 @@
     });
     $("#sqlRun").addEventListener("click", () => runSql(box.value));
     $("#sqlReset").addEventListener("click", () => {
-      S.sqlPlace = placeOf(S.cfg.sql_query);
+      S.sqlPlace = placeOf(defaultSql());
       S.sqlDirty = true;
-      box.value = S.cfg.sql_query;
+      box.value = defaultSql();
       renderSqlPlaces();
     });
   }
@@ -660,10 +645,9 @@
       const res = await fetch("/api/state", { cache: "no-store" });
       const st = await res.json();
       S.status = st.status;
-      S.error = st.error || null;
       S.commits = st.commits || [];
       S.runs = st.runs || [];
-      showNotice(st.status === "error" ? `Arraylake unreachable, showing last known data · ${S.error}` : "");
+      showNotice(st.status === "error" ? `Arraylake unreachable, showing last known data · ${st.error}` : "");
     } catch (e) {
       S.status = "error";
       showNotice("Booth server unreachable");

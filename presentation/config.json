@@ -15,6 +15,7 @@
   },
 
   "lead_steps": 12,
+  "lead_step_min": 10,
   "run_interval_min": 10,
   "max_runs": 6,
   "poll_seconds": 5,

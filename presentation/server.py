@@ -94,16 +94,24 @@ class Shared:
             return dict(getattr(self, name))
 
 
-def default_sql() -> str:
-    """config.json query for the first place in sql.places; {init} stays for sql_text()."""
+def all_leads() -> list[int]:
+    """Every forecast lead in minutes: lead_step_min, 2 * lead_step_min, ... lead_steps of them."""
+    return [CONFIG["lead_step_min"] * (i + 1) for i in range(CONFIG["lead_steps"])]
+
+
+def place_queries() -> dict[str, str]:
+    """config.json query filled in per sql.places entry; {init} stays for sql_text()."""
     sql = CONFIG["sql"]
-    lat, lon = next(iter(sql["places"].values()))
-    return (
-        "\n".join(sql["query"])
-        .replace("{lat}", str(lat))
-        .replace("{lon}", str(lon))
-        .replace("{box}", str(sql["box_deg"]))
-    )
+    template = "\n".join(sql["query"]).replace("{box}", str(sql["box_deg"]))
+    return {
+        name: template.replace("{lat}", str(lat)).replace("{lon}", str(lon))
+        for name, (lat, lon) in sql["places"].items()
+    }
+
+
+def default_sql() -> str:
+    """The query for the first place in sql.places."""
+    return next(iter(place_queries().values()))
 
 
 def check_sql(query: str) -> str:
@@ -147,7 +155,7 @@ def build_runs(times: list[str], commits: list[dict]) -> list[dict]:
     `ref` is the newest snapshot holding the run; runs older than the history get the
     oldest snapshot in it. Snapshot tile URLs are immutable and cached for a month.
     """
-    full = [10 * (i + 1) for i in range(CONFIG["lead_steps"])]
+    full = all_leads()
     seen = leads_by_init(commits)
     oldest = commits[-1]["id"] if commits else None
     runs = []
@@ -242,7 +250,7 @@ def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
             if t > now:
                 break
             msg = f"stormscope-eu {init:%Y-%m-%dT%H:%M} " + (
-                "analysis frame (lead 0 min)" if i == 0 else f"+{i * 10} min"
+                "analysis frame (lead 0 min)" if i == 0 else f"+{i * CONFIG['lead_step_min']} min"
             )
             sid = f"DEMO{init:%H%M}{i:02d}".ljust(20, "X")
             commits.append({"id": sid, "message": msg, "written_at": t.isoformat()})
@@ -333,8 +341,7 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
             import math
 
             phase = time.time() / 600 + len(sql_text()) % 7
-            rows = [[m * 10, 60 + 25 * math.sin(m / 2 + phase)] for m in range(13)]
-            rows = rows[1:]  # leads 10..120
+            rows = [[m, 60 + 25 * math.sin(m / 20 + phase)] for m in all_leads()]
             SHARED.set_sql(status="demo", query=sql_text(), columns=["lead_time", "brightness"], rows=rows, seconds=0.4, ran_at=utcnow().isoformat())
             continue
         prev = SHARED.get("sql")
@@ -353,15 +360,9 @@ def public_config() -> dict:
     keys = [
         "org", "repo", "group", "tile_base", "tile_ref_mode", "data_bounds", "max_tile_level", "variables",
         "lead_steps", "run_interval_min", "max_runs", "panel_seconds", "playback_speed", "hold_ms",
-        "station", "camera", "viewer_url", "qr_tile",
+        "station", "camera", "viewer_url", "qr_tile", "branch",
     ]
-    cfg = {k: CONFIG[k] for k in keys}
-    cfg["branch"] = CONFIG["branch"]
-    cfg["sql_query"] = default_sql()
-    cfg["sql_template"] = "\n".join(CONFIG["sql"]["query"])
-    cfg["sql_places"] = CONFIG["sql"]["places"]
-    cfg["sql_box"] = CONFIG["sql"]["box_deg"]
-    return cfg
+    return {k: CONFIG[k] for k in keys} | {"leads": all_leads(), "sql_places": place_queries()}
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -403,7 +404,7 @@ class Handler(SimpleHTTPRequestHandler):
             if clean.startswith(prefix):
                 rel = Path(clean[len(prefix):])
                 target = (root / rel).resolve()
-                if root.resolve() in target.parents or target == root.resolve():
+                if target.is_relative_to(root.resolve()):
                     return str(target)
                 return str(WEB / "__forbidden__")
         return super().translate_path(path)

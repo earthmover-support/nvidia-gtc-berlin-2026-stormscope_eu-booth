@@ -37,6 +37,7 @@ import os
 import platform
 import shutil
 import ssl
+import statistics
 import time
 import urllib.request
 import zipfile
@@ -82,7 +83,7 @@ def rtt_probe(n: int = 5) -> dict[str, float]:
         except Exception:  # noqa: BLE001 -- an HTTP error still measures the round trip
             pass
         samples.append(time.perf_counter() - t0)
-    return {"rtt_min_s": min(samples), "rtt_median_s": sorted(samples)[len(samples) // 2]}
+    return {"rtt_min_s": min(samples), "rtt_median_s": statistics.median(samples)}
 
 
 def download_slot(slot: datetime, cache: Path) -> dict[str, float | str | int]:
@@ -194,7 +195,7 @@ def main() -> None:
 
     totals = sorted(r["total_s"] for r in runs)
     print(
-        f"per-slot total: median {totals[len(totals)//2]:.2f}s  "
+        f"per-slot total: median {statistics.median(totals):.2f}s  "
         f"min {totals[0]:.2f}s  max {totals[-1]:.2f}s",
         flush=True,
     )

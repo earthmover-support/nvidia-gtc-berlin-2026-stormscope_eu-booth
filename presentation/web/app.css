@@ -56,7 +56,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 #globe { position: absolute; inset: 0; background: #05070A; }
 .station { display: flex; align-items: center; gap: 12px; pointer-events: none; }
 .station i { box-sizing: border-box; width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--lime); box-shadow: 0 0 0 1.5px #000, inset 0 0 0 1.5px #000; }
-.station span { padding: 5px 8px; border-radius: 4px; background: rgba(10, 10, 12, .8); color: #EDEDED; font: 600 15px/1.25 Geist, system-ui, sans-serif; white-space: pre; }
+.station span { padding: 5px 8px; border-radius: 4px; background: rgba(10, 10, 12, .8); color: var(--text); font: 600 15px/1.25 var(--sans); white-space: pre; }
 
 .viz-top, .viz-bottom { position: absolute; left: 0; right: 0; z-index: 2; padding: 18px 22px; }
 .viz-top { top: 0; display: flex; justify-content: space-between; align-items: flex-start; background: rgba(5, 7, 10, .72); }
@@ -81,7 +81,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 
 .ticks { display: flex; gap: 6px; }
 .ticks div { flex: 1 1 0; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font: 13px var(--mono); color: var(--muted); border: 1px solid #23272E; }
-.ticks div.obs { color: var(--text); border-color: var(--faint); }
 .ticks div.pending { color: var(--faint); border-style: dashed; }
 .ticks div.now { background: var(--text); color: var(--ground); border-color: var(--text); font-weight: 600; }
 
