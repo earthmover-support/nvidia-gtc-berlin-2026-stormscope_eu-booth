@@ -96,6 +96,11 @@
   let labelsLayer; // forecast frames go under the basemap's first label layer
   let layerKey = "";
   const layers = new Map(); // lead -> MapLibre source/layer id
+  const loaded = new Set(); // leads whose source has finished loading once
+  const LOAD_TIMEOUT_MS = 20000; // a stuck lead stops blocking the next one after this
+  let addedAt = 0;
+  // frames the loop plays: committed leads that are on screen already
+  const playLeads = (run) => (run ? run.leads.filter((l) => loaded.has(l)) : []);
 
   // Smallest zoom at which the whole panel, swayed and pitched, stays inside
   // camera.cover [west, south, east, north]: the part of Europe the forecast always fills.
@@ -142,6 +147,14 @@
       syncLayers();
       showFrame();
     });
+    map.on("sourcedata", (e) => {
+      const lead = Number((e.sourceId || "").replace("lead-", ""));
+      if (!layers.has(lead) || loaded.has(lead) || !map.isSourceLoaded(e.sourceId)) return;
+      loaded.add(lead);
+      syncLayers();
+      showFrame();
+      renderInits();
+    });
 
     // Camera: always looking at Europe, gentle sway of the bearing around a fixed centre.
     const cam = c.camera;
@@ -169,9 +182,12 @@
       map.removeSource(id);
     }
     layers.clear();
+    loaded.clear();
   }
 
-  // One raster source per lead time, all loaded up front at opacity 0 so the loop never waits on tiles.
+  // One raster source per lead time at opacity 0, so the loop never waits on tiles once loaded.
+  // Sources are added one at a time in playback order: the tiles service renders about one
+  // tile per second, so requesting all leads at once leaves every frame half drawn for minutes.
   function syncLayers() {
     if (!mapReady) return;
     const run = selectedRun();
@@ -182,8 +198,10 @@
       layerKey = key;
       S.frame = 0;
     }
-    for (const lead of run.leads) {
-      if (layers.has(lead)) continue;
+    const busy = [...layers.keys()].some((l) => !loaded.has(l));
+    if (busy && Date.now() - addedAt < LOAD_TIMEOUT_MS) return;
+    const lead = run.leads.find((l) => !layers.has(l));
+    if (lead != null) {
       const id = `lead-${lead}`;
       map.addSource(id, {
         type: "raster",
@@ -197,12 +215,13 @@
         labelsLayer
       );
       layers.set(lead, id);
+      addedAt = Date.now();
     }
   }
 
   function showFrame() {
     const run = selectedRun();
-    const leads = run ? run.leads : [];
+    const leads = playLeads(run);
     if (S.frame >= leads.length) S.frame = 0;
     const lead = leads[S.frame];
     for (const [l, id] of layers) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
@@ -216,13 +235,13 @@
     clearTimeout(animTimer);
     if (S.animPaused) return;
     const run = selectedRun();
-    const last = run && run.leads.length && S.frame === run.leads.length - 1;
+    const n = playLeads(run).length;
+    const last = n && S.frame === n - 1;
     animTimer = setTimeout(animate, SPEEDS[S.speed] * 1000 + (last ? S.cfg.hold_ms : 0));
   }
 
   function animate() {
-    const run = selectedRun();
-    const n = run ? run.leads.length : 0;
+    const n = playLeads(selectedRun()).length;
     if (n) {
       S.frame = (S.frame + 1) % n;
       showFrame();
@@ -328,7 +347,7 @@
   function renderTicks(run, current) {
     const box = $("#ticks");
     box.replaceChildren();
-    const have = new Set(run ? run.leads : []);
+    const have = new Set(playLeads(run));
     for (let i = 1; i <= S.cfg.lead_steps; i++) {
       const lead = i * 10;
       const d = el("div", null, `+${lead}`);
