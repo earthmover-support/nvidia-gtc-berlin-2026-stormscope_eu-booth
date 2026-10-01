@@ -168,7 +168,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .sql-head b { font-size: 15px; color: #F5F5F5; white-space: nowrap; }
 .sql-head span { font: 12px var(--mono); color: var(--lime); text-align: right; }
 .sql-head span.err { color: #FFB86B; }
-.sql textarea { margin: 0; padding: 8px 10px; resize: vertical; min-height: 7.5em; font: 12.5px/1.5 var(--mono); color: #E2DFF0; background: #0E0D16; border: 1px solid #2E2C40; border-radius: 8px; outline: none; }
+.sql textarea { margin: 0; padding: 8px 10px; resize: vertical; min-height: 11.5em; font: 12.5px/1.5 var(--mono); color: #E2DFF0; background: #0E0D16; border: 1px solid #2E2C40; border-radius: 8px; outline: none; }
 .sql textarea:focus { border-color: var(--em-lav); }
 .sql-places { display: flex; flex-wrap: wrap; gap: 6px; }
 .sql-places button, .sql-run button { font: 500 12px var(--mono); padding: 4px 10px; border-radius: 999px; border: 1px solid #3A3852; background: transparent; color: #E2DFF0; cursor: pointer; }
