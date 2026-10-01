@@ -49,3 +49,11 @@ gpu = [
 
 [tool.uv.sources]
 earth2studio = { git = "https://github.com/NVIDIA/earth2studio.git" }
+
+[tool.uv]
+# eccodeslib (via earth2studio[data]) has released versions with linux-only wheels
+# (e.g. 2.48.2.27); require a resolution that also installs on Apple Silicon.
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]

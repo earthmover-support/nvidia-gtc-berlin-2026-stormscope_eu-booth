@@ -100,6 +100,42 @@ Reference layout: `earthmover-public/goes-16`, group `ABI-L2-MCMIPF/post-2023-04
 - The service offers two styles, `raster` and `polygons`. A bogus style returns a 422 listing
   the accepted values.
 
+## Where this is applied
+
+- **New runs:** `06_stormscope_eu_pipeline.py` writes all of the above at ingest. It creates
+  `fci_geos_projection` (`add_grid_mapping`), `grid_mapping` goes on every data array through
+  `GEOREF`, and `east_positive` negates `x` in the schema and in every `write`. The negation has
+  to go in both places, because `write` finds its slice by looking up coordinate values.
+- **Existing data:** `fix_grid_mapping.py [BRANCH]` adds the same metadata to the root group
+  and `stormscope_v2` in place, without rewriting any chunks. It is idempotent. Applied to
+  `main` on 2026-09-29.
+- Checked 2026-09-29 without a GPU. The ingest writer was fed two lead times of
+  `true_color` from `main` and wrote them to Arraylake branch `writer_gm_check`. The stored
+  `x` equals `main`'s, the projection matches lat/lon to 4e-6° with an identical off-disk mask,
+  and the tiles are byte-identical to `main`'s (`3/2/4`, `7/41/68`).
+
+## Spatial chunking (measured)
+
+The ingest now writes 280 × 304 spatial chunks with zstd (#4): `true_color` chunks are
+`(1, 1, 1, 280, 304, 3)`, 32 per frame. Before, a frame was one ~33 MB chunk. **For tiles,
+this changed nothing measurable.** Same tiles, branch `writer_gm_check` (chunked, zstd) vs.
+`main` (one chunk per frame, uncompressed), 512 px, XS service, 2026-09-29:
+
+| tile | `main` | chunked |
+|---|---|---|
+| `3/2/4` (Europe) | 8.3 s | 7.9-9.0 s |
+| `3/2/3` | 1.2 s | 1.3-1.6 s |
+| `4/5/9` | 3.9 s | 3.9 s |
+| `4/5/8` | 1.3 s | 1.2 s |
+| `5/10/17`, `5/11/16`, `5/9/16` | 0.5-0.8 s | 0.6-0.9 s |
+| `7/41/68` (Berlin) | 0.3-0.4 s | 0.4-0.5 s |
+
+The chunked branch had never been read before, so reading chunks is not what costs the
+time. The render cost follows the tile's footprint on the source grid, which points to
+reprojection on the service's single CPU. For faster tiles, try a bigger SKU or caching
+(#5), not a different chunking. The chunking still stays: it costs nothing here, and the
+SQL panel (#4) and any partial reads may benefit (not measured).
+
 ## Writing checklist
 
 - [ ] Grid mapping variable present, CF attributes as above.
