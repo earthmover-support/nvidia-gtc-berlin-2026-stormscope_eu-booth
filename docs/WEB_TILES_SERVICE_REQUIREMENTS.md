@@ -117,8 +117,8 @@ Reference layout: `earthmover-public/goes-16`, group `ABI-L2-MCMIPF/post-2023-04
   to go in both places, because `write` finds its slice by looking up coordinate values. The
   notebook's last cell asserts on the raw Zarr attributes.
 - **RGB band metadata (#10):** `06_stormscope_eu_pipeline.py` writes it at schema creation.
-  `fix_rgb_band_attrs.py BRANCH [--commit]` adds it to the existing repo in place (metadata
-  only, idempotent, refuses if `rgb` is not red/green/blue).
+  The existing repo got the same attributes in a metadata-only commit, `0ER90FTHKN0KF6TNCS60`
+  on `main` (2026-10-01), applied by the one-off script in the comments of #12.
 - **Existing data:** `fix_grid_mapping.py [BRANCH]` adds the same metadata to the root group
   and `stormscope_v2` in place, without rewriting any chunks. It is idempotent. Applied to
   `main` on 2026-09-29.

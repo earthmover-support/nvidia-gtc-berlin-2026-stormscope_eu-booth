@@ -92,7 +92,7 @@ RGB_VALUES = np.array(["red", "green", "blue"])
 # Band metadata for both composites. The tiles service takes the `rgb` dim as R, G, B by
 # position and reads only `valid_min`/`valid_max` (the byte stretch), so the order here
 # is a record for readers, not something the service checks yet (see
-# docs/WEB_TILES_SERVICE_REQUIREMENTS.md). fix_rgb_band_attrs.py writes the same to the repo.
+# docs/WEB_TILES_SERVICE_REQUIREMENTS.md).
 RGB_BAND_ATTRS = {"long_name": "colour band", "color_interpretation": " ".join(RGB_VALUES)}
 RGB_VALID_RANGE = {"valid_min": 0.0, "valid_max": 1.0}
 # FCI central wavelengths; `radiance_to_bt` takes their reciprocal, the wavenumber in cm-1.
