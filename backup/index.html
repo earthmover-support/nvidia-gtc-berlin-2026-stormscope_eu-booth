@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StormScope-EU · direct from Icechunk</title>
+  </head>
+  <body>
+    <div id="map"></div>
+    <aside id="panel">
+      <h1>StormScope-EU nowcast</h1>
+      <p class="sub">Read straight from Icechunk in the browser, rendered on the GPU. No tile server.</p>
+      <div class="row">
+        <select id="variable" aria-label="Variable"></select>
+        <select id="init" aria-label="Initialisation"></select>
+      </div>
+      <div class="row">
+        <button id="play" type="button">Pause</button>
+        <input id="lead" type="range" min="0" max="12" step="1" value="0" aria-label="Lead time" />
+      </div>
+      <div id="label">loading…</div>
+      <div id="status"></div>
+    </aside>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
