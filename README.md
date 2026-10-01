@@ -90,7 +90,6 @@ run must therefore use the same `--n-steps` (lead-time layout).
 uv run python scripts/stormscope_eu_pipeline.py --n-steps 3                    # local Icechunk in outputs/
 uv run python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
 uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
-uv run python scripts/stormscope_eu_pipeline.py --publish-target none          # inference only, no output
 ```
 
 | Flag | Default | Notes |
@@ -98,7 +97,7 @@ uv run python scripts/stormscope_eu_pipeline.py --publish-target none          #
 | `--start-time` | freshest downloadable slot | ISO 8601 UTC on a 10-min boundary. If the Data Store can't be searched, falls back to 2 h behind now. |
 | `--n-steps` | `12` | 10-min steps |
 | `--output-dir` | `outputs` | local Icechunk store |
-| `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` \| `none` |
+| `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` |
 | `--arraylake-repo` | `$ARRAYLAKE_REPO` or `gtc-berlin/stormscope-eu_gtc_berlin_2026` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
 | `--device` | `auto` | `auto` \| `cuda` \| `cpu` |
 

@@ -165,7 +165,7 @@ ZARR_CONVENTIONS = [
 # `xr.open_zarr` would read them back as data variables instead of coordinates of every
 # field.
 GEOREF = {"coordinates": "lat lon valid_time", "grid_mapping": GRID_MAPPING}
-PUBLISH_TARGETS = ["local", "arraylake", "none"]
+PUBLISH_TARGETS = ["local", "arraylake"]
 # Default --publish-target arraylake destination; the cube goes in its root group.
 ARRAYLAKE_REPO = "gtc-berlin/stormscope-eu_gtc_berlin_2026"
 
@@ -197,8 +197,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--n-steps", type=int, default=12, help="forecast steps of 10 min (12 = 2 h)")
     p.add_argument("--output-dir", default="outputs", help="where the local Icechunk store goes")
     p.add_argument("--publish-target", choices=PUBLISH_TARGETS, default=None,
-                   help="local = Icechunk repo on disk, arraylake = hosted repo (needs ARRAYLAKE_API_TOKEN), "
-                        "none = skip publish [env: STORMSCOPE_PUBLISH_TARGET, default local]")
+                   help="local = Icechunk repo on disk, arraylake = hosted repo (needs ARRAYLAKE_API_TOKEN) "
+                        "[env: STORMSCOPE_PUBLISH_TARGET, default local]")
     p.add_argument("--arraylake-repo", default=os.environ.get("ARRAYLAKE_REPO", ARRAYLAKE_REPO),
                    help="ArrayLake org/repo when --publish-target arraylake [env: ARRAYLAKE_REPO]")
     p.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
@@ -727,58 +727,53 @@ def main():
 
     channels = [str(v) for v in coords["variable"]]
 
-    if args.publish_target == "none":
-        backend = None
+    backend, location = build_backend(
+        args.publish_target, args.output_dir, args.arraylake_repo
+    )
+    lead_time = np.arange(args.n_steps + 1) * model.output_times[0]
+    init = np.datetime_as_string(coords["time"][0], unit="m")
+    if "true_color" not in backend.root:
+        create_schema(backend, model, coords, lead_time)
+        message = f"stormscope-eu {init} schema"
     else:
-        backend, location = build_backend(
-            args.publish_target, args.output_dir, args.arraylake_repo
-        )
-        lead_time = np.arange(args.n_steps + 1) * model.output_times[0]
-        init = np.datetime_as_string(coords["time"][0], unit="m")
-        if "true_color" not in backend.root:
-            create_schema(backend, model, coords, lead_time)
-            message = f"stormscope-eu {init} schema"
-        else:
-            message = extend_schema(backend, coords["time"], lead_time)
-        if message is not None:
-            # Commit metadata makes `repo.ancestry()` filterable without reading data:
-            # `time` is the init, `lead_time` the minutes the commit covers.
-            metadata = {
-                "time": init,
-                "lead_time": lead_minutes(lead_time).tolist(),
-                "status": "schema_extended",
-            }
-            print("schema ->", backend.commit(message, metadata=metadata))
+        message = extend_schema(backend, coords["time"], lead_time)
+    if message is not None:
+        # Commit metadata makes `repo.ancestry()` filterable without reading data:
+        # `time` is the init, `lead_time` the minutes the commit covers.
+        metadata = {
+            "time": init,
+            "lead_time": lead_minutes(lead_time).tolist(),
+            "status": "schema_extended",
+        }
+        print("schema ->", backend.commit(message, metadata=metadata))
 
     for step, (x_pred, coords_pred) in enumerate(
         tqdm(model.create_iterator(x, coords), total=args.n_steps + 1)
     ):
-        if backend is not None:
-            # Forecast only: step 0's five past observed frames are model input, not output.
-            x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
-            backend.write(*step_writes(x_pred_out, coords_pred_out, channels))
+        # Forecast only: step 0's five past observed frames are model input, not output.
+        x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
+        backend.write(*step_writes(x_pred_out, coords_pred_out, channels))
 
-            lead = lead_minutes(coords_pred_out["lead_time"])
-            if step == 0:
-                message = f"stormscope-eu {init} analysis frame (lead {lead[-1]} min)"
-            else:
-                message = f"stormscope-eu {init} +{lead[-1]} min"
-            # commit flushes the background writes above, then opens a fresh session --
-            # an Icechunk session is spent once committed. `rebase_with` lets the step
-            # land on top of a commit made meanwhile by another writer (another init's
-            # chunks, say); it still fails on a real conflict, such as that commit
-            # changing the metadata of an array this step writes.
-            metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
-            snapshot = backend.commit(
-                message, metadata=metadata, rebase_with=icechunk.ConflictDetector()
-            )
-            tqdm.write(f"{message} -> {snapshot}")
+        lead = lead_minutes(coords_pred_out["lead_time"])
+        if step == 0:
+            message = f"stormscope-eu {init} analysis frame (lead {lead[-1]} min)"
+        else:
+            message = f"stormscope-eu {init} +{lead[-1]} min"
+        # commit flushes the background writes above, then opens a fresh session --
+        # an Icechunk session is spent once committed. `rebase_with` lets the step
+        # land on top of a commit made meanwhile by another writer (another init's
+        # chunks, say); it still fails on a real conflict, such as that commit
+        # changing the metadata of an array this step writes.
+        metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
+        snapshot = backend.commit(
+            message, metadata=metadata, rebase_with=icechunk.ConflictDetector()
+        )
+        tqdm.write(f"{message} -> {snapshot}")
 
         if step == args.n_steps:
             break
 
-    if backend is not None:
-        print(f"Published to {args.publish_target} ({location})")
+    print(f"Published to {args.publish_target} ({location})")
 
 
 if __name__ == "__main__":
