@@ -23,9 +23,7 @@ dependencies = [
     "icechunk>=1.0",
     "xarray>=2025.1",
     "zarr>=3",
-    # plotting / misc
-    "cartopy",
-    "matplotlib",
+    # misc
     "ipywidgets",
     "python-dotenv",
     "tqdm",
@@ -47,6 +45,7 @@ earth2studio = { git = "https://github.com/NVIDIA/earth2studio.git" }
 dev = [
     "ipykernel>=7.3.0",  # VS Code notebook kernel
     "jupyterlab>=4.6.4",
+    "matplotlib>=3.11.2",
 ]
 
 [tool.uv]
