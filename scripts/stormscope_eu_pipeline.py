@@ -50,18 +50,15 @@ Usage:
 import argparse
 import os
 from collections import OrderedDict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
+import earth2studio
 import eumdac
 import icechunk
 import numpy as np
 import pyproj
 import torch
 from dotenv import load_dotenv
-from tqdm import tqdm
-from zarr.codecs import BloscCodec, ZstdCodec
-
-import earth2studio
 from earth2studio.data import fetch_data
 from earth2studio.data.meteosat_fci import (
     PERSPECTIVE_POINT_HEIGHT,
@@ -74,6 +71,8 @@ from earth2studio.data.utils_eumetsat import eumetsat_credentials
 from earth2studio.io import IceChunkBackend
 from earth2studio.models.px.stormscope_meteosat import StormScopeMeteosatEU
 from earth2studio.utils.coords import map_coords
+from tqdm import tqdm
+from zarr.codecs import BloscCodec, ZstdCodec
 
 load_dotenv()
 
@@ -171,7 +170,7 @@ ARRAYLAKE_REPO = "gtc-berlin/stormscope-eu_gtc_berlin_2026"
 
 # EUMETSAT Data Store freshness search (see resolve_start_time).
 SCAN_STEP = timedelta(seconds=MeteosatFCI.SCAN_FREQUENCY)  # FCI repeat cycle: 10 min
-FCI_EPOCH = datetime(2000, 1, 1, tzinfo=timezone.utc)  # anchor of the scan-slot grid
+FCI_EPOCH = datetime(2000, 1, 1, tzinfo=UTC)  # anchor of the scan-slot grid
 SEARCH_LOOKBACK = timedelta(hours=6)  # how far back to hunt for a complete input window
 REALTIME_LAG = timedelta(hours=2)  # blind fallback when the Data Store cannot be searched
 # Youngest slot this account is allowed to *download*. The Data Store publishes a product
@@ -261,9 +260,9 @@ def floor_to_slot(when: datetime) -> datetime:
     seconds since 2000-01-01, so every candidate analysis time has to land on it.
     """
     when = (
-        when.astimezone(timezone.utc)
+        when.astimezone(UTC)
         if when.tzinfo
-        else when.replace(tzinfo=timezone.utc)
+        else when.replace(tzinfo=UTC)
     )
     slots = int((when - FCI_EPOCH).total_seconds()) // MeteosatFCI.SCAN_FREQUENCY
     return FCI_EPOCH + slots * SCAN_STEP
@@ -285,7 +284,7 @@ def latest_fci_slot(
     collection, the IR/WV bands at 2 km and the VIS/NIR bands at 1 km. HRFI only repeats
     four of them at finer resolution, which this pipeline does not use.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     token = eumdac.AccessToken(credentials=eumetsat_credentials())
     collection = eumdac.DataStore(token).get_collection(
         MeteosatFCI.COLLECTION_ID["FDHSI"]
@@ -305,11 +304,11 @@ def latest_fci_slot(
 def resolve_start_time(pinned: np.datetime64 | None, n_frames: int) -> datetime:
     """The analysis time to run: pinned, else latest available, else `REALTIME_LAG` back."""
     if pinned is not None:
-        return floor_to_slot(pinned.astype("datetime64[s]").astype(datetime).replace(tzinfo=timezone.utc))
+        return floor_to_slot(pinned.astype("datetime64[s]").astype(datetime).replace(tzinfo=UTC))
     try:
         return latest_fci_slot(n_frames)
     except Exception as err:  # no credentials, no network, feed gap beyond the lookback
-        fallback = floor_to_slot(datetime.now(timezone.utc) - REALTIME_LAG)
+        fallback = floor_to_slot(datetime.now(UTC) - REALTIME_LAG)
         print(f"Data Store search failed ({err!r}); falling back to {REALTIME_LAG} back")
         return fallback
 
@@ -374,7 +373,7 @@ def add_coord(
     values = np.asarray(values.detach().cpu() if torch.is_tensor(values) else values, dtype=dtype)
     # y/x split like the data arrays; any other dim stays whole
     chunks = tuple(
-        CHUNKS[dim] if dim in ("y", "x") else size for dim, size in zip(dims, values.shape)
+        CHUNKS[dim] if dim in ("y", "x") else size for dim, size in zip(dims, values.shape, strict=True)
     )
     if name not in backend.root:
         array = backend.root.create_array(
@@ -546,7 +545,7 @@ class ReopenableIceChunkBackend(IceChunkBackend):
                     self.coords[dim] = self.root[dim][:]
         for name, array in arrays:
             if name not in self.coords:
-                self.chunks.update(zip(array.metadata.dimension_names, array.chunks))
+                self.chunks.update(zip(array.metadata.dimension_names, array.chunks, strict=True))
 
 
 def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
@@ -717,7 +716,7 @@ def main():
     in_coords = model.input_coords()
 
     analysis_time = resolve_start_time(args.start_time, n_frames=len(in_coords["lead_time"]))
-    lag_min = (datetime.now(timezone.utc) - analysis_time).total_seconds() / 60
+    lag_min = (datetime.now(UTC) - analysis_time).total_seconds() / 60
     print(f"analysis time {analysis_time:%Y-%m-%d %H:%M} UTC ({lag_min:.0f} min behind now)")
     start_time = np.datetime64(analysis_time.replace(tzinfo=None))  # numpy carries no timezone
 

@@ -63,7 +63,7 @@ VENDOR = {
 
 
 def utcnow() -> dt.datetime:
-    return dt.datetime.now(dt.timezone.utc)
+    return dt.datetime.now(dt.UTC)
 
 
 class Shared:
@@ -209,7 +209,7 @@ def poll_arraylake(stop: threading.Event) -> None:
                     {
                         "id": snap.id,
                         "message": snap.message,
-                        "written_at": snap.written_at.astimezone(dt.timezone.utc).isoformat(),
+                        "written_at": snap.written_at.astimezone(dt.UTC).isoformat(),
                     }
                 )
             if commits and commits[0]["id"] != head:
