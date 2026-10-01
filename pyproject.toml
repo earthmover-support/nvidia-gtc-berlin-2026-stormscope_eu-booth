@@ -4,8 +4,15 @@ version = "0.1.0"
 description = "StormScope-EU nowcasting on MTG-I1 FCI -> Arraylake/Icechunk (GTC Berlin demo)"
 requires-python = "==3.12.*"
 dependencies = [
-    # earth2studio: StormScopeMeteosatEU + MeteosatFCI are main-only (not in 0.17.0)
-    "earth2studio[data] @ git+https://github.com/NVIDIA/earth2studio.git",
+    # earth2studio bare (no [data] extra): the full extra pulls cfgrib /
+    # eccodes / eccodeslib, which have no macOS arm64 wheels (eccodeslib is
+    # linux-only), so `uv sync` fails on a Mac. The pipeline only needs the
+    # MeteosatFCI source (eumdac + netCDF4) and the Icechunk ingest path
+    # (arraylake + icechunk), listed explicitly below. The Coiled GPU env
+    # still installs the full earth2studio[data]; see
+    # coiled/requirements-stormscope-eu.txt.
+    "earth2studio @ git+https://github.com/NVIDIA/earth2studio.git",
+    "eumdac>=3.1.0",
     # contents of the `stormscope` extra, minus earth2studio[utils]
     # ([utils] pulls earth2grid, which is git-only / source build)
     "nvidia-physicsnemo>=2.1.0",  # stormscope_meteosat imports it; installs fine on macOS
@@ -19,15 +26,12 @@ dependencies = [
     "icechunk>=1.0",
     "xarray>=2025.1",
     "zarr>=3",
-    # notebook / plotting / misc
+    # plotting / misc
     "cartopy",
     "matplotlib",
-    "jupyterlab",
     "ipywidgets",
     "python-dotenv",
     "tqdm",
-    "eumdac",
-    "ipykernel>=7.3.0",  # VS Code notebook kernel
     "coiled>=1.135.3",   # launch the GPU runs from here
 ]
 
@@ -42,6 +46,12 @@ gpu = [
 
 [tool.uv.sources]
 earth2studio = { git = "https://github.com/NVIDIA/earth2studio.git" }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",  # VS Code notebook kernel
+    "jupyterlab>=4.6.4",
+]
 
 [tool.uv]
 # eccodeslib (via earth2studio[data]) has released versions with linux-only wheels

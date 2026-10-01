@@ -9,17 +9,14 @@ NVIDIA GTC Berlin 2026.
 - https://hackmd.io/@ukEyv-C_TnK1RVN9gH211w/BkSIAjzOGl
 - https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026
 
-[`demo.ipynb`](demo.ipynb) runs
+[`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py) runs
 [`StormScopeMeteosatEU`](https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/)
 end to end: fetch six consecutive FCI frames from the EUMETSAT Data Store, roll the model
 forward autoregressively in 10-minute steps, and write each step to Icechunk on Arraylake as
 it is produced. By default it initialises from the freshest slot this account may download
 (~80–90 min behind real time — downloading anything fresher needs the EUMETSAT NRT licence;
-see `MIN_LAG` in the notebook), so the notebook can be run on a schedule as is.
-
-> **Note:** `demo.ipynb` is only here for debugging on Coiled. The pipeline script
-> ([`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py), see
-> [Pipeline script](#pipeline-script)) is what produces the dataset.
+see `MIN_LAG` in the script), so it can be run on a schedule as is. See
+[Pipeline script](#pipeline-script).
 
 **Ingest target:**
 [gtc-berlin/stormscope-eu_gtc_berlin_2026](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
@@ -60,31 +57,62 @@ see nothing there.
 
 ## Running it
 
-for now coiled: to be changed to brev: The model needs a CUDA GPU; the notebook is run on a Coiled GPU VM in the `earthmover-devs`
-workspace. The environment definition lives in [`coiled/`](coiled/) and the notebook's *Run
-this on Coiled* section has the commands to build it and launch the notebook on a VM.
+for now coiled: to be changed to brev: The model needs a CUDA GPU; the pipeline is run on a Coiled GPU VM in the `earthmover-devs`
+workspace. The environment definition lives in [`coiled/`](coiled/).
 
 Credentials come from a local `.env` (see [`.env.example`](.env.example)):
 
 - `EUMETSAT_CONSUMER_KEY` / `EUMETSAT_CONSUMER_SECRET` — model input, from
   <https://api.eumetsat.int/api-key/>
-- `ARRAYLAKE_API_TOKEN` — ingest target (the notebook and the script both read it)
+- `ARRAYLAKE_API_TOKEN` — ingest target (read by the script)
+
+### On Coiled
+
+The software environment is already built as `earthmover-devs/stormscope-eu`. To rebuild
+it from `coiled/` (images are built per region, so a new region queues a ~9.6 GB build):
+
+```bash
+coiled env create --name stormscope-eu --workspace earthmover-devs --gpu-enabled \
+  --architecture x86_64 \
+  --conda coiled/environment-stormscope-eu.yml --pip coiled/requirements-stormscope-eu.txt
+```
+
+Run the pipeline headless on a GPU VM in `us-east-1`, the Arraylake bucket's region:
+
+```bash
+set -a; source .env; set +a
+coiled run --workspace earthmover-devs --software stormscope-eu --name stormscope-eu-run \
+  --gpu --vm-type g6e.xlarge --vm-type g5.2xlarge --vm-type g6.2xlarge \
+  --region us-east-1 --disk-size 200 --keepalive 1h \
+  --env EUMETSAT_CONSUMER_KEY=$EUMETSAT_CONSUMER_KEY \
+  --env EUMETSAT_CONSUMER_SECRET=$EUMETSAT_CONSUMER_SECRET \
+  --env ARRAYLAKE_API_TOKEN=$ARRAYLAKE_API_TOKEN \
+  python 06_stormscope_eu_pipeline.py --publish-target arraylake
+```
+
+- Pass several `--vm-type`s: GPU capacity is scarce and Coiled takes the first available.
+- Don't add `--sync`. If a file changes locally mid-run, the mutagen session can fail and
+  kill the run.
+- Don't `coiled run --name` a VM that someone is using interactively. The VM shuts down
+  when the command exits.
+- On a failed run, Coiled logs print the `--env` values in clear text. Don't paste them
+  anywhere.
+- Stopping a run partway leaves the steps already committed. Rerunning the same init
+  overwrites its slice.
 
 ## Pipeline script
 
-[`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py) is the notebook as a CLI,
-from [negin513/GTC-Berlin-EarthMover](https://github.com/negin513/GTC-Berlin-EarthMover)
+[`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py) comes from [negin513/GTC-Berlin-EarthMover](https://github.com/negin513/GTC-Berlin-EarthMover)
 (`gtc-demo/05_stormscope_eu_pipeline.py`):
 
 ```
 MTG observations → Earth2Studio inference → Icechunk/ArrayLake publish → tile dashboard
 ```
 
-It uses the same freshness search (`MIN_LAG`) and the same one-commit-per-step streaming
-as `demo.ipynb`. It differs in two ways. It publishes through plain
-`earth2studio.io.IceChunkBackend` with `arraylake.Client.get_icechunk_storage`, so it needs
-no backend subclass. And it writes to the root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026`
-(the default for `--arraylake-repo`), the same repo and group as `demo.ipynb`. Each run
+It searches for the freshest downloadable slot (`MIN_LAG`) and streams one commit per step.
+It publishes through plain `earth2studio.io.IceChunkBackend` with
+`arraylake.Client.get_icechunk_storage`, so it needs no backend subclass, and writes to the
+root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026` (the default for `--arraylake-repo`). Each run
 extends the schema by its init time and appends along `time`, keeping earlier inits; every
 run must therefore use the same `--n-steps` (lead-time layout).
 
@@ -104,10 +132,10 @@ uv run python 06_stormscope_eu_pipeline.py --publish-target none          # PNG 
 | `--arraylake-repo` | `$ARRAYLAKE_REPO` or `gtc-berlin/stormscope-eu_gtc_berlin_2026` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
 | `--device` | `auto` | `auto` \| `cuda` \| `cpu` |
 
-Unlike the notebook, it stores only two RGB composites, not the 16 raw channels. Both are
+It stores only two RGB composites, not the 16 raw channels. Both are
 `(ensemble, time, lead_time, y, x, rgb)` float32 in 0–1:
 
-- `true_color`: the VIS 0.6/0.5/0.4 µm recipe, as in the notebook.
+- `true_color`: the VIS 0.6/0.5/0.4 µm recipe.
 - `airmass`: the
   [EUMETSAT airmass recipe](https://eumetrain.org/sites/default/files/2020-05/RGB_recipes.pdf)
   (p. 4), on brightness temperatures converted from radiance with

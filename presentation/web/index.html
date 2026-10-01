@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StormScope-EU · GTC Berlin</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
+<link rel="stylesheet" href="app.css">
+<script src="/vendor/maplibre/maplibre-gl.js"></script>
+<script src="/vendor/qrcode/qrcode.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="logos">
+      <img src="img/nvidia.svg" alt="NVIDIA" class="nv-logo">
+      <span class="x">×</span>
+      <img src="img/earthmover.svg" alt="Earthmover" class="em-logo">
+    </div>
+    <div class="headline">StormScope-EU · a live AI nowcast of Europe, from orbit to your phone</div>
+    <div class="live" id="live"><span class="dot"></span><span id="clock">LIVE · --:--:-- UTC</span></div>
+  </header>
+
+  <main class="main">
+
+    <!-- ============ globe ============ -->
+    <section class="viz">
+      <div id="globe"></div>
+
+      <div class="viz-top">
+        <div class="init-block">
+          <div class="eyebrow">FORECAST INITIALISED</div>
+          <div class="init-title"><span id="initTitle">--:-- UTC</span> · Meteosat-12 FCI</div>
+          <div class="valid" id="validLabel">&nbsp;</div>
+        </div>
+        <div class="seg" id="varToggle" role="group" aria-label="Variable"></div>
+      </div>
+
+      <div class="viz-bottom">
+        <div class="init-row">
+          <span class="eyebrow">INIT</span>
+          <div class="inits" id="inits"></div>
+          <div class="loop" id="loopLabel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+            <span></span>
+          </div>
+          <div class="playback">
+            <button type="button" class="play" id="playBtn" aria-label="Pause"></button>
+            <div class="seg" id="speedToggle" role="group" aria-label="Playback speed"></div>
+          </div>
+        </div>
+        <div class="ticks" id="ticks"></div>
+      </div>
+
+      <div class="notice" id="notice" hidden></div>
+    </section>
+
+    <!-- ============ rotating panels ============ -->
+    <section class="panels" id="panels">
+
+      <article class="panel nv" data-panel="nowcasting">
+        <div class="kicker">01 · NOWCASTING</div>
+        <h2>The weather of the next two hours</h2>
+        <p>Classic weather models take hours to run and struggle to say where a storm cell will pop up this afternoon. Nowcasting starts from what satellites see right now and projects it forward, fast enough to act on.</p>
+        <div class="box">
+          <div class="label">HOW FAR AHEAD</div>
+          <div class="range">
+            <div class="r now"><b>0–2 h</b><span>nowcasting</span></div>
+            <div class="r mid"><b>hours–10 days</b><span>weather forecast</span></div>
+            <div class="r far"><b>weeks +</b><span>climate</span></div>
+          </div>
+        </div>
+        <div class="label">WHO NEEDS IT</div>
+        <div class="chips">
+          <span>Severe-storm warnings</span><span>Solar power ramps</span><span>Aviation</span><span>Outdoor events</span>
+        </div>
+        <p class="small">What's new: a generative AI model that paints the next satellite image, every 10 minutes, on a single GPU.</p>
+      </article>
+
+      <article class="panel nv" data-panel="mtg">
+        <div class="kicker">02 · THE EYE IN ORBIT</div>
+        <h2>Meteosat-12 sees Europe every 10 minutes</h2>
+        <p>The first imager of EUMETSAT's Meteosat Third Generation. It sits 36,000 km above the Gulf of Guinea at 0° longitude and has been Europe's prime geostationary weather satellite since 2025.</p>
+        <div class="stats">
+          <div><b>16</b><span>spectral channels (FCI)</span></div>
+          <div><b>10 min</b><span>full-disk repeat cycle</span></div>
+          <div><b>1–2 km</b><span>pixels, visible and infrared</span></div>
+          <div><b>Dec 2022</b><span>launched on Ariane 5</span></div>
+        </div>
+        <div class="label">ON THE GLOBE</div>
+        <div class="two">
+          <div class="card on"><code>true_color</code><span>What your eye would see: red, green and blue light combined</span></div>
+          <div class="card"><code>airmass</code><span>Infrared water-vapour and ozone channels: red dry sinking air, green warm tropical air, blue cold polar air, white thick high cloud</span></div>
+        </div>
+      </article>
+
+      <article class="panel nv" data-panel="model">
+        <div class="kicker">03 · THE AI MODEL</div>
+        <h2>StormScope-EU predicts the next two hours of clouds</h2>
+        <p>A generative diffusion model from NVIDIA. It forecasts all 16 satellite channels directly in image space, learning how clouds move and grow instead of solving the physics.</p>
+        <div class="box flow">
+          <div class="label">INPUT · 6 OBSERVED FRAMES</div>
+          <div class="frames"><span>−50</span><span>−40</span><span>−30</span><span>−20</span><span>−10</span><span>0</span></div>
+          <div class="arrow">↓</div>
+          <div class="engine"><b>StormScope-EU on GPU</b><span>48 denoising steps · bf16</span></div>
+          <div class="arrow">↓</div>
+          <div class="out"><span class="pill">+10 min</span><span>The new frame is fed back in. 12 rollouts reach +120 min.</span></div>
+        </div>
+        <ul class="facts">
+          <li>Conditioned on orography and land–sea mask</li>
+          <li>Ensemble-of-experts denoising across noise levels</li>
+          <li>[GPU MODEL] · [N] s per 10-minute step</li>
+        </ul>
+      </article>
+
+      <article class="panel nv" data-panel="e2s">
+        <div class="kicker">04 · THE PIPELINE</div>
+        <h2>Earth2Studio wires data, model and storage together</h2>
+        <p>NVIDIA's open-source Python package for AI weather and climate. You can swap data sources, models and outputs without rewriting the pipeline.</p>
+        <ol class="steps">
+          <li><i>1</i><div><b>Fetch</b><span>Latest 6 FCI frames from the EUMETSAT Data Store</span></div></li>
+          <li><i>2</i><div><b>Predict</b><span>StormScope-EU rolls forward 12 × 10 min on the GPU</span></div></li>
+          <li class="split"><i>3</i><div><b>Write</b><span>Each step lands in Icechunk on Arraylake as one commit</span></div></li>
+          <li class="violet"><i>4</i><div><b>Serve</b><span>Arraylake compute renders map tiles</span></div></li>
+        </ol>
+      </article>
+
+      <article class="panel em" data-panel="arraylake">
+        <div class="kicker">05 · THE DATA LAKE</div>
+        <h2>Every forecast step is a commit</h2>
+        <p>Each 10-minute step lands in Arraylake as a versioned Icechunk commit seconds after the GPU produces it. Readers never see a half-written forecast.</p>
+        <div class="commits" id="commitList"></div>
+        <div class="two">
+          <div class="card"><b>Transactional</b><span>Icechunk: open-source, cloud-native Zarr storage</span></div>
+          <div class="card"><b>Time travel</b><span>Open any past forecast by its snapshot ID</span></div>
+        </div>
+        <div class="callout">Each commit fires a webhook into Slack.</div>
+      </article>
+
+      <article class="panel em" data-panel="access">
+        <div class="kicker">06 · YOUR TURN</div>
+        <h2>Take the forecast with you</h2>
+        <div class="two qr">
+          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw tiles on your phone</b><span>Straight from Arraylake Flux. No server in between.</span></div>
+          <div class="qrcard"><div class="qrbox" id="qrViewer"></div><b>Animated web viewer</b><span id="viewerUrl">[VIEWER URL]</span></div>
+        </div>
+        <div class="sql">
+          <div class="sql-head"><b>Live SQL</b><span id="sqlStatus">…</span></div>
+          <div class="sql-run">
+            <div class="sql-places" id="sqlPlaces"></div>
+            <button type="button" id="sqlRun" title="⌘/Ctrl + Enter · Esc leaves the editor">Run ▸</button>
+            <button type="button" id="sqlReset">Reset</button>
+          </div>
+          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="8" aria-label="SQL query"></textarea>
+          <div class="bars" id="sqlBars"></div>
+          <div class="sql-foot" id="sqlFoot">Brightness over STATION Berlin, next 2 h · PostgreSQL wire protocol</div>
+        </div>
+      </article>
+
+      <footer class="panel-foot">
+        <div class="progress" id="progress"></div>
+        <div class="keys">← → panels · space pause · P play · S speed · T/A variable · 1–6 init</div>
+      </footer>
+    </section>
+  </main>
+
+  <!-- ============ ingest strip ============ -->
+  <footer class="strip">
+    <div class="next"><div class="eyebrow">NEXT RUN IN</div><div class="big mono" id="countdown">--:--</div></div>
+    <div class="ingest">
+      <div class="muted" id="ingestLabel">Waiting for Arraylake…</div>
+      <div class="cells" id="cells"></div>
+    </div>
+    <div class="last"><div class="eyebrow">LAST COMMIT</div><div class="mono lime" id="lastCommit">—</div></div>
+  </footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

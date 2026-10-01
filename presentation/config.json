@@ -1,0 +1,53 @@
+{
+  "org": "gtc-berlin",
+  "repo": "gtc-berlin/stormscope-eu_gtc_berlin_2026",
+  "branch": "main",
+  "group": "",
+
+  "tile_base": "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu_gtc_berlin_2026",
+  "tile_ref_mode": "snapshot",
+  "data_bounds": [-63.76155, 29.80654, 72.30417, 75.78313],
+  "max_tile_level": 7,
+
+  "variables": {
+    "true_color": { "style": "raster/rgb", "colorscalerange": "0,1", "available": true },
+    "airmass":    { "style": "raster/rgb", "colorscalerange": "0,1", "available": true }
+  },
+
+  "lead_steps": 12,
+  "lead_step_min": 10,
+  "run_interval_min": 10,
+  "max_runs": 6,
+  "poll_seconds": 5,
+  "history_depth": 120,
+
+  "panel_seconds": 25,
+  "playback_speed": "normal",
+  "hold_ms": 2500,
+
+  "station": { "name": "STATION Berlin", "lat": 52.4999581, "lon": 13.3757385 },
+  "camera": { "lon": 12.0, "lat": 49.0, "zoom": 3.2, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,
+              "cover": [-12, 34, 40, 64], "max_zoom": 8.5, "idle_reset_s": 30 },
+
+  "viewer_url": "",
+  "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
+
+  "sql": {
+    "host": "sql-501bbe54f844df18.compute.arraylake.app",
+    "max_rows": 200,
+    "box_deg": 0.05,
+    "places": {
+      "Berlin":    [52.4999, 13.3757],
+      "Paris":     [48.8566, 2.3522],
+      "London":    [51.5072, -0.1276]
+    },
+    "query": [
+      "SELECT lead_time, AVG(true_color) AS brightness",
+      "FROM \"stormscope-eu_gtc_berlin_2026\".\"root\"",
+      "WHERE time = TIMESTAMP '{init}' AND lead_time > INTERVAL '0 minutes'",
+      "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",
+      "  AND lon BETWEEN {lon} - {box} AND {lon} + {box}",
+      "GROUP BY lead_time ORDER BY lead_time;"
+    ]
+  }
+}
