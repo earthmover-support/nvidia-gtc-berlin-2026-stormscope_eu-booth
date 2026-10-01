@@ -128,7 +128,13 @@
         center: [c.camera.lon, c.camera.lat],
         zoom: c.camera.zoom,
         pitch: c.camera.pitch,
-        interactive: false, // booth: nobody can drag it away
+        // visitors may zoom and pan; the sway owns the bearing, pitch stays fixed
+        dragRotate: false,
+        pitchWithRotate: false,
+        touchPitch: false,
+        keyboard: false,
+        boxZoom: false,
+        maxZoom: c.camera.max_zoom,
         attributionControl: { compact: true, customAttribution: FORECAST_ATTR },
         fadeDuration: 0,
       });
@@ -152,15 +158,43 @@
       syncLayers();
     });
 
+    map.touchZoomRotate.disableRotation();
+
     // Camera: always looking at Europe, gentle sway of the bearing around a fixed centre.
+    // Visitors can zoom in and pan; after camera.idle_reset_s without input it eases home.
     const cam = c.camera;
-    const fitZoom = () => map.jumpTo({ zoom: Math.max(cam.zoom, coverZoom(cam, map.getContainer())) });
+    const center = [cam.lon, cam.lat];
+    let home = cam.zoom;
+    const fitZoom = () => {
+      home = Math.max(cam.zoom, coverZoom(cam, map.getContainer()));
+      map.setMinZoom(home); // never zoom out past the covered view
+      map.jumpTo({ center, zoom: home });
+    };
     fitZoom();
     map.on("resize", fitZoom);
-    const t0 = performance.now();
-    const sway = () => {
-      const t = (performance.now() - t0) / 1000;
-      map.jumpTo({ bearing: cam.sway_deg * Math.sin((2 * Math.PI * t) / cam.sway_period_s) });
+
+    let idle;
+    const touched = () => {
+      clearTimeout(idle);
+      idle = setTimeout(() => map.easeTo({ center, zoom: home, duration: 1500 }), cam.idle_reset_s * 1000);
+    };
+    let held = false; // a finger or mouse button is down on the globe
+    const box = map.getCanvasContainer();
+    box.addEventListener("pointerdown", () => { held = true; touched(); }, { passive: true });
+    box.addEventListener("wheel", touched, { passive: true });
+    for (const type of ["pointerup", "pointercancel"]) {
+      window.addEventListener(type, () => { held = false; touched(); }, { passive: true });
+    }
+
+    // jumpTo() resets gesture handlers and stops eases, so the sway waits while a pointer is
+    // down or the map moves; its clock pauses too, so the bearing picks up where it left off.
+    let t = 0, last = performance.now();
+    const sway = (now) => {
+      if (!held && !map.isMoving()) {
+        t += (now - last) / 1000;
+        map.jumpTo({ bearing: cam.sway_deg * Math.sin((2 * Math.PI * t) / cam.sway_period_s) });
+      }
+      last = now;
       requestAnimationFrame(sway);
     };
     requestAnimationFrame(sway);

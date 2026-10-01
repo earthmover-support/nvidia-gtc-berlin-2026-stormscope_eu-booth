@@ -26,7 +26,7 @@
 
   "station": { "name": "STATION Berlin", "lat": 52.4999581, "lon": 13.3757385 },
   "camera": { "lon": 12.0, "lat": 49.0, "zoom": 3.2, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,
-              "cover": [-12, 34, 40, 64] },
+              "cover": [-12, 34, 40, 64], "max_zoom": 8.5, "idle_reset_s": 30 },
 
   "viewer_url": "",
   "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
