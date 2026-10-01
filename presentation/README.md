@@ -2,7 +2,7 @@
 
 Local web app for the GTC Berlin booth: a MapLibre globe fixed on Europe showing the
 latest StormScope-EU run from Arraylake, rotating explainer panels, a live ingest strip,
-QR codes and a live Zax-SQL query. The Slack app runs in its own window next to it.
+QR codes and a live Zax-SQL query.
 
 ```
 presentation/
@@ -24,10 +24,10 @@ uv run presentation/server.py --demo           # rehearsal: fake commits + SQL, 
 `server.py` reads `ARRAYLAKE_API_TOKEN` (and optionally `ARRAYLAKE_SQL_HOST`) from the repo's
 `.env`. The token stays on the server; the browser only gets `/api/*` JSON and public tile URLs.
 
-Booth window (Slack takes the right ~30 %):
+Booth window (full screen):
 
 ```bash
-chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1344,1080 \
+chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,1080 \
          --noerrdialogs --disable-session-crashed-bubble
 ```
 
