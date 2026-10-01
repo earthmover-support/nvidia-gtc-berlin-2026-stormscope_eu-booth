@@ -148,6 +148,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .steps li { display: flex; gap: 14px; align-items: center; padding: 12px 14px; background: var(--nv-card); border-radius: 10px; }
 .steps i { font: normal 600 14px var(--mono); width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--nv-green); color: var(--nv-green); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .steps li.violet i { border-color: var(--em-lav); color: var(--em-lav); }
+/* NVIDIA writes into Arraylake: ring and number half green, half violet */
+.steps li.split i { position: relative; border-color: transparent; color: transparent; background: linear-gradient(90deg, var(--nv-green) 50%, var(--em-lav) 50%); -webkit-background-clip: text; background-clip: text; }
+.steps li.split i::before { content: ""; position: absolute; inset: -2px; padding: 2px; border-radius: 50%; background: linear-gradient(90deg, var(--nv-green) 50%, var(--em-lav) 50%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 .steps b { display: block; font-size: 17px; color: #fff; } .steps span { font-size: 14px; color: #BDBDBD; }
 
 .commits { display: flex; flex-direction: column; gap: 8px; }
