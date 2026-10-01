@@ -110,11 +110,11 @@ Reference layout: `earthmover-public/goes-16`, group `ABI-L2-MCMIPF/post-2023-04
 
 ## Where this is applied
 
-- **New runs:** `06_stormscope_eu_pipeline.py` writes all of the above at ingest. It creates
+- **New runs:** `scripts/stormscope_eu_pipeline.py` writes all of the above at ingest. It creates
   `fci_geos_projection` (`add_grid_mapping`), `grid_mapping` goes on every data array through
   `GEOREF`, and `east_positive` negates `x` in the schema and in every `write`. The negation has
   to go in both places, because `write` finds its slice by looking up coordinate values.
-- **RGB band metadata (#10):** `06_stormscope_eu_pipeline.py` writes it at schema creation.
+- **RGB band metadata (#10):** `scripts/stormscope_eu_pipeline.py` writes it at schema creation.
   The existing repo got the same attributes in a metadata-only commit, `0ER90FTHKN0KF6TNCS60`
   on `main` (2026-10-01), applied by the one-off script in the comments of #12.
 - **Existing data:** the one-off script in
@@ -131,7 +131,7 @@ Reference layout: `earthmover-public/goes-16`, group `ABI-L2-MCMIPF/post-2023-04
 ## Spatial chunking (measured)
 
 The pipeline writes 560 × 1216 spatial chunks with zstd (`CHUNKS` in
-`06_stormscope_eu_pipeline.py`): `true_color` chunks are `(1, 1, 1, 560, 1216, 3)`, 4 per
+`scripts/stormscope_eu_pipeline.py`): `true_color` chunks are `(1, 1, 1, 560, 1216, 3)`, 4 per
 frame. Before #4, a frame was one ~33 MB chunk. The measurement below used 280 × 304 chunks
 (32 per frame) and found that **for tiles, chunking changed nothing measurable.** Same
 tiles, branch `writer_gm_check` (chunked, zstd) vs.

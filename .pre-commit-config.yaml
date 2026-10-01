@@ -1,4 +1,4 @@
-# Keep notebook outputs out of git: the demo is run on a Coiled GPU VM and its
+# Keep notebook outputs out of git: the demo is run on a GPU VM and its
 # outputs are megabytes of embedded PNGs that change on every run.
 #
 #   uv tool install pre-commit   # or: pipx install pre-commit

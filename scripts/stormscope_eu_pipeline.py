@@ -38,13 +38,13 @@ Env vars required:
 
 Install:
     uv pip install "earth2studio[stormscope,data] @ git+https://github.com/NVIDIA/earth2studio.git" \
-        cartopy python-dotenv icechunk arraylake xarray zarr eumdac
+        python-dotenv icechunk arraylake xarray zarr eumdac
 
 Usage:
-    python 06_stormscope_eu_pipeline.py --n-steps 3
-    python 06_stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
-    python 06_stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
-    python 06_stormscope_eu_pipeline.py --help
+    python scripts/stormscope_eu_pipeline.py --n-steps 3
+    python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
+    python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
+    python scripts/stormscope_eu_pipeline.py --help
 """
 
 import argparse
@@ -52,10 +52,8 @@ import os
 from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 
-import cartopy.crs as ccrs
 import eumdac
 import icechunk
-import matplotlib.pyplot as plt
 import numpy as np
 import pyproj
 import torch
@@ -167,7 +165,7 @@ ZARR_CONVENTIONS = [
 # `xr.open_zarr` would read them back as data variables instead of coordinates of every
 # field.
 GEOREF = {"coordinates": "lat lon valid_time", "grid_mapping": GRID_MAPPING}
-PUBLISH_TARGETS = ["local", "arraylake", "none"]
+PUBLISH_TARGETS = ["local", "arraylake"]
 # Default --publish-target arraylake destination; the cube goes in its root group.
 ARRAYLAKE_REPO = "gtc-berlin/stormscope-eu_gtc_berlin_2026"
 
@@ -187,7 +185,7 @@ MIN_LAG = timedelta(minutes=80)
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="StormScope EU nowcast: fetch MTG/FCI -> Earth2Studio rollout -> RGB PNG "
+        description="StormScope EU nowcast: fetch MTG/FCI -> Earth2Studio rollout "
                      "-> streaming Icechunk/ArrayLake publish",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -197,10 +195,10 @@ def parse_args() -> argparse.Namespace:
                         "this account (see MIN_LAG), falling back to --realtime-lag-hours "
                         "behind now if the Data Store can't be searched.")
     p.add_argument("--n-steps", type=int, default=12, help="forecast steps of 10 min (12 = 2 h)")
-    p.add_argument("--output-dir", default="outputs", help="where the PNG and local Icechunk store go")
+    p.add_argument("--output-dir", default="outputs", help="where the local Icechunk store goes")
     p.add_argument("--publish-target", choices=PUBLISH_TARGETS, default=None,
-                   help="local = Icechunk repo on disk, arraylake = hosted repo (needs ARRAYLAKE_API_TOKEN), "
-                        "none = skip publish [env: STORMSCOPE_PUBLISH_TARGET, default local]")
+                   help="local = Icechunk repo on disk, arraylake = hosted repo (needs ARRAYLAKE_API_TOKEN) "
+                        "[env: STORMSCOPE_PUBLISH_TARGET, default local]")
     p.add_argument("--arraylake-repo", default=os.environ.get("ARRAYLAKE_REPO", ARRAYLAKE_REPO),
                    help="ArrayLake org/repo when --publish-target arraylake [env: ARRAYLAKE_REPO]")
     p.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
@@ -241,7 +239,7 @@ def load_model(device: torch.device) -> StormScopeMeteosatEU:
     return model
 
 
-def build_data_sources() -> tuple[dict, tuple]:
+def build_data_sources() -> dict:
     """Step 2: FCI data sources at 1km/2km matching the model's pixel bbox."""
     bbox_2km = StormScopeMeteosatEU.Model_FCI_BBox
     fci_bbox = {"2km": bbox_2km}
@@ -253,7 +251,7 @@ def build_data_sources() -> tuple[dict, tuple]:
         res: MeteosatFCI(resolution=res, pixel_bbox=bbox)
         for (res, bbox) in fci_bbox.items()
     }
-    return fci, bbox_2km
+    return fci
 
 
 def floor_to_slot(when: datetime) -> datetime:
@@ -354,47 +352,6 @@ def add_ensemble_dim(x: torch.Tensor, coords: dict, ensemble_size: int):
     coords["ensemble"] = np.arange(ensemble_size)
     coords.move_to_end("ensemble", last=False)
     return x, coords
-
-
-def rgb_channel_indices(model: StormScopeMeteosatEU) -> list[int]:
-    return [list(model.variables).index(ch) for ch in RGB_CHANNELS]
-
-
-def frame_valid_time(coords_pred: dict) -> np.datetime64:
-    # the model keeps `time` fixed at the IC time and advances only lead_time
-    return coords_pred["time"][0] + coords_pred["lead_time"][0]
-
-
-def render_rgb(rgb_pred, coords_pred, bbox_2km, out_path: str):
-    """True-colour RGB composite (VIS 0.6/0.5/0.4 um) in geostationary proj, as a PNG."""
-    rgb = (rgb_pred / 24.0).clamp(min=0, max=1) * 255
-    rgb = rgb.permute(1, 2, 0).numpy()
-    rgb = np.interp(rgb, [0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255]) / 255.0
-
-    proj = ccrs.Geostationary(
-        central_longitude=0.0,
-        satellite_height=PERSPECTIVE_POINT_HEIGHT,
-        globe=ccrs.Globe(semimajor_axis=SEMI_MAJOR_AXIS, semiminor_axis=SEMI_MINOR_AXIS),
-    )
-    extent = MeteosatFCI.projection_extent(resolution="2km", pixel_bbox=bbox_2km)
-
-    aspect = (extent[1] - extent[0]) / (extent[3] - extent[2])
-    fig_height = 8
-    fig = plt.figure(figsize=(fig_height * aspect, fig_height))
-    ax = fig.add_subplot(1, 1, 1, projection=proj)
-    ax.set_xlim(extent[0], extent[1])
-    ax.set_ylim(extent[2], extent[3])
-    ax.coastlines(color="white", linewidth=0.8)
-    ax.imshow(rgb, transform=proj, extent=extent, origin="lower")
-
-    valid_time = str(frame_valid_time(coords_pred).astype("datetime64[m]")).replace("T", " ")
-    lead_min = int(coords_pred["lead_time"][0].astype("timedelta64[m]") / np.timedelta64(1, "m"))
-    ax.set_title(f"StormScopeMeteosatEU - RGB\nValid {valid_time} UTC  (+{lead_min} min)")
-
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=150)
-    plt.close(fig)
-    return rgb, extent
 
 
 def add_coord(
@@ -756,7 +713,7 @@ def main():
         device = torch.device(args.device)
 
     model = load_model(device)
-    fci, bbox_2km = build_data_sources()
+    fci = build_data_sources()
     in_coords = model.input_coords()
 
     analysis_time = resolve_start_time(args.start_time, n_frames=len(in_coords["lead_time"]))
@@ -770,66 +727,53 @@ def main():
 
     channels = [str(v) for v in coords["variable"]]
 
-    if args.publish_target == "none":
-        backend = None
+    backend, location = build_backend(
+        args.publish_target, args.output_dir, args.arraylake_repo
+    )
+    lead_time = np.arange(args.n_steps + 1) * model.output_times[0]
+    init = np.datetime_as_string(coords["time"][0], unit="m")
+    if "true_color" not in backend.root:
+        create_schema(backend, model, coords, lead_time)
+        message = f"stormscope-eu {init} schema"
     else:
-        backend, location = build_backend(
-            args.publish_target, args.output_dir, args.arraylake_repo
-        )
-        lead_time = np.arange(args.n_steps + 1) * model.output_times[0]
-        init = np.datetime_as_string(coords["time"][0], unit="m")
-        if "true_color" not in backend.root:
-            create_schema(backend, model, coords, lead_time)
-            message = f"stormscope-eu {init} schema"
-        else:
-            message = extend_schema(backend, coords["time"], lead_time)
-        if message is not None:
-            # Commit metadata makes `repo.ancestry()` filterable without reading data:
-            # `time` is the init, `lead_time` the minutes the commit covers.
-            metadata = {
-                "time": init,
-                "lead_time": lead_minutes(lead_time).tolist(),
-                "status": "schema_extended",
-            }
-            print("schema ->", backend.commit(message, metadata=metadata))
+        message = extend_schema(backend, coords["time"], lead_time)
+    if message is not None:
+        # Commit metadata makes `repo.ancestry()` filterable without reading data:
+        # `time` is the init, `lead_time` the minutes the commit covers.
+        metadata = {
+            "time": init,
+            "lead_time": lead_minutes(lead_time).tolist(),
+            "status": "schema_extended",
+        }
+        print("schema ->", backend.commit(message, metadata=metadata))
 
-    rgb_last = coords_last = None
     for step, (x_pred, coords_pred) in enumerate(
         tqdm(model.create_iterator(x, coords), total=args.n_steps + 1)
     ):
-        ch_idx = rgb_channel_indices(model)
-        rgb_last, coords_last = x_pred[0, 0, 0, ch_idx].detach().cpu(), coords_pred
+        # Forecast only: step 0's five past observed frames are model input, not output.
+        x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
+        backend.write(*step_writes(x_pred_out, coords_pred_out, channels))
 
-        if backend is not None:
-            # Forecast only: step 0's five past observed frames are model input, not output.
-            x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
-            backend.write(*step_writes(x_pred_out, coords_pred_out, channels))
-
-            lead = lead_minutes(coords_pred_out["lead_time"])
-            if step == 0:
-                message = f"stormscope-eu {init} analysis frame (lead {lead[-1]} min)"
-            else:
-                message = f"stormscope-eu {init} +{lead[-1]} min"
-            # commit flushes the background writes above, then opens a fresh session --
-            # an Icechunk session is spent once committed. `rebase_with` lets the step
-            # land on top of a commit made meanwhile by another writer (another init's
-            # chunks, say); it still fails on a real conflict, such as that commit
-            # changing the metadata of an array this step writes.
-            metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
-            snapshot = backend.commit(
-                message, metadata=metadata, rebase_with=icechunk.ConflictDetector()
-            )
-            tqdm.write(f"{message} -> {snapshot}")
+        lead = lead_minutes(coords_pred_out["lead_time"])
+        if step == 0:
+            message = f"stormscope-eu {init} analysis frame (lead {lead[-1]} min)"
+        else:
+            message = f"stormscope-eu {init} +{lead[-1]} min"
+        # commit flushes the background writes above, then opens a fresh session --
+        # an Icechunk session is spent once committed. `rebase_with` lets the step
+        # land on top of a commit made meanwhile by another writer (another init's
+        # chunks, say); it still fails on a real conflict, such as that commit
+        # changing the metadata of an array this step writes.
+        metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
+        snapshot = backend.commit(
+            message, metadata=metadata, rebase_with=icechunk.ConflictDetector()
+        )
+        tqdm.write(f"{message} -> {snapshot}")
 
         if step == args.n_steps:
             break
 
-    png_path = os.path.join(args.output_dir, "stormscope_eu_latest.png")
-    render_rgb(rgb_last, coords_last, bbox_2km, png_path)
-    print(f"Saved {png_path}")
-
-    if backend is not None:
-        print(f"Published to {args.publish_target} ({location})")
+    print(f"Published to {args.publish_target} ({location})")
 
 
 if __name__ == "__main__":

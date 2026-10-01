@@ -9,7 +9,7 @@ NVIDIA GTC Berlin 2026.
 - https://hackmd.io/@ukEyv-C_TnK1RVN9gH211w/BkSIAjzOGl
 - https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026
 
-[`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py) runs
+[`scripts/stormscope_eu_pipeline.py`](scripts/stormscope_eu_pipeline.py) runs
 [`StormScopeMeteosatEU`](https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/)
 end to end: fetch six consecutive FCI frames from the EUMETSAT Data Store, roll the model
 forward autoregressively in 10-minute steps, and write each step to Icechunk on Arraylake as
@@ -57,8 +57,9 @@ see nothing there.
 
 ## Running it
 
-for now coiled: to be changed to brev: The model needs a CUDA GPU; the pipeline is run on a Coiled GPU VM in the `earthmover-devs`
-workspace. The environment definition lives in [`coiled/`](coiled/).
+The model needs a CUDA GPU. Install the GPU extra there (`uv sync --extra gpu`, with
+NATTEN's prebuilt wheels from <https://whl.natten.org/>) and run the
+[pipeline script](#pipeline-script).
 
 Credentials come from a local `.env` (see [`.env.example`](.env.example)):
 
@@ -66,43 +67,12 @@ Credentials come from a local `.env` (see [`.env.example`](.env.example)):
   <https://api.eumetsat.int/api-key/>
 - `ARRAYLAKE_API_TOKEN` — ingest target (read by the script)
 
-### On Coiled
-
-The software environment is already built as `earthmover-devs/stormscope-eu`. To rebuild
-it from `coiled/` (images are built per region, so a new region queues a ~9.6 GB build):
-
-```bash
-coiled env create --name stormscope-eu --workspace earthmover-devs --gpu-enabled \
-  --architecture x86_64 \
-  --conda coiled/environment-stormscope-eu.yml --pip coiled/requirements-stormscope-eu.txt
-```
-
-Run the pipeline headless on a GPU VM in `us-east-1`, the Arraylake bucket's region:
-
-```bash
-set -a; source .env; set +a
-coiled run --workspace earthmover-devs --software stormscope-eu --name stormscope-eu-run \
-  --gpu --vm-type g6e.xlarge --vm-type g5.2xlarge --vm-type g6.2xlarge \
-  --region us-east-1 --disk-size 200 --keepalive 1h \
-  --env EUMETSAT_CONSUMER_KEY=$EUMETSAT_CONSUMER_KEY \
-  --env EUMETSAT_CONSUMER_SECRET=$EUMETSAT_CONSUMER_SECRET \
-  --env ARRAYLAKE_API_TOKEN=$ARRAYLAKE_API_TOKEN \
-  python 06_stormscope_eu_pipeline.py --publish-target arraylake
-```
-
-- Pass several `--vm-type`s: GPU capacity is scarce and Coiled takes the first available.
-- Don't add `--sync`. If a file changes locally mid-run, the mutagen session can fail and
-  kill the run.
-- Don't `coiled run --name` a VM that someone is using interactively. The VM shuts down
-  when the command exits.
-- On a failed run, Coiled logs print the `--env` values in clear text. Don't paste them
-  anywhere.
-- Stopping a run partway leaves the steps already committed. Rerunning the same init
-  overwrites its slice.
+Stopping a run partway leaves the steps already committed. Rerunning the same init
+overwrites its slice.
 
 ## Pipeline script
 
-[`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py) comes from [negin513/GTC-Berlin-EarthMover](https://github.com/negin513/GTC-Berlin-EarthMover)
+[`scripts/stormscope_eu_pipeline.py`](scripts/stormscope_eu_pipeline.py) comes from [negin513/GTC-Berlin-EarthMover](https://github.com/negin513/GTC-Berlin-EarthMover)
 (`gtc-demo/05_stormscope_eu_pipeline.py`):
 
 ```
@@ -117,18 +87,17 @@ extends the schema by its init time and appends along `time`, keeping earlier in
 run must therefore use the same `--n-steps` (lead-time layout).
 
 ```bash
-uv run python 06_stormscope_eu_pipeline.py --n-steps 3                    # local Icechunk in outputs/
-uv run python 06_stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
-uv run python 06_stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
-uv run python 06_stormscope_eu_pipeline.py --publish-target none          # PNG only
+uv run python scripts/stormscope_eu_pipeline.py --n-steps 3                    # local Icechunk in outputs/
+uv run python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
+uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
 ```
 
 | Flag | Default | Notes |
 |---|---|---|
 | `--start-time` | freshest downloadable slot | ISO 8601 UTC on a 10-min boundary. If the Data Store can't be searched, falls back to 2 h behind now. |
 | `--n-steps` | `12` | 10-min steps |
-| `--output-dir` | `outputs` | PNG + local Icechunk store |
-| `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` \| `none` |
+| `--output-dir` | `outputs` | local Icechunk store |
+| `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` |
 | `--arraylake-repo` | `$ARRAYLAKE_REPO` or `gtc-berlin/stormscope-eu_gtc_berlin_2026` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
 | `--device` | `auto` | `auto` \| `cuda` \| `cpu` |
 
@@ -163,6 +132,5 @@ are one `(ensemble, time, lead_time)` by 560 × 1216 pixels (2 × 2 per frame), 
 `rgb` bands in one chunk, zstd-compressed; `lat`/`lon` share the y/x chunks, stored as
 float32 with Blosc zstd + byte shuffle.
 
-Each run appends its init time to the repo's root group. It saves a true-colour PNG of the last step to
-`<output-dir>/stormscope_eu_latest.png`. The model checkpoint (`nvidia/stormscope-meteosat`
+Each run appends its init time to the repo's root group. The model checkpoint (`nvidia/stormscope-meteosat`
 on Hugging Face) is downloaded on first run.
