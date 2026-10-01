@@ -185,21 +185,31 @@ MIN_LAG = timedelta(minutes=80)
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="StormScope EU nowcast: fetch MTG/FCI -> Earth2Studio rollout "
-                     "-> streaming Icechunk/ArrayLake publish",
+        "-> streaming Icechunk/ArrayLake publish",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    p.add_argument("--start-time", default=None,
-                   help="initial-condition time, ISO 8601 UTC (e.g. 2026-06-30T12:00). "
-                        "Default: the freshest slot the EUMETSAT Data Store can serve "
-                        "this account (see MIN_LAG), falling back to --realtime-lag-hours "
-                        "behind now if the Data Store can't be searched.")
+    p.add_argument(
+        "--start-time",
+        default=None,
+        help="initial-condition time, ISO 8601 UTC (e.g. 2026-06-30T12:00). "
+        "Default: the freshest slot the EUMETSAT Data Store can serve "
+        "this account (see MIN_LAG), falling back to --realtime-lag-hours "
+        "behind now if the Data Store can't be searched.",
+    )
     p.add_argument("--n-steps", type=int, default=12, help="forecast steps of 10 min (12 = 2 h)")
     p.add_argument("--output-dir", default="outputs", help="where the local Icechunk store goes")
-    p.add_argument("--publish-target", choices=PUBLISH_TARGETS, default=None,
-                   help="local = Icechunk repo on disk, arraylake = hosted repo (needs ARRAYLAKE_API_TOKEN) "
-                        "[env: STORMSCOPE_PUBLISH_TARGET, default local]")
-    p.add_argument("--arraylake-repo", default=os.environ.get("ARRAYLAKE_REPO", ARRAYLAKE_REPO),
-                   help="ArrayLake org/repo when --publish-target arraylake [env: ARRAYLAKE_REPO]")
+    p.add_argument(
+        "--publish-target",
+        choices=PUBLISH_TARGETS,
+        default=None,
+        help="local = Icechunk repo on disk, arraylake = hosted repo (needs ARRAYLAKE_API_TOKEN) "
+        "[env: STORMSCOPE_PUBLISH_TARGET, default local]",
+    )
+    p.add_argument(
+        "--arraylake-repo",
+        default=os.environ.get("ARRAYLAKE_REPO", ARRAYLAKE_REPO),
+        help="ArrayLake org/repo when --publish-target arraylake [env: ARRAYLAKE_REPO]",
+    )
     p.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
     args = p.parse_args()
 
@@ -213,13 +223,17 @@ def parse_args() -> argparse.Namespace:
         if np.isnat(args.start_time):
             p.error("--start-time must be a real timestamp")
         if not MeteosatFCI.available(args.start_time):
-            p.error(f"--start-time {args.start_time} has no MTG FCI data (must be on a 10-min boundary "
-                    "within the operational period)")
+            p.error(
+                f"--start-time {args.start_time} has no MTG FCI data (must be on a 10-min boundary "
+                "within the operational period)"
+            )
     if args.publish_target is None:
         # argparse does not check `choices` against an env-derived default
         args.publish_target = os.environ.get("STORMSCOPE_PUBLISH_TARGET", "local")
         if args.publish_target not in PUBLISH_TARGETS:
-            p.error(f"STORMSCOPE_PUBLISH_TARGET={args.publish_target!r} must be one of {PUBLISH_TARGETS}")
+            p.error(
+                f"STORMSCOPE_PUBLISH_TARGET={args.publish_target!r} must be one of {PUBLISH_TARGETS}"
+            )
     if args.publish_target == "arraylake":
         if not args.arraylake_repo:
             p.error("--publish-target arraylake needs --arraylake-repo or ARRAYLAKE_REPO")
@@ -246,10 +260,7 @@ def build_data_sources() -> dict:
         (2 * bbox_2km[0][0], 2 * bbox_2km[0][1]),
         (2 * bbox_2km[1][0], 2 * bbox_2km[1][1]),
     )
-    fci = {
-        res: MeteosatFCI(resolution=res, pixel_bbox=bbox)
-        for (res, bbox) in fci_bbox.items()
-    }
+    fci = {res: MeteosatFCI(resolution=res, pixel_bbox=bbox) for (res, bbox) in fci_bbox.items()}
     return fci
 
 
@@ -259,11 +270,7 @@ def floor_to_slot(when: datetime) -> datetime:
     `MeteosatFCI` rejects any time that is not an exact multiple of `SCAN_FREQUENCY`
     seconds since 2000-01-01, so every candidate analysis time has to land on it.
     """
-    when = (
-        when.astimezone(UTC)
-        if when.tzinfo
-        else when.replace(tzinfo=UTC)
-    )
+    when = when.astimezone(UTC) if when.tzinfo else when.replace(tzinfo=UTC)
     slots = int((when - FCI_EPOCH).total_seconds()) // MeteosatFCI.SCAN_FREQUENCY
     return FCI_EPOCH + slots * SCAN_STEP
 
@@ -286,9 +293,7 @@ def latest_fci_slot(
     """
     now = datetime.now(UTC)
     token = eumdac.AccessToken(credentials=eumetsat_credentials())
-    collection = eumdac.DataStore(token).get_collection(
-        MeteosatFCI.COLLECTION_ID["FDHSI"]
-    )
+    collection = eumdac.DataStore(token).get_collection(MeteosatFCI.COLLECTION_ID["FDHSI"])
     products = collection.search(dtstart=now - lookback, dtend=now - min_lag)
 
     slots = {floor_to_slot(p.sensing_start) for p in products}
@@ -337,9 +342,7 @@ def fetch_initial_condition(
             device=device,
         )
 
-    x, coords = StormScopeMeteosatEU.combine_1km_2km_inputs(
-        *x_res["1km"], *x_res["2km"]
-    )
+    x, coords = StormScopeMeteosatEU.combine_1km_2km_inputs(*x_res["1km"], *x_res["2km"])
     del x_res
     x, coords = map_coords(x, coords, in_coords)
     return x, coords
@@ -373,7 +376,8 @@ def add_coord(
     values = np.asarray(values.detach().cpu() if torch.is_tensor(values) else values, dtype=dtype)
     # y/x split like the data arrays; any other dim stays whole
     chunks = tuple(
-        CHUNKS[dim] if dim in ("y", "x") else size for dim, size in zip(dims, values.shape, strict=True)
+        CHUNKS[dim] if dim in ("y", "x") else size
+        for dim, size in zip(dims, values.shape, strict=True)
     )
     if name not in backend.root:
         array = backend.root.create_array(
@@ -425,8 +429,12 @@ def geozarr_attrs(y, x) -> dict:
         "spatial:dimensions": ["y", "x"],
         "spatial:shape": [len(y_m), len(x_m)],
         "spatial:transform": [float(dx), 0.0, float(x0), 0.0, float(dy), float(y0)],
-        "spatial:bbox": [float(min(x0, x1)), float(min(y0, y1)),
-                         float(max(x0, x1)), float(max(y0, y1))],
+        "spatial:bbox": [
+            float(min(x0, x1)),
+            float(min(y0, y1)),
+            float(max(x0, x1)),
+            float(max(y0, y1)),
+        ],
         "spatial:registration": "pixel",
     }
 
@@ -453,9 +461,7 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     """
     idx = [list(variables).index(ch) for ch in RGB_CHANNELS]
     rgb = np.clip(arr[..., idx, :, :] / 24.0, 0, 1) * 255
-    rgb = np.interp(
-        rgb, [0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255]
-    ) / 255.0
+    rgb = np.interp(rgb, [0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255]) / 255.0
     return np.moveaxis(rgb, -3, -1).astype("float32")
 
 
@@ -559,16 +565,23 @@ def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
         # subclass is needed (see module docstring).
         client = arraylake.Client(token=os.environ["ARRAYLAKE_API_TOKEN"])
         storage = client.get_icechunk_storage(arraylake_repo)
-        backend = ReopenableIceChunkBackend(storage=storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR])
+        backend = ReopenableIceChunkBackend(
+            storage=storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR]
+        )
         location = arraylake_repo
     else:
-        backend = ReopenableIceChunkBackend(local_icechunk_path, chunks=CHUNKS, zarr_codecs=[COMPRESSOR])
+        backend = ReopenableIceChunkBackend(
+            local_icechunk_path, chunks=CHUNKS, zarr_codecs=[COMPRESSOR]
+        )
         location = local_icechunk_path
     return backend, location
 
 
 def create_schema(
-    backend: IceChunkBackend, model: StormScopeMeteosatEU, coords: OrderedDict, lead_time: np.ndarray
+    backend: IceChunkBackend,
+    model: StormScopeMeteosatEU,
+    coords: OrderedDict,
+    lead_time: np.ndarray,
 ) -> None:
     """Allocate the cube in an empty repo, sized for this run's init alone.
 
@@ -603,20 +616,28 @@ def create_schema(
             **GEOREF,
             **RGB_VALID_RANGE,
             "long_name": "EUMETSAT airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, "
-                         "WV 6.3 um inverted brightness temperatures), 0-1",
+            "WV 6.3 um inverted brightness temperatures), 0-1",
             "source_channels": " ".join(AIRMASS_CHANNELS),
         }
     )
     backend.root["rgb"].attrs.update(RGB_BAND_ATTRS)
     add_coord(
-        backend, "lat", model.lat, ("y", "x"),
+        backend,
+        "lat",
+        model.lat,
+        ("y", "x"),
         {"standard_name": "latitude", "units": "degrees_north"},
-        dtype="float32", compressors=[LATLON_COMPRESSOR],
+        dtype="float32",
+        compressors=[LATLON_COMPRESSOR],
     )
     add_coord(
-        backend, "lon", model.lon, ("y", "x"),
+        backend,
+        "lon",
+        model.lon,
+        ("y", "x"),
         {"standard_name": "longitude", "units": "degrees_east"},
-        dtype="float32", compressors=[LATLON_COMPRESSOR],
+        dtype="float32",
+        compressors=[LATLON_COMPRESSOR],
     )
     add_grid_mapping(backend, GRID_MAPPING, FCI_GEOS)
     for dim, axis, direction in (("x", "X", "east"), ("y", "Y", "north")):
@@ -626,12 +647,13 @@ def create_schema(
                 "units": "rad",
                 "axis": axis,
                 "long_name": f"FCI fixed grid projection {dim}-coordinate "
-                             f"(scan angle, positive {direction})",
+                f"(scan angle, positive {direction})",
             }
         )
     # valid_time is 2-D: one run per `time`, each with its own `lead_time` offsets.
     add_coord(
-        backend, "valid_time",
+        backend,
+        "valid_time",
         total_coords["time"][:, None] + total_coords["lead_time"][None, :],
         ("time", "lead_time"),
         {"standard_name": "time", "long_name": "valid time (time + lead_time)"},
@@ -646,7 +668,7 @@ def create_schema(
         {
             "standard_name": "forecast_period",
             "long_name": "offset from analysis time; 0 = observed analysis frame, > 0 = "
-                         "forecast. Earlier observed frames are model input and are not stored.",
+            "forecast. Earlier observed frames are model input and are not stored.",
         }
     )
     backend.root["ensemble"].attrs.update(
@@ -726,9 +748,7 @@ def main():
 
     channels = [str(v) for v in coords["variable"]]
 
-    backend, location = build_backend(
-        args.publish_target, args.output_dir, args.arraylake_repo
-    )
+    backend, location = build_backend(args.publish_target, args.output_dir, args.arraylake_repo)
     lead_time = np.arange(args.n_steps + 1) * model.output_times[0]
     init = np.datetime_as_string(coords["time"][0], unit="m")
     if "true_color" not in backend.root:

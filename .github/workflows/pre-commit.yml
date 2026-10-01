@@ -34,5 +34,5 @@ jobs:
       # ruff runs in its own workflow (lint.yml) with inline annotations.
       - name: Run pre-commit hooks
         env:
-          SKIP: ruff-check
+          SKIP: ruff-check,ruff-format
         run: uvx pre-commit run --all-files --show-diff-on-failure

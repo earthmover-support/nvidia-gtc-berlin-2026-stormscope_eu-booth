@@ -64,18 +64,21 @@ Verified against earth2studio's stored lat/lon: max error 4e-6°, identical off-
 
 ```python
 H = 35786400.0  # m
-fci_geos_projection = xr.DataArray(np.int32(0), attrs={
-    "grid_mapping_name": "geostationary",
-    "perspective_point_height": H,
-    "semi_major_axis": 6378137.0,
-    "semi_minor_axis": 6356752.3142,
-    "inverse_flattening": 298.257223563,
-    "latitude_of_projection_origin": 0.0,
-    "longitude_of_projection_origin": 0.0,
-    "sweep_angle_axis": "y",            # GOES is "x"; MTG/SEVIRI is "y"
-    "crs_wkt": pyproj.CRS.from_cf(...).to_wkt(),  # optional, helps rioxarray/GDAL
-})
-x = -earth2studio_x                     # earth2studio FCI x is positive WEST; CF wants east
+fci_geos_projection = xr.DataArray(
+    np.int32(0),
+    attrs={
+        "grid_mapping_name": "geostationary",
+        "perspective_point_height": H,
+        "semi_major_axis": 6378137.0,
+        "semi_minor_axis": 6356752.3142,
+        "inverse_flattening": 298.257223563,
+        "latitude_of_projection_origin": 0.0,
+        "longitude_of_projection_origin": 0.0,
+        "sweep_angle_axis": "y",  # GOES is "x"; MTG/SEVIRI is "y"
+        "crs_wkt": pyproj.CRS.from_cf(...).to_wkt(),  # optional, helps rioxarray/GDAL
+    },
+)
+x = -earth2studio_x  # earth2studio FCI x is positive WEST; CF wants east
 x.attrs = {"units": "rad", "axis": "X", "standard_name": "projection_x_coordinate"}
 y.attrs = {"units": "rad", "axis": "Y", "standard_name": "projection_y_coordinate"}
 data_var.attrs["grid_mapping"] = "fci_geos_projection"
