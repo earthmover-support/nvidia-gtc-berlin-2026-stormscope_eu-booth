@@ -125,7 +125,7 @@
           <li><i>1</i><div><b>Fetch</b><span>Latest 6 FCI frames from the EUMETSAT Data Store</span></div></li>
           <li><i>2</i><div><b>Predict</b><span>StormScope-EU rolls forward 12 × 10 min on the GPU</span></div></li>
           <li><i>3</i><div><b>Write</b><span>Each step lands in Icechunk on Arraylake as one commit</span></div></li>
-          <li><i>4</i><div><b>Serve</b><span>Flux renders map tiles for this globe and your phone</span></div></li>
+          <li class="violet"><i>4</i><div><b>Serve</b><span>Arraylake compute renders map tiles</span></div></li>
         </ol>
         <pre class="code">from earth2studio.models.px import StormScopeMeteosatEU
 pkg = StormScopeMeteosatEU.load_default_package()
