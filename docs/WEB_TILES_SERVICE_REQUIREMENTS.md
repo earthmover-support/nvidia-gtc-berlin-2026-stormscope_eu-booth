@@ -96,7 +96,7 @@ Reference layout: `earthmover-public/goes-16`, group `ABI-L2-MCMIPF/post-2023-04
   xarray-style string (`0 minutes`) or ISO 8601 (`PT10M`), not a number.
 - `raster/rgb` renders a 3-band composite from a dimension of length 3 (`rgb` =
   `red`/`green`/`blue`). Pass `variables=true_color` with no band selector.
-  `stormscope_v2`'s `true_color` is already stretched to 0-1, so use `colorscalerange=0,1`.
+  `true_color` and `airmass` are stored stretched to 0-1, so use `colorscalerange=0,1`.
 - `raster/rgb` maps a size-3 dim named `band` or `rgb` to R, G, B **by position**. Every
   rgb tile logs "Treating dimension as RGB bands in positional R, G, B order; no attributes
   confirm this." The warning is unconditional: xpublish-tiles (`pipeline.py`, `apply_query`,
@@ -117,19 +117,24 @@ Reference layout: `earthmover-public/goes-16`, group `ABI-L2-MCMIPF/post-2023-04
 - **RGB band metadata (#10):** `06_stormscope_eu_pipeline.py` writes it at schema creation.
   The existing repo got the same attributes in a metadata-only commit, `0ER90FTHKN0KF6TNCS60`
   on `main` (2026-10-01), applied by the one-off script in the comments of #12.
-- **Existing data:** `fix_grid_mapping.py [BRANCH]` adds the same metadata to the root group
-  and `stormscope_v2` in place, without rewriting any chunks. It is idempotent. Applied to
-  `main` on 2026-09-29.
-- Checked 2026-09-29 without a GPU. The ingest writer was fed two lead times of
+- **Existing data:** the one-off script in
+  [#3 (comment)](https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/3#issuecomment-5893671054)
+  added the same metadata to the root group and `stormscope_v2` of the earlier repo
+  `gtc-berlin/stormscope-eu` in place, without rewriting any chunks. Applied to `main` on
+  2026-09-29.
+- Checked 2026-09-29 without a GPU, with the writer of the since-removed `demo.ipynb`
+  (the same georeference code as the pipeline). It was fed two lead times of
   `true_color` from `main` and wrote them to Arraylake branch `writer_gm_check`. The stored
   `x` equals `main`'s, the projection matches lat/lon to 4e-6° with an identical off-disk mask,
   and the tiles are byte-identical to `main`'s (`3/2/4`, `7/41/68`).
 
 ## Spatial chunking (measured)
 
-The ingest now writes 280 × 304 spatial chunks with zstd (#4): `true_color` chunks are
-`(1, 1, 1, 280, 304, 3)`, 32 per frame. Before, a frame was one ~33 MB chunk. **For tiles,
-this changed nothing measurable.** Same tiles, branch `writer_gm_check` (chunked, zstd) vs.
+The pipeline writes 560 × 1216 spatial chunks with zstd (`CHUNKS` in
+`06_stormscope_eu_pipeline.py`): `true_color` chunks are `(1, 1, 1, 560, 1216, 3)`, 4 per
+frame. Before #4, a frame was one ~33 MB chunk. The measurement below used 280 × 304 chunks
+(32 per frame) and found that **for tiles, chunking changed nothing measurable.** Same
+tiles, branch `writer_gm_check` (chunked, zstd) vs.
 `main` (one chunk per frame, uncompressed), 512 px, XS service, 2026-09-29:
 
 | tile | `main` | chunked |

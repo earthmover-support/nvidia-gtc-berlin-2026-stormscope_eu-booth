@@ -6,7 +6,7 @@ requires-python = "==3.12.*"
 dependencies = [
     # earth2studio bare (no [data] extra): the full extra pulls cfgrib /
     # eccodes / eccodeslib, which have no macOS arm64 wheels (eccodeslib is
-    # linux-only), so `uv sync` fails on a Mac. The notebook only needs the
+    # linux-only), so `uv sync` fails on a Mac. The pipeline only needs the
     # MeteosatFCI source (eumdac + netCDF4) and the Icechunk ingest path
     # (arraylake + icechunk), listed explicitly below. The Coiled GPU env
     # still installs the full earth2studio[data]; see
@@ -26,13 +26,12 @@ dependencies = [
     "icechunk>=1.0",
     "xarray>=2025.1",
     "zarr>=3",
-    # notebook / plotting / misc
+    # plotting / misc
     "cartopy",
     "matplotlib",
     "ipywidgets",
     "python-dotenv",
     "tqdm",
-    "eumdac",
     "coiled>=1.135.3",   # launch the GPU runs from here
 ]
 

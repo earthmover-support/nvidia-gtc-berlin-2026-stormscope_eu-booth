@@ -146,7 +146,7 @@ def leads_by_init(commits: list[dict]) -> dict[str, dict]:
 
 
 def build_runs(times: list[str], commits: list[dict]) -> list[dict]:
-    """One run per init in the repo's `time` coordinate (rolling window), newest first.
+    """One run per init in the repo's `time` coordinate, newest first.
 
     A run whose commits are in the recent history and have not reached the last lead
     is in progress: only its committed leads are offered, so no browser ever caches

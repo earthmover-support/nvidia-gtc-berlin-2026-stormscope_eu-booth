@@ -66,6 +66,40 @@ Credentials come from a local `.env` (see [`.env.example`](.env.example)):
   <https://api.eumetsat.int/api-key/>
 - `ARRAYLAKE_API_TOKEN` — ingest target (read by the script)
 
+### On Coiled
+
+The software environment is already built as `earthmover-devs/stormscope-eu`. To rebuild
+it from `coiled/` (images are built per region, so a new region queues a ~9.6 GB build):
+
+```bash
+coiled env create --name stormscope-eu --workspace earthmover-devs --gpu-enabled \
+  --architecture x86_64 \
+  --conda coiled/environment-stormscope-eu.yml --pip coiled/requirements-stormscope-eu.txt
+```
+
+Run the pipeline headless on a GPU VM in `us-east-1`, the Arraylake bucket's region:
+
+```bash
+set -a; source .env; set +a
+coiled run --workspace earthmover-devs --software stormscope-eu --name stormscope-eu-run \
+  --gpu --vm-type g6e.xlarge --vm-type g5.2xlarge --vm-type g6.2xlarge \
+  --region us-east-1 --disk-size 200 --keepalive 1h \
+  --env EUMETSAT_CONSUMER_KEY=$EUMETSAT_CONSUMER_KEY \
+  --env EUMETSAT_CONSUMER_SECRET=$EUMETSAT_CONSUMER_SECRET \
+  --env ARRAYLAKE_API_TOKEN=$ARRAYLAKE_API_TOKEN \
+  python 06_stormscope_eu_pipeline.py --publish-target arraylake
+```
+
+- Pass several `--vm-type`s: GPU capacity is scarce and Coiled takes the first available.
+- Don't add `--sync`. If a file changes locally mid-run, the mutagen session can fail and
+  kill the run.
+- Don't `coiled run --name` a VM that someone is using interactively. The VM shuts down
+  when the command exits.
+- On a failed run, Coiled logs print the `--env` values in clear text. Don't paste them
+  anywhere.
+- Stopping a run partway leaves the steps already committed. Rerunning the same init
+  overwrites its slice.
+
 ## Pipeline script
 
 [`06_stormscope_eu_pipeline.py`](06_stormscope_eu_pipeline.py) comes from [negin513/GTC-Berlin-EarthMover](https://github.com/negin513/GTC-Berlin-EarthMover)
