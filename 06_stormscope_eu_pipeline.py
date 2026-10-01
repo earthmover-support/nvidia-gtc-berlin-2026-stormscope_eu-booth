@@ -3,37 +3,32 @@
 MTG/FCI observations (EUMETSAT) -> Earth2Studio inference (StormScopeMeteosatEU)
 -> streaming Icechunk/ArrayLake publication -> tile-ready true-colour product.
 
-This mirrors the official booth demo notebook:
-`resolve_start_time()`'s EUMETSAT-Data-Store freshness search, the full
-streaming schema (reduced here to the two composites, `true_color` and
-`airmass`), and writing one Icechunk commit per
+It finds the freshest downloadable initial condition with
+`resolve_start_time()`'s EUMETSAT-Data-Store search, stores two composites,
+`true_color` and `airmass`, and writes one Icechunk commit per
 10-minute rollout step as it is produced, rather than computing the whole
-forecast first and publishing once. Unlike the official demo, this writes to
-the root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026` (see ARRAYLAKE_REPO
-below). Runs accumulate: each one appends
-its init to `time` in a schema commit of its own, then fills it step by step.
+forecast first and publishing once. It writes to the root group of
+`gtc-berlin/stormscope-eu_gtc_berlin_2026` (see ARRAYLAKE_REPO below). Runs
+accumulate: each one appends its init to `time` in a schema commit of its own,
+then fills it step by step.
 
 Publishing goes through Earth2Studio's `earth2studio.io.IceChunkBackend`
-directly, rather than the official demo's `ArraylakeBackend(IceChunkBackend)`
-subclass: `arraylake.Client.get_icechunk_storage(name)` returns a plain
+directly, with no Arraylake-specific subclass:
+`arraylake.Client.get_icechunk_storage(name)` returns a plain
 `icechunk.Storage` object, which is exactly what `IceChunkBackend`'s
 `storage` parameter already accepts -- it calls
 `icechunk.Repository.open_or_create(storage, ...)` internally either way, so
-the hosted-vs-local choice is just which `storage` object gets passed in,
-and no Arraylake subclass is needed. The one subclass here,
-`ReopenableIceChunkBackend`, only works around base `IceChunkBackend` failing
-to reopen a repo that holds a scalar array (the CF grid mapping), which
-appending to an existing cube requires. `add_coord()` below is the one piece of the
-official demo's subclass that base `IceChunkBackend` genuinely lacks --
-writing a non-dimension 2-D coordinate (`lat`/`lon`) without it being taken
-for a new index dimension -- ported as a plain function against
-`backend.root` (a zarr Group) instead, since that is all it ever touched.
+the hosted-vs-local choice is just which `storage` object gets passed in.
+The one subclass here, `ReopenableIceChunkBackend`, only works around base
+`IceChunkBackend` failing to reopen a repo that holds a scalar array (the CF
+grid mapping), which appending to an existing cube requires. `add_coord()`
+below covers the one thing base `IceChunkBackend` lacks -- writing a
+non-dimension 2-D coordinate (`lat`/`lon`) without it being taken for a new
+index dimension -- as a plain function against `backend.root` (a zarr Group).
 
 `add_array()` forwards unrecognized kwargs straight to
-`zarr.Group.create_array()`, which has no `attrs` parameter (the official
-demo's subclassed `add_array` absorbs `attrs=` itself; base `IceChunkBackend`
-does not) -- attrs must be set via `.attrs.update()` on the array after
-creation, as everywhere below.
+`zarr.Group.create_array()`, which has no `attrs` parameter -- attrs must be
+set via `.attrs.update()` on the array after creation, as everywhere below.
 
 Env vars required:
     EUMETSAT_CONSUMER_KEY, EUMETSAT_CONSUMER_SECRET
@@ -176,8 +171,7 @@ PUBLISH_TARGETS = ["local", "arraylake", "none"]
 # Default --publish-target arraylake destination; the cube goes in its root group.
 ARRAYLAKE_REPO = "gtc-berlin/stormscope-eu_gtc_berlin_2026"
 
-# EUMETSAT Data Store freshness search (see resolve_start_time), matching
-# the official demo's defaults.
+# EUMETSAT Data Store freshness search (see resolve_start_time).
 SCAN_STEP = timedelta(seconds=MeteosatFCI.SCAN_FREQUENCY)  # FCI repeat cycle: 10 min
 FCI_EPOCH = datetime(2000, 1, 1, tzinfo=timezone.utc)  # anchor of the scan-slot grid
 SEARCH_LOOKBACK = timedelta(hours=6)  # how far back to hunt for a complete input window
@@ -417,10 +411,8 @@ def add_coord(
     `IceChunkBackend.add_array` cannot: an n-dimensional entry in its
     CoordSystem is taken to *be* the grid and gets replaced by enumerated
     index dimensions, which would detach the array from the model's own
-    `y`/`x` scan angles. Adapted from the official booth demo's
-    `ArraylakeBackend.add_coord` -- that logic only ever touches `self.root`
-    (a zarr Group), so it works here as a plain function against
-    `backend.root` without needing a backend subclass.
+    `y`/`x` scan angles. This only touches `backend.root` (a zarr Group),
+    so it needs no backend subclass.
     """
     values = np.asarray(values.detach().cpu() if torch.is_tensor(values) else values, dtype=dtype)
     # y/x split like the data arrays; any other dim stays whole
