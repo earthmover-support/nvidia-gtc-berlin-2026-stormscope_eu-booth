@@ -134,7 +134,7 @@
         touchPitch: false,
         keyboard: false,
         boxZoom: false,
-        maxZoom: c.camera.max_zoom,
+        maxZoom: c.camera.max_zoom ?? 8.5,
         attributionControl: { compact: true, customAttribution: FORECAST_ATTR },
         fadeDuration: 0,
       });
@@ -176,21 +176,23 @@
     let idle;
     const touched = () => {
       clearTimeout(idle);
-      idle = setTimeout(() => map.easeTo({ center, zoom: home, duration: 1500 }), cam.idle_reset_s * 1000);
+      idle = setTimeout(() => map.easeTo({ center, zoom: home, duration: 1500 }), (cam.idle_reset_s ?? 30) * 1000);
     };
     let held = false; // a finger or mouse button is down on the globe
+    let wheelAt = 0; // a wheel zoom is queued until MapLibre's next frame
     const box = map.getCanvasContainer();
     box.addEventListener("pointerdown", () => { held = true; touched(); }, { passive: true });
-    box.addEventListener("wheel", touched, { passive: true });
+    box.addEventListener("wheel", () => { wheelAt = performance.now(); touched(); }, { passive: true });
     for (const type of ["pointerup", "pointercancel"]) {
       window.addEventListener(type, () => { held = false; touched(); }, { passive: true });
     }
 
-    // jumpTo() resets gesture handlers and stops eases, so the sway waits while a pointer is
-    // down or the map moves; its clock pauses too, so the bearing picks up where it left off.
+    // jumpTo() resets gesture handlers (dropping queued wheel zooms) and stops eases, so the
+    // sway waits while a pointer is down, just after a wheel event, or while the map moves;
+    // its clock pauses too, so the bearing picks up where it left off.
     let t = 0, last = performance.now();
     const sway = (now) => {
-      if (!held && !map.isMoving()) {
+      if (!held && now - wheelAt > 300 && !map.isMoving()) {
         t += (now - last) / 1000;
         map.jumpTo({ bearing: cam.sway_deg * Math.sin((2 * Math.PI * t) / cam.sway_period_s) });
       }
