@@ -409,6 +409,12 @@ class Handler(SimpleHTTPRequestHandler):
                 return str(WEB / "__forbidden__")
         return super().translate_path(path)
 
+    def end_headers(self):
+        # static files revalidate on every load, so a reload picks up edits to app.css / app.js
+        if not self.path.startswith("/api/"):
+            self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
     def log_message(self, fmt, *args):
         log.debug(fmt, *args)  # args[0] can be an HTTPStatus, not a str
 
