@@ -29,9 +29,8 @@ Related: [WEB_TILES_SERVICE_REQUIREMENTS.md](WEB_TILES_SERVICE_REQUIREMENTS.md) 
 
 ## Throughput
 
-Script: [`benchmarks/tiles_throughput.py`](../benchmarks/tiles_throughput.py). It requests the
-240 tiles of one run in playback order with N in flight, on snapshot-pinned URLs. N = 6 is
-what one browser does. Replica counts are from polling `al compute status` every ~15 s.
+A load script requested the 240 tiles of one run in playback order with N in flight, on
+snapshot-pinned URLs. N = 6 is what one browser does. Replica counts are from polling `al compute status` every ~15 s.
 
 | config | in flight | tiles/s | maps/s | full run | p50 / p95 tile | 504s | replicas |
 |---|---|---|---|---|---|---|---|
@@ -120,8 +119,6 @@ show partly drawn and fill in from +10 onward.
 ## Reproduce
 
 ```bash
-# one run, 6 in flight (one browser); snapshot ids from /api/state (`runs[].ref`)
-uv run benchmarks/tiles_throughput.py airmass 2026-09-30T09:00:00 NM149HDW8RNTJEJF1050 6
 # check the service shape and replicas
 uvx --from arraylake al compute status gtc-berlin tiles-4f49272b
 # resize for a test, then restore the booth settings

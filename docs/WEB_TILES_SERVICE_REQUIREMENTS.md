@@ -2,8 +2,7 @@
 
 What a dataset has to carry for the [Flux tiles service](https://docs.earthmover.io/compute/tiles)
 to render it correctly. It combines the Earthmover docs with what we measured on
-`gtc-berlin/stormscope-eu` (service `tiles-4f49272b`) on 2026-09-29. Background:
-[TILES_BUG.md](../TILES_BUG.md).
+`gtc-berlin/stormscope-eu` (service `tiles-4f49272b`) on 2026-09-29.
 
 ## TL;DR for StormScope-EU (MTG FCI, geostationary)
 
