@@ -1,0 +1,104 @@
+name: License Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/license-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+
+jobs:
+  pip-licenses:
+    # Full-environment audit: installs the locked deps and fails if any
+    # transitive package has a non-allow-listed license.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Sync locked dependencies
+        run: uv sync --frozen
+
+      - name: Install pip-licenses
+        run: uv pip install pip-licenses
+
+      - name: Generate license report
+        run: |
+          uv run pip-licenses \
+            --format=markdown \
+            --with-urls \
+            --with-license-file \
+            --no-license-path \
+            > licenses.md
+
+      - name: Upload license report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: licenses
+          path: licenses.md
+
+      # Uses --partial-match with short SPDX/classifier tokens so each token
+      # substring-matches any variant (e.g. "BSD" matches "BSD License",
+      # "BSD-3-Clause", "BSD-2-Clause", and full BSD license text).
+      # Multi-license fields like "MPL-2.0 AND MIT" pass if any token matches.
+      # Explicitly ignored packages. Keep this list tight — each entry is an
+      # exception to the allow-list and should be justified.
+      #
+      # Missing license metadata (verified upstream):
+      #   - google-crc32c: Apache-2.0 (github.com/googleapis/python-crc32c)
+      #   - icechunk:      Apache-2.0 (github.com/earth-mover/icechunk)
+      #
+      # NVIDIA CUDA runtime wheels pulled in by torch on linux (proprietary,
+      # NVIDIA CUDA EULA, or no license metadata). Redistributable runtime
+      # libraries required to run StormScope-EU on GPU; accepted as a scoped
+      # exception. A torch bump that adds a new CUDA wheel fails here on purpose.
+      # nvidia-nvtx's license field says Apache 2.0, but its classifier says
+      # Other/Proprietary, and pip-licenses reads the classifier.
+      - name: Enforce OSI allow-list
+        run: |
+          uv run pip-licenses --partial-match \
+          --ignore-packages \
+            google-crc32c \
+            icechunk \
+            cuda-toolkit \
+            nvidia-cublas \
+            nvidia-cuda-cupti \
+            nvidia-cuda-nvrtc \
+            nvidia-cuda-runtime \
+            nvidia-cudnn-cu13 \
+            nvidia-cufft \
+            nvidia-cufile \
+            nvidia-curand \
+            nvidia-cusolver \
+            nvidia-cusparse \
+            nvidia-cusparselt-cu13 \
+            nvidia-nccl-cu13 \
+            nvidia-nvjitlink \
+            nvidia-nvshmem-cu13 \
+            nvidia-nvtx \
+          --allow-only=\
+          "MIT;\
+          BSD;\
+          Apache;\
+          ISC;\
+          MPL;\
+          Mozilla Public License;\
+          PSF;\
+          Python Software Foundation;\
+          HPND;\
+          Historical Permission Notice;\
+          Unlicense;\
+          Public Domain;\
+          Zlib;\
+          0BSD;\
+          LGPL"

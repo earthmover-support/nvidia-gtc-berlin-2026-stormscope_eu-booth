@@ -55,3 +55,12 @@ required-environments = [
     "sys_platform == 'darwin' and platform_machine == 'arm64'",
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
+
+[tool.ruff]
+# Pinned here so local runs and CI resolve the same settings.
+line-length = 100
+extend-exclude = ["presentation/node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]  # long strings/comments are common in the CF metadata

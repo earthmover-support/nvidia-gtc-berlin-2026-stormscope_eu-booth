@@ -1,5 +1,6 @@
 # Keep notebook outputs out of git: the demo is run on a GPU VM and its
 # outputs are megabytes of embedded PNGs that change on every run.
+# ruff lints Python with the settings in pyproject.toml.
 #
 #   uv tool install pre-commit   # or: pipx install pre-commit
 #   pre-commit install
@@ -8,3 +9,7 @@ repos:
     rev: 0.9.1
     hooks:
       - id: nbstripout
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
