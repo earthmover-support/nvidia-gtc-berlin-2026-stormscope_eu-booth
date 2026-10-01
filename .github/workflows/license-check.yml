@@ -62,6 +62,8 @@ jobs:
       # NVIDIA CUDA EULA, or no license metadata). Redistributable runtime
       # libraries required to run StormScope-EU on GPU; accepted as a scoped
       # exception. A torch bump that adds a new CUDA wheel fails here on purpose.
+      # nvidia-nvtx's license field says Apache 2.0, but its classifier says
+      # Other/Proprietary, and pip-licenses reads the classifier.
       - name: Enforce OSI allow-list
         run: |
           uv run pip-licenses --partial-match \
@@ -83,6 +85,7 @@ jobs:
             nvidia-nccl-cu13 \
             nvidia-nvjitlink \
             nvidia-nvshmem-cu13 \
+            nvidia-nvtx \
           --allow-only=\
           "MIT;\
           BSD;\
