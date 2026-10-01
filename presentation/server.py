@@ -143,9 +143,13 @@ def build_runs(times: list[str], commits: list[dict]) -> list[dict]:
     A run whose commits are in the recent history and have not reached the last lead
     is in progress: only its committed leads are offered, so no browser ever caches
     a tile that has not been written yet. Anything else is complete.
+
+    `ref` is the newest snapshot holding the run; runs older than the history get the
+    oldest snapshot in it. Snapshot tile URLs are immutable and cached for a month.
     """
     full = [10 * (i + 1) for i in range(CONFIG["lead_steps"])]
     seen = leads_by_init(commits)
+    oldest = commits[-1]["id"] if commits else None
     runs = []
     for t in sorted(set(times), reverse=True):
         init = t[:16]
@@ -155,7 +159,7 @@ def build_runs(times: list[str], commits: list[dict]) -> list[dict]:
         else:
             leads, complete = sorted(rec["leads"]), False
         runs.append({"init": init, "time": t, "leads": leads, "complete": complete,
-                     "ref": rec["ref"] if rec else None})
+                     "ref": rec["ref"] if rec else oldest})
     return runs
 
 
