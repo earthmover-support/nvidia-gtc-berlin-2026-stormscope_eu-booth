@@ -49,8 +49,7 @@ let times = [], leads = [], frame = 0, ready = 0, timer = null, firstLabel;
 const map = new maplibregl.Map({
   container: "map",
   style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-  center: [10.4, 51.2], // Germany
-  zoom: 3,
+  bounds: [[-5, 44], [26, 58]], // Germany in the centre; leaves out Morocco, Norway, Iceland, Black Sea
   maxZoom: 8,
 });
 map.addControl(new maplibregl.NavigationControl());
