@@ -74,4 +74,4 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 5. **Run length**: the strip and scrubber assume 12 steps, +10 to +120 min
    (`lead_steps`). Keep the commit-message format in the ingest: `... schema`,
    `... analysis frame (lead 0 min)`, `... +N min`.
-6. Fill `viewer_url` in `config.json` for the second QR code.
+6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 6).
