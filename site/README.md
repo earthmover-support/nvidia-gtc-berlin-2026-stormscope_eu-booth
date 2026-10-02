@@ -19,4 +19,6 @@ renders slowly.
 
 ## Hosting
 
-The plan is to host this page on GitHub Pages or on Earthmover. Neither is set up yet.
+Earthmover hosts this page on Vercel, deployed from `main` with root directory `site`,
+framework preset "Other" and no build command. The tiles service sends
+`Access-Control-Allow-Origin: *`, so the page works from any domain.
