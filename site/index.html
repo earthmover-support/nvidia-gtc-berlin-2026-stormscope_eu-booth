@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StormScope-EU nowcast</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.js"></script>
+<style>
+  html, body, #map { margin: 0; height: 100%; background: #000; }
+  #panel {
+    position: absolute; top: 12px; left: 12px; z-index: 1; padding: 10px 12px;
+    font: 13px system-ui, sans-serif; color: #eee; background: rgba(20, 20, 24, .85);
+    border-radius: 8px; display: grid; gap: 8px; min-width: 260px;
+  }
+  #panel b { font-size: 14px; }
+  #panel select, #panel button { font: inherit; }
+  #panel input[type=range] { width: 100%; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  #status { color: #aaa; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel">
+  <b>StormScope-EU nowcast · MTG-I1 FCI</b>
+  <label class="row">Init (UTC) <select id="init"></select></label>
+  <label class="row">Variable
+    <select id="var">
+      <option value="true_color">True colour</option>
+      <option value="airmass">Airmass RGB</option>
+    </select>
+  </label>
+  <div class="row"><button id="play">Pause</button><span id="lead"></span></div>
+  <input id="slider" type="range" min="0" value="0" step="1">
+  <span id="status">Loading inits…</span>
+</div>
+<script>
+// Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
+const BASE = "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin";
+const REPO = "stormscope-eu_gtc_berlin_2026";
+const REF = "main";
+const BOUNDS = [-63.76155, 29.80654, 72.30417, 75.78313];
+const FRAME_MS = 800;
+
+const $ = (id) => document.getElementById(id);
+let times = [], leads = [], frame = 0, ready = 0, timer = null, firstLabel;
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+  center: [10.4, 51.2], // Germany
+  zoom: 3,
+  maxZoom: 8,
+});
+map.addControl(new maplibregl.NavigationControl());
+
+// The /info endpoint crashes the service; /tree (xarray's HTML repr) carries the coordinate arrays.
+async function loadCoords() {
+  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${REF}/tree`)).text();
+  const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
+  const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, ""));
+  times = values(pres.find((s) => s.includes("datetime64"))).map((t) => t.slice(0, 19));
+  leads = values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number);
+}
+
+function tileUrl(variable, time, lead) {
+  const p = new URLSearchParams({
+    variables: variable, style: "raster/rgb", colorscalerange: "0,1",
+    time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
+  });
+  return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+}
+
+// One raster layer per lead time, all kept loaded; playback only flips opacity.
+// Layers are added one after another on `idle`: the service renders slowly, and
+// asking for every lead at once leaves all frames half drawn.
+let generation = 0;
+function loadRun() {
+  const gen = ++generation;
+  for (const l of map.getStyle().layers) if (l.id.startsWith("frame-")) map.removeLayer(l.id);
+  for (const s of Object.keys(map.getStyle().sources)) if (s.startsWith("frame-")) map.removeSource(s);
+  const time = $("init").value, variable = $("var").value;
+  let i = 0;
+  ready = 0;
+  const addNext = () => {
+    if (gen !== generation) return;
+    ready = i; // every frame before i has finished loading
+    if (i >= leads.length) return ($("status").textContent = `${leads.length} frames loaded`);
+    const id = `frame-${i}`;
+    map.addSource(id, { type: "raster", tiles: [tileUrl(variable, time, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
+    map.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-fade-duration": 0 } }, firstLabel);
+    $("status").textContent = `Loading frame ${i + 1}/${leads.length}`;
+    i++;
+    show(frame);
+    map.once("idle", addNext);
+  };
+  addNext();
+}
+
+function show(k) {
+  frame = k;
+  leads.forEach((_, i) => map.getLayer(`frame-${i}`) && map.setPaintProperty(`frame-${i}`, "raster-opacity", i === k ? 0.9 : 0));
+  $("slider").value = k;
+  const valid = new Date(Date.parse($("init").value + "Z") + leads[k] * 60e3).toISOString().slice(11, 16);
+  $("lead").textContent = `${leads[k] === 0 ? "analysis" : "+" + leads[k] + " min"} · valid ${valid} UTC`;
+}
+
+function setPlaying(on) {
+  clearInterval(timer);
+  timer = on ? setInterval(() => show((frame + 1) % Math.max(ready, 1)), FRAME_MS) : null;
+  $("play").textContent = on ? "Pause" : "Play";
+}
+
+map.on("load", async () => {
+  map.setProjection({ type: "globe" });
+  firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
+  try {
+    await loadCoords();
+  } catch (e) {
+    $("status").textContent = `Could not reach the tiles service: ${e.message}`;
+    return;
+  }
+  $("init").innerHTML = times.slice().reverse().map((t) => `<option>${t}</option>`).join("");
+  $("slider").max = leads.length - 1;
+  $("init").onchange = $("var").onchange = loadRun;
+  $("slider").oninput = (e) => { setPlaying(false); show(+e.target.value); };
+  $("play").onclick = () => setPlaying(!timer);
+  loadRun();
+  setPlaying(true);
+});
+</script>
+</body>
+</html>
