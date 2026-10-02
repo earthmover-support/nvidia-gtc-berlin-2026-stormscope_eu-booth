@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StormScope-EU nowcast</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.js"></script>
+<style>
+  /* NVIDIA palette, after negin513.github.io/GTC-Berlin-EarthMover/cesium-arraylake */
+  :root {
+    --bg: #000; --surface: #0d0d0d; --border: #1e1e1e; --border2: #2a2a2a;
+    --text: #eaeaea; --text-dim: #999; --green: #76b900; --green-dim: rgba(118, 185, 0, .14);
+    --font: "NVIDIA Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  html, body, #map { margin: 0; height: 100%; background: var(--bg); }
+  #panel {
+    position: absolute; top: 12px; left: 12px; z-index: 1; width: 280px; padding: 16px;
+    display: grid; gap: 14px; background: rgba(0, 0, 0, .85); border: 1px solid var(--border);
+    font: 700 13px var(--font); color: var(--text); -webkit-font-smoothing: antialiased;
+  }
+  .logos { display: flex; align-items: center; gap: 10px; }
+  .logos img { height: 20px; }
+  .logos span { color: var(--text-dim); font-size: 16px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .links { display: flex; gap: 8px; padding-top: 3px; }
+  .links a { display: block; width: 20px; height: 20px; color: var(--text-dim); opacity: .85; }
+  .links a:hover { color: var(--green); opacity: 1; }
+  .links svg, .links img { width: 100%; height: 100%; display: block; }
+  .title { font-size: 17px; letter-spacing: -.3px; }
+  .subtitle { color: var(--text-dim); margin-top: 2px; }
+  .label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .row { display: flex; gap: 6px; align-items: center; }
+  select, button { font: inherit; border-radius: 0; cursor: pointer; }
+  select { width: 100%; padding: 6px; background: var(--surface); color: var(--text); border: 1px solid var(--border2); }
+  .pill { flex: 1; padding: 7px 10px; background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
+  .pill:hover, .pill.active { border-color: var(--green); color: var(--green); }
+  .pill.active { background: var(--green-dim); }
+  #play { width: 32px; height: 32px; flex-shrink: 0; background: var(--green); color: #000; border: none; }
+  #play:hover { background: #8fd400; }
+  input[type=range] { flex: 1; accent-color: var(--green); }
+  #lead { font-size: 15px; }
+  #status { font-size: 11px; padding: 6px 8px; border-left: 3px solid var(--green); background: var(--surface); color: var(--text-dim); }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel">
+  <div class="logos"><img src="nvidia.svg" alt="NVIDIA"><span>×</span><img src="earthmover.svg" alt="Earthmover"></div>
+  <div class="head">
+    <div>
+      <div class="title">StormScope-EU nowcast</div>
+      <div class="subtitle">MTG-I1 FCI · Arraylake Flux tiles</div>
+    </div>
+    <div class="links">
+      <a href="https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth" title="Code on GitHub" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-label="GitHub"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+      </a>
+      <a href="https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026" title="Dataset on Arraylake" target="_blank" rel="noopener">
+        <img src="arraylake.svg" alt="Arraylake">
+      </a>
+    </div>
+  </div>
+  <div><div class="label">Init (UTC)</div><select id="init"></select></div>
+  <div>
+    <div class="label">Variable</div>
+    <div class="row" id="vars">
+      <button class="pill active" data-var="true_color">True colour</button>
+      <button class="pill" data-var="airmass">Airmass RGB</button>
+    </div>
+  </div>
+  <div>
+    <div class="label">Lead time</div>
+    <div id="lead"></div>
+    <div class="row" style="margin-top: 8px"><button id="play">❚❚</button><input id="slider" type="range" min="0" value="0" step="1"></div>
+  </div>
+  <div id="status">Loading inits…</div>
+</div>
+<script>
+// Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
+const BASE = "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin";
+const REPO = "stormscope-eu_gtc_berlin_2026";
+const REF = "main";
+const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
+const FRAME_MS = 800;
+const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
+
+const $ = (id) => document.getElementById(id);
+let leads = [], variable = "true_color", frame = 0, added = 0, addedAt = 0, timer = null, firstLabel;
+const loaded = new Set(); // indices of frames whose tiles have all arrived
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+  bounds: [[-5, 44], [26, 58]], // Germany in the centre; leaves out Morocco, Norway, Iceland, Black Sea
+  maxZoom: 8,
+});
+map.addControl(new maplibregl.NavigationControl());
+
+// /info fails on this repo; /tree (xarray's HTML repr) carries the coordinate arrays. Past 200
+// values xarray abbreviates an array to its first and last three, so the "..." entry is dropped.
+async function loadCoords() {
+  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${REF}/tree`)).text();
+  const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
+  const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, "")).filter((v) => v !== "...");
+  return {
+    times: values(pres.find((s) => s.includes("datetime64"))).map((t) => t.slice(0, 19)),
+    leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
+  };
+}
+const coords = loadCoords(); // runs while the basemap style loads
+
+function tileUrl(time, lead) {
+  const p = new URLSearchParams({
+    variables: variable, style: "raster/rgb", colorscalerange: "0,1",
+    time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
+  });
+  return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+}
+
+// One raster layer per lead time, all kept loaded; playback only flips opacity.
+// Frames are added one at a time, each once the previous one has loaded (or timed out):
+// the service renders slowly, and asking for every lead at once leaves all frames half drawn.
+function loadRun() {
+  for (let i = 0; i < added; i++) {
+    map.removeLayer(`frame-${i}`);
+    map.removeSource(`frame-${i}`);
+  }
+  added = 0;
+  loaded.clear();
+  addNext();
+  show(frame); // the valid-time label depends on the init
+}
+
+function addNext() {
+  const i = added;
+  if (i >= leads.length || (i > 0 && !loaded.has(i - 1) && Date.now() - addedAt < LOAD_TIMEOUT_MS)) return;
+  const id = `frame-${i}`;
+  map.addSource(id, { type: "raster", tiles: [tileUrl($("init").value, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
+  map.addLayer({
+    id, type: "raster", source: id,
+    paint: { "raster-opacity": i === frame ? 0.9 : 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 },
+  }, firstLabel);
+  added++;
+  addedAt = Date.now();
+  setTimeout(addNext, LOAD_TIMEOUT_MS);
+  status();
+}
+
+map.on("sourcedata", (e) => {
+  const i = Number(e.sourceId?.replace("frame-", "")); // NaN for the basemap's sources
+  if (!e.tile || !(i < added) || loaded.has(i) || !map.isSourceLoaded(e.sourceId)) return;
+  loaded.add(i);
+  status();
+  addNext();
+});
+
+const status = () => ($("status").textContent = `${loaded.size}/${leads.length} frames loaded`);
+
+function show(k) {
+  if (map.getLayer(`frame-${frame}`)) map.setPaintProperty(`frame-${frame}`, "raster-opacity", 0);
+  frame = k;
+  if (map.getLayer(`frame-${k}`)) map.setPaintProperty(`frame-${k}`, "raster-opacity", 0.9);
+  $("slider").value = k;
+  const valid = new Date(Date.parse($("init").value + "Z") + leads[k] * 60e3).toISOString().slice(11, 16);
+  $("lead").textContent = `${leads[k] === 0 ? "analysis" : "+" + leads[k] + " min"} · valid ${valid} UTC`;
+}
+
+// Playback steps through the frames that have finished loading.
+function step() {
+  const ready = [...loaded].sort((a, b) => a - b);
+  if (ready.length) show(ready.find((k) => k > frame) ?? ready[0]);
+}
+
+function setPlaying(on) {
+  clearInterval(timer);
+  timer = on ? setInterval(step, FRAME_MS) : null;
+  $("play").textContent = on ? "❚❚" : "▶";
+}
+
+map.on("load", async () => {
+  map.setProjection({ type: "globe" });
+  firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
+  let times;
+  try {
+    ({ times, leads } = await coords);
+  } catch (e) {
+    $("status").textContent = `Could not reach the tiles service: ${e.message}`;
+    return;
+  }
+  $("init").innerHTML = times.slice().reverse().map((t) => `<option>${t}</option>`).join("");
+  $("slider").max = leads.length - 1;
+  $("init").onchange = loadRun;
+  const pills = document.querySelectorAll(".pill");
+  for (const b of pills) b.onclick = () => {
+    for (const p of pills) p.classList.toggle("active", p === b);
+    variable = b.dataset.var;
+    loadRun();
+  };
+  $("slider").oninput = (e) => { setPlaying(false); show(+e.target.value); };
+  $("play").onclick = () => setPlaying(!timer);
+  loadRun();
+  show(0);
+  setPlaying(true);
+});
+</script>
+</body>
+</html>
