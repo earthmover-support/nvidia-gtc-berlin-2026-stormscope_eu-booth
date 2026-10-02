@@ -81,11 +81,13 @@
 const BASE = "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin";
 const REPO = "stormscope-eu_gtc_berlin_2026";
 const REF = "main";
-const BOUNDS = [-63.76155, 29.80654, 72.30417, 75.78313];
+const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
 const FRAME_MS = 800;
+const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
 
 const $ = (id) => document.getElementById(id);
-let times = [], leads = [], variable = "true_color", frame = 0, ready = 0, timer = null, firstLabel;
+let leads = [], variable = "true_color", frame = 0, added = 0, addedAt = 0, timer = null, firstLabel;
+const loaded = new Set(); // indices of frames whose tiles have all arrived
 
 const map = new maplibregl.Map({
   container: "map",
@@ -95,16 +97,20 @@ const map = new maplibregl.Map({
 });
 map.addControl(new maplibregl.NavigationControl());
 
-// The /info endpoint crashes the service; /tree (xarray's HTML repr) carries the coordinate arrays.
+// /info fails on this repo; /tree (xarray's HTML repr) carries the coordinate arrays. Past 200
+// values xarray abbreviates an array to its first and last three, so the "..." entry is dropped.
 async function loadCoords() {
   const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${REF}/tree`)).text();
   const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
-  const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, ""));
-  times = values(pres.find((s) => s.includes("datetime64"))).map((t) => t.slice(0, 19));
-  leads = values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number);
+  const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, "")).filter((v) => v !== "...");
+  return {
+    times: values(pres.find((s) => s.includes("datetime64"))).map((t) => t.slice(0, 19)),
+    leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
+  };
 }
+const coords = loadCoords(); // runs while the basemap style loads
 
-function tileUrl(variable, time, lead) {
+function tileUrl(time, lead) {
   const p = new URLSearchParams({
     variables: variable, style: "raster/rgb", colorscalerange: "0,1",
     time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
@@ -113,50 +119,70 @@ function tileUrl(variable, time, lead) {
 }
 
 // One raster layer per lead time, all kept loaded; playback only flips opacity.
-// Layers are added one after another on `idle`: the service renders slowly, and
-// asking for every lead at once leaves all frames half drawn.
-let generation = 0;
+// Frames are added one at a time, each once the previous one has loaded (or timed out):
+// the service renders slowly, and asking for every lead at once leaves all frames half drawn.
 function loadRun() {
-  const gen = ++generation;
-  for (const l of map.getStyle().layers) if (l.id.startsWith("frame-")) map.removeLayer(l.id);
-  for (const s of Object.keys(map.getStyle().sources)) if (s.startsWith("frame-")) map.removeSource(s);
-  const time = $("init").value;
-  let i = 0;
-  ready = 0;
-  const addNext = () => {
-    if (gen !== generation) return;
-    ready = i; // every frame before i has finished loading
-    if (i >= leads.length) return ($("status").textContent = `${leads.length} frames loaded`);
-    const id = `frame-${i}`;
-    map.addSource(id, { type: "raster", tiles: [tileUrl(variable, time, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
-    map.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-fade-duration": 0 } }, firstLabel);
-    $("status").textContent = `Loading frame ${i + 1}/${leads.length}`;
-    i++;
-    show(frame);
-    map.once("idle", addNext);
-  };
+  for (let i = 0; i < added; i++) {
+    map.removeLayer(`frame-${i}`);
+    map.removeSource(`frame-${i}`);
+  }
+  added = 0;
+  loaded.clear();
   addNext();
 }
 
+function addNext() {
+  const i = added;
+  if (i >= leads.length || (i > 0 && !loaded.has(i - 1) && Date.now() - addedAt < LOAD_TIMEOUT_MS)) return;
+  const id = `frame-${i}`;
+  map.addSource(id, { type: "raster", tiles: [tileUrl($("init").value, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
+  map.addLayer({
+    id, type: "raster", source: id,
+    paint: { "raster-opacity": i === frame ? 0.9 : 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 },
+  }, firstLabel);
+  added++;
+  addedAt = Date.now();
+  setTimeout(addNext, LOAD_TIMEOUT_MS);
+  status();
+}
+
+map.on("sourcedata", (e) => {
+  const i = Number(e.sourceId?.replace("frame-", "")); // NaN for the basemap's sources
+  if (!e.tile || !(i < added) || loaded.has(i) || !map.isSourceLoaded(e.sourceId)) return;
+  loaded.add(i);
+  status();
+  addNext();
+});
+
+const status = () => ($("status").textContent = `${loaded.size}/${leads.length} frames loaded`);
+
 function show(k) {
+  if (map.getLayer(`frame-${frame}`)) map.setPaintProperty(`frame-${frame}`, "raster-opacity", 0);
   frame = k;
-  leads.forEach((_, i) => map.getLayer(`frame-${i}`) && map.setPaintProperty(`frame-${i}`, "raster-opacity", i === k ? 0.9 : 0));
+  if (map.getLayer(`frame-${k}`)) map.setPaintProperty(`frame-${k}`, "raster-opacity", 0.9);
   $("slider").value = k;
   const valid = new Date(Date.parse($("init").value + "Z") + leads[k] * 60e3).toISOString().slice(11, 16);
   $("lead").textContent = `${leads[k] === 0 ? "analysis" : "+" + leads[k] + " min"} · valid ${valid} UTC`;
 }
 
+// Playback steps through the frames that have finished loading.
+function step() {
+  const ready = [...loaded].sort((a, b) => a - b);
+  if (ready.length) show(ready.find((k) => k > frame) ?? ready[0]);
+}
+
 function setPlaying(on) {
   clearInterval(timer);
-  timer = on ? setInterval(() => show((frame + 1) % Math.max(ready, 1)), FRAME_MS) : null;
+  timer = on ? setInterval(step, FRAME_MS) : null;
   $("play").textContent = on ? "❚❚" : "▶";
 }
 
 map.on("load", async () => {
   map.setProjection({ type: "globe" });
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
+  let times;
   try {
-    await loadCoords();
+    ({ times, leads } = await coords);
   } catch (e) {
     $("status").textContent = `Could not reach the tiles service: ${e.message}`;
     return;
@@ -164,15 +190,16 @@ map.on("load", async () => {
   $("init").innerHTML = times.slice().reverse().map((t) => `<option>${t}</option>`).join("");
   $("slider").max = leads.length - 1;
   $("init").onchange = loadRun;
-  for (const b of document.querySelectorAll(".pill")) b.onclick = () => {
-    document.querySelector(".pill.active").classList.remove("active");
-    b.classList.add("active");
+  const pills = document.querySelectorAll(".pill");
+  for (const b of pills) b.onclick = () => {
+    for (const p of pills) p.classList.toggle("active", p === b);
     variable = b.dataset.var;
     loadRun();
   };
   $("slider").oninput = (e) => { setPlaying(false); show(+e.target.value); };
   $("play").onclick = () => setPlaying(!timer);
   loadRun();
+  show(0);
   setPlaying(true);
 });
 </script>
