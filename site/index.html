@@ -39,7 +39,12 @@
   #play { width: 32px; height: 32px; flex-shrink: 0; background: var(--green); color: #000; border: none; }
   #play:hover { background: #8fd400; }
   input[type=range] { flex: 1; accent-color: var(--green); }
-  #lead { font-size: 15px; }
+  #lead { flex: 1; font-size: 15px; }
+  #collapse { width: 28px; height: 28px; flex-shrink: 0; padding: 0; background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
+  #collapse:hover { border-color: var(--green); color: var(--green); }
+  /* Collapsed: only lead time, play and slider stay visible */
+  #panel.collapsed > :not(#playback), #panel.collapsed #playback > .label { display: none; }
+  #panel.collapsed { padding: 10px 12px; }
   #status { font-size: 11px; padding: 6px 8px; border-left: 3px solid var(--green); background: var(--surface); color: var(--text-dim); }
 </style>
 </head>
@@ -70,9 +75,9 @@
       <button class="pill" data-var="airmass">Airmass RGB</button>
     </div>
   </div>
-  <div>
+  <div id="playback">
     <div class="label">Lead time</div>
-    <div id="lead"></div>
+    <div class="row"><div id="lead"></div><button id="collapse" aria-controls="panel" aria-expanded="true" title="Collapse panel">▴</button></div>
     <div class="row" style="margin-top: 8px"><button id="play">❚❚</button><input id="slider" type="range" min="0" value="0" step="1"></div>
   </div>
   <div id="status">Loading inits…</div>
@@ -173,6 +178,15 @@ function step() {
   const ready = [...loaded].sort((a, b) => a - b);
   if (ready.length) show(ready.find((k) => k > frame) ?? ready[0]);
 }
+
+function setCollapsed(on) {
+  $("panel").classList.toggle("collapsed", on);
+  $("collapse").textContent = on ? "▾" : "▴";
+  $("collapse").title = on ? "Expand panel" : "Collapse panel";
+  $("collapse").setAttribute("aria-expanded", String(!on));
+}
+$("collapse").onclick = () => setCollapsed(!$("panel").classList.contains("collapsed"));
+setCollapsed(matchMedia("(max-width: 600px)").matches); // phones start collapsed
 
 function setPlaying(on) {
   clearInterval(timer);
