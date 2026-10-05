@@ -1,0 +1,50 @@
+# Runs the StormScope-EU pipeline continuously on the host's GPU, publishing to Arraylake.
+#
+#   mkdir -p secrets
+#   printf %s "<key>"    > secrets/eumetsat_consumer_key
+#   printf %s "<secret>" > secrets/eumetsat_consumer_secret
+#   printf %s "<token>"  > secrets/arraylake_api_token
+#   docker compose up -d --build
+#   docker compose logs -f
+#
+# Arguments after the service name replace the default command, e.g. a one-off pinned run:
+#   docker compose run --rm pipeline python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00
+services:
+  pipeline:
+    build: .
+    image: stormscope-eu-pipeline:latest
+    restart: unless-stopped
+    environment:
+      STORMSCOPE_PUBLISH_TARGET: ${STORMSCOPE_PUBLISH_TARGET:-arraylake}
+      ARRAYLAKE_REPO: ${ARRAYLAKE_REPO:-gtc-berlin/stormscope-eu_gtc_berlin_2026}
+    secrets:
+      - eumetsat_consumer_key
+      - eumetsat_consumer_secret
+      - arraylake_api_token
+    volumes:
+      - cache:/cache
+      - outputs:/app/outputs
+    # NGC's recommended settings for its PyTorch-based containers
+    shm_size: 1g
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+secrets:
+  eumetsat_consumer_key:
+    file: ./secrets/eumetsat_consumer_key
+  eumetsat_consumer_secret:
+    file: ./secrets/eumetsat_consumer_secret
+  arraylake_api_token:
+    file: ./secrets/arraylake_api_token
+
+volumes:
+  cache:
+  outputs:

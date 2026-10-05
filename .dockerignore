@@ -1,0 +1,6 @@
+# Only scripts/ and docker/ go into the image; keep credentials and bulky local state
+# out of the build context.
+*
+!scripts/
+!docker/
+**/__pycache__
