@@ -765,14 +765,13 @@ class StormScopeEUPipeline:
         self.model = load_model(self.device)
         self.fci = build_data_sources()
 
-
     def __call__(
         self,
         start_time: np.datetime64,
         n_steps: int,
         publish_target: str,
         output_dir: str,
-        arraylake_repo: str
+        arraylake_repo: str,
     ):
         """Run one nowcast from `start_time` and publish it step by step.
 
@@ -854,10 +853,16 @@ def main():
 
     while True:
         try:
-            analysis_time = resolve_start_time(args.start_time, n_frames=len(pipeline.model.input_coords()["lead_time"]))
+            analysis_time = resolve_start_time(
+                args.start_time, n_frames=len(pipeline.model.input_coords()["lead_time"])
+            )
             lag_min = (datetime.now(UTC) - analysis_time).total_seconds() / 60
-            print(f"analysis time {analysis_time:%Y-%m-%d %H:%M} UTC ({lag_min:.0f} min behind now)")
-            start_time = np.datetime64(analysis_time.replace(tzinfo=None))  # numpy carries no timezone
+            print(
+                f"analysis time {analysis_time:%Y-%m-%d %H:%M} UTC ({lag_min:.0f} min behind now)"
+            )
+            start_time = np.datetime64(
+                analysis_time.replace(tzinfo=None)
+            )  # numpy carries no timezone
             if start_time == last_start:
                 time.sleep(wait_seconds)
                 continue
@@ -867,11 +872,13 @@ def main():
                 n_steps=args.n_steps,
                 publish_target=args.publish_target,
                 output_dir=args.output_dir,
-                arraylake_repo=args.arraylake_repo
+                arraylake_repo=args.arraylake_repo,
             )
             last_start = start_time
         except Exception as e:
-            print(f"{datetime.now()}: Exception occurred: {e}, retrying after {wait_seconds} seconds")
+            print(
+                f"{datetime.now()}: Exception occurred: {e}, retrying after {wait_seconds} seconds"
+            )
             time.sleep(wait_seconds)
 
         if args.start_time is not None:
