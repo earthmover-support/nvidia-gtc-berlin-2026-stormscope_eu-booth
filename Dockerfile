@@ -27,11 +27,17 @@ RUN pip install --no-cache-dir -c /opt/base-constraints.txt \
 RUN pip install natten==0.21.7+torch2130cu130 -f https://whl.natten.org
 
 # Fail the build, not the first run, if a dependency is missing: StormScopeMeteosatEU
-# only reports its optional imports when it is instantiated.
+# only reports its optional imports when it is instantiated. The physicsnemo modules it
+# needs are located rather than imported: importing them loads transformer_engine, which
+# needs libcuda.so.1, and builds run without the GPU driver.
 RUN python -c "\
-import arraylake, eumdac, icechunk, nvtx, omegaconf, pyproj; \
-import physicsnemo.diffusion.samplers, physicsnemo.nn.module.dit_layers; \
-from earth2studio.models.px.stormscope_meteosat import StormScopeMeteosatEU"
+import importlib.util, pathlib; \
+import arraylake, earth2studio, eumdac, icechunk, nvtx, omegaconf, pyproj; \
+root = pathlib.Path(importlib.util.find_spec('physicsnemo').submodule_search_locations[0]); \
+needed = ['diffusion/noise_schedulers', 'diffusion/preconditioners', 'diffusion/samplers', \
+          'nn/module/dit_layers', 'utils/zenith_angle']; \
+missing = [m for m in needed if not (root / m).is_dir() and not (root / m).with_suffix('.py').is_file()]; \
+assert not missing, f'physicsnemo is missing {missing}'"
 
 # Model checkpoint and downloaded FCI products; compose.yaml mounts a volume here.
 ENV EARTH2STUDIO_CACHE=/cache/earth2studio \
