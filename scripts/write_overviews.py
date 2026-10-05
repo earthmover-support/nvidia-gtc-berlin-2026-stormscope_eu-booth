@@ -9,7 +9,7 @@
 #     "python-dotenv",
 # ]
 # ///
-"""Write low-resolution overview levels (2x, 4x) next to the native StormScope-EU cube.
+"""Write low-resolution overview levels (default: 2x) next to the native StormScope-EU cube.
 
 Issue #9: with no coarser level to read, the Flux tiles service renders every zoomed-out
 tile from the full 1120 x 2432 grid. This backfills block-averaged copies of the stored
@@ -21,7 +21,10 @@ The layout copies `earthmover-public/synthetic-multiscales`, which Flux already 
 
     /                   native cube (untouched) + `multiscales` layout
     overviews/2x/       y_2x, x_2x: 560 x 1216
-    overviews/4x/       y_4x, x_4x: 280 x 608
+
+Only 2x by default: Flux picks the level from the zoom alone, whatever the tile size, and
+serves a 4x level at z3-4 -- visibly blocky at the booth globe's zoom. With 2x as the
+coarsest level, z3-5 read 2x and z6+ the native grid.
 
 Each overview group is a self-contained GeoZarr dataset: its own block-averaged `y`/`x`
 scan angles, `lat`/`lon`, the CF grid mapping and the shared `ensemble`/`time`/
@@ -39,7 +42,7 @@ Env vars required:
 
 Usage:
     uv run --script scripts/write_overviews.py --branch test-overviews
-    uv run --script scripts/write_overviews.py --branch main --factors 2 4 --dry-run
+    uv run --script scripts/write_overviews.py --branch main --factors 2 4 --dry-run  # add a 4x level
 """
 
 import argparse
@@ -53,7 +56,7 @@ from dotenv import load_dotenv
 
 ARRAYLAKE_REPO = "gtc-berlin/stormscope-eu_gtc_berlin_2026"
 VARIABLES = ["true_color", "airmass"]
-FACTORS = [2, 4]
+FACTORS = [2]
 # Copied unchanged into every overview group: coordinates without a spatial dimension and
 # the CF grid mapping the data arrays point at.
 SHARED = ["ensemble", "time", "lead_time", "rgb", "valid_time", "fci_geos_projection"]
