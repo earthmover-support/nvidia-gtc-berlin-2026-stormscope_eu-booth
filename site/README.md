@@ -1,7 +1,8 @@
 # site
 
 A static MapLibre globe of the latest StormScope-EU nowcasts. Tiles come straight from the
-public Earthmover Flux tiles service (`gtc-berlin`). The page has an init selector, a
+public Earthmover Flux tiles service (`gtc-berlin`). The page has a branch selector
+(`BRANCHES` in `index.html`; the service cannot list them), an init selector, a
 true colour / airmass toggle, and playback over lead times. No build step and no server:
 `index.html` plus three logo SVGs.
 
