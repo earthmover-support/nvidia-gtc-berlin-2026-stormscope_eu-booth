@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir -c /opt/base-constraints.txt \
     "nvtx>=0.2.11" \
     "omegaconf>=2.3.0"
 
-RUN pip install natten==0.21.7+torch2130cu130 -f https://whl.natten.org
+RUN pip install natten==0.21.7+torch2130cu132 -f https://whl.natten.org
 
 # Fail the build, not the first run, if a dependency is missing: StormScopeMeteosatEU
 # only reports its optional imports when it is instantiated. The physicsnemo modules it

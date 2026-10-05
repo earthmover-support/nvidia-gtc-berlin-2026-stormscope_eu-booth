@@ -103,6 +103,12 @@ docker compose run --rm pipeline python scripts/stormscope_eu_pipeline.py --star
 The model checkpoint and downloaded FCI products persist in the `cache` volume. Nothing
 prunes old FCI products, so it grows by one slot every 10 minutes.
 
+If you need to debug inside the container, you can run an interactive shell inside it instead:
+
+```bash
+docker compose run --rm --build pipeline bash
+```
+
 ## Pipeline script
 
 [`scripts/stormscope_eu_pipeline.py`](scripts/stormscope_eu_pipeline.py) comes from [negin513/GTC-Berlin-EarthMover](https://github.com/negin513/GTC-Berlin-EarthMover)
