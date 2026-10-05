@@ -39,7 +39,12 @@
   #play { width: 32px; height: 32px; flex-shrink: 0; background: var(--green); color: #000; border: none; }
   #play:hover { background: #8fd400; }
   input[type=range] { flex: 1; accent-color: var(--green); }
-  #lead { font-size: 15px; }
+  #lead { flex: 1; font-size: 15px; }
+  #collapse { width: 28px; height: 28px; flex-shrink: 0; padding: 0; background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
+  #collapse:hover { border-color: var(--green); color: var(--green); }
+  /* Collapsed: only lead time, play and slider stay visible */
+  #panel.collapsed > :not(#playback), #panel.collapsed #playback > .label { display: none; }
+  #panel.collapsed { padding: 10px 12px; }
   #status { font-size: 11px; padding: 6px 8px; border-left: 3px solid var(--green); background: var(--surface); color: var(--text-dim); }
 </style>
 </head>
@@ -61,6 +66,7 @@
       </a>
     </div>
   </div>
+  <div><div class="label">Arraylake branch</div><select id="ref"></select></div>
   <div><div class="label">Init (UTC)</div><select id="init"></select></div>
   <div>
     <div class="label">Variable</div>
@@ -69,9 +75,9 @@
       <button class="pill" data-var="airmass">Airmass RGB</button>
     </div>
   </div>
-  <div>
+  <div id="playback">
     <div class="label">Lead time</div>
-    <div id="lead"></div>
+    <div class="row"><div id="lead"></div><button id="collapse" aria-controls="panel" aria-expanded="true" title="Collapse panel">▴</button></div>
     <div class="row" style="margin-top: 8px"><button id="play">❚❚</button><input id="slider" type="range" min="0" value="0" step="1"></div>
   </div>
   <div id="status">Loading inits…</div>
@@ -80,7 +86,9 @@
 // Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
 const BASE = "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin";
 const REPO = "stormscope-eu_gtc_berlin_2026";
-const REF = "main";
+// Branches offered in the dropdown; the tiles service has no public endpoint that lists them.
+// Value is the colorscalerange: test-uint8 stores bytes, the others reflectance in 0..1.
+const BRANCHES = { main: "0,1", "test-overviews": "0,1", "test-uint8": "0,255" };
 const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
 const FRAME_MS = 800;
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
@@ -99,8 +107,8 @@ map.addControl(new maplibregl.NavigationControl());
 
 // /info fails on this repo; /tree (xarray's HTML repr) carries the coordinate arrays. Past 200
 // values xarray abbreviates an array to its first and last three, so the "..." entry is dropped.
-async function loadCoords() {
-  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${REF}/tree`)).text();
+async function loadCoords(ref) {
+  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${ref}/tree`)).text();
   const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
   const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, "")).filter((v) => v !== "...");
   return {
@@ -108,14 +116,14 @@ async function loadCoords() {
     leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
   };
 }
-const coords = loadCoords(); // runs while the basemap style loads
+const coords = loadCoords(Object.keys(BRANCHES)[0]); // runs while the basemap style loads
 
 function tileUrl(time, lead) {
   const p = new URLSearchParams({
-    variables: variable, style: "raster/rgb", colorscalerange: "0,1",
+    variables: variable, style: "polygons/rgb", colorscalerange: BRANCHES[$("ref").value],
     time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
-  return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+  return `${BASE}/${REPO}/${$("ref").value}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
 }
 
 // One raster layer per lead time, all kept loaded; playback only flips opacity.
@@ -172,24 +180,47 @@ function step() {
   if (ready.length) show(ready.find((k) => k > frame) ?? ready[0]);
 }
 
+function setCollapsed(on) {
+  $("panel").classList.toggle("collapsed", on);
+  $("collapse").textContent = on ? "▾" : "▴";
+  $("collapse").title = on ? "Expand panel" : "Collapse panel";
+  $("collapse").setAttribute("aria-expanded", String(!on));
+}
+$("collapse").onclick = () => setCollapsed(!$("panel").classList.contains("collapsed"));
+setCollapsed(matchMedia("(max-width: 600px)").matches); // phones start collapsed
+
 function setPlaying(on) {
   clearInterval(timer);
   timer = on ? setInterval(step, FRAME_MS) : null;
   $("play").textContent = on ? "❚❚" : "▶";
 }
 
+// Fills the init selector from a branch's coordinates, keeping the selected init if the branch has it.
+async function useCoords(pending) {
+  let times;
+  try {
+    ({ times, leads } = await pending);
+  } catch (e) {
+    $("status").textContent = `Could not reach the tiles service: ${e.message}`;
+    return false;
+  }
+  const prev = $("init").value;
+  $("init").innerHTML = times.slice().reverse().map((t) => `<option>${t}</option>`).join("");
+  if (times.includes(prev)) $("init").value = prev;
+  $("slider").max = leads.length - 1;
+  frame = Math.min(frame, leads.length - 1);
+  return true;
+}
+
 map.on("load", async () => {
   map.setProjection({ type: "globe" });
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
-  let times;
-  try {
-    ({ times, leads } = await coords);
-  } catch (e) {
-    $("status").textContent = `Could not reach the tiles service: ${e.message}`;
-    return;
-  }
-  $("init").innerHTML = times.slice().reverse().map((t) => `<option>${t}</option>`).join("");
-  $("slider").max = leads.length - 1;
+  $("ref").innerHTML = Object.keys(BRANCHES).map((b) => `<option>${b}</option>`).join("");
+  if (!(await useCoords(coords))) return;
+  $("ref").onchange = async () => {
+    $("status").textContent = "Loading inits…";
+    if (await useCoords(loadCoords($("ref").value))) loadRun();
+  };
   $("init").onchange = loadRun;
   const pills = document.querySelectorAll(".pill");
   for (const b of pills) b.onclick = () => {
