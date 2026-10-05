@@ -70,6 +70,39 @@ Credentials come from a local `.env` (see [`.env.example`](.env.example)):
 Stopping a run partway leaves the steps already committed. Rerunning the same init
 overwrites its slice.
 
+### Docker
+
+On a cloud GPU instance, [`compose.yaml`](compose.yaml) runs the pipeline in a container
+built from [`Dockerfile`](Dockerfile): the NGC PhysicsNeMo 26.08 image plus earth2studio.
+The container starts the script with no arguments, so it runs
+continuously, publishing each new init to Arraylake, and restarts unless stopped. The host
+needs the NVIDIA Container Toolkit, and pulling from `nvcr.io` may need an NGC login.
+
+Credentials are passed as Compose secrets, one file each in `secrets/` (git-ignored, and
+kept out of the image by [`.dockerignore`](.dockerignore));
+[`docker/entrypoint.sh`](docker/entrypoint.sh) exports them as the environment variables
+above:
+
+```bash
+mkdir -p secrets
+printf %s "<key>"    > secrets/eumetsat_consumer_key
+printf %s "<secret>" > secrets/eumetsat_consumer_secret
+printf %s "<token>"  > secrets/arraylake_api_token
+docker compose up -d --build
+docker compose logs -f
+```
+
+`STORMSCOPE_PUBLISH_TARGET` and `ARRAYLAKE_REPO` can be overridden from the shell or a
+`.env` next to `compose.yaml`. Arguments after the service name replace the default
+command, e.g. a single pinned run:
+
+```bash
+docker compose run --rm pipeline python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00
+```
+
+The model checkpoint and downloaded FCI products persist in the `cache` volume. Nothing
+prunes old FCI products, so it grows by one slot every 10 minutes.
+
 ## Pipeline script
 
 [`scripts/stormscope_eu_pipeline.py`](scripts/stormscope_eu_pipeline.py) comes from [negin513/GTC-Berlin-EarthMover](https://github.com/negin513/GTC-Berlin-EarthMover)

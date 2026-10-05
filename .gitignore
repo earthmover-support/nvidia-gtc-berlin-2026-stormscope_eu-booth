@@ -3,6 +3,7 @@
 .ipynb_checkpoints
 outputs
 .env
+secrets/
 __pycache__
 
 node_modules
