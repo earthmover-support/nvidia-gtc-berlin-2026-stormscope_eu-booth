@@ -29,7 +29,7 @@
   "camera": { "lon": 12.0, "lat": 49.0, "zoom": 3.2, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,
               "cover": [-12, 34, 40, 64], "max_zoom": 8.5, "idle_reset_s": 30 },
 
-  "viewer_url": "",
+  "viewer_url": "https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/",
   "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
 
   "sql": {
