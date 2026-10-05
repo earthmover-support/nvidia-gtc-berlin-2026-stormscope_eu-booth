@@ -61,6 +61,7 @@
       </a>
     </div>
   </div>
+  <div><div class="label">Arraylake branch</div><select id="ref"></select></div>
   <div><div class="label">Init (UTC)</div><select id="init"></select></div>
   <div>
     <div class="label">Variable</div>
@@ -80,13 +81,15 @@
 // Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
 const BASE = "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin";
 const REPO = "stormscope-eu_gtc_berlin_2026";
-const REF = "main";
+// Branches offered in the dropdown; `?ref=<branch>` selects one (and adds it if unlisted).
+const REFS = ["main", "test-uint8", "test-overviews"];
 const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
 const FRAME_MS = 800;
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
 
 const $ = (id) => document.getElementById(id);
-let leads = [], variable = "true_color", frame = 0, added = 0, addedAt = 0, timer = null, firstLabel;
+let ref = new URLSearchParams(location.search).get("ref") || REFS[0];
+let leads = [], scale = "0,1", variable = "true_color", frame = 0, added = 0, addedAt = 0, timer = null, firstLabel;
 const loaded = new Set(); // indices of frames whose tiles have all arrived
 
 const map = new maplibregl.Map({
@@ -99,23 +102,28 @@ map.addControl(new maplibregl.NavigationControl());
 
 // /info fails on this repo; /tree (xarray's HTML repr) carries the coordinate arrays. Past 200
 // values xarray abbreviates an array to its first and last three, so the "..." entry is dropped.
+// It also lists the RGB variables' valid_max (1 for float 0-1, 255 for uint8), which sets the
+// colour scale; both RGB variables on a branch share it.
 async function loadCoords() {
-  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${REF}/tree`)).text();
+  const res = await fetch(`${BASE}/_meta/datasets/${REPO}/${ref}/tree`);
+  if (!res.ok) throw new Error(`${ref}: HTTP ${res.status}`);
+  const html = await res.text();
   const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
   const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, "")).filter((v) => v !== "...");
   return {
     times: values(pres.find((s) => s.includes("datetime64"))).map((t) => t.slice(0, 19)),
     leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
+    scale: `0,${html.match(/valid_max :<\/span><\/dt><dd>([^<]+)/)?.[1] ?? 1}`,
   };
 }
-const coords = loadCoords(); // runs while the basemap style loads
+let coords = loadCoords(); // runs while the basemap style loads
 
 function tileUrl(time, lead) {
   const p = new URLSearchParams({
-    variables: variable, style: "raster/rgb", colorscalerange: "0,1",
+    variables: variable, style: "raster/rgb", colorscalerange: scale,
     time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
-  return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+  return `${BASE}/${REPO}/${ref}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
 }
 
 // One raster layer per lead time, all kept loaded; playback only flips opacity.
@@ -178,18 +186,38 @@ function setPlaying(on) {
   $("play").textContent = on ? "❚❚" : "▶";
 }
 
-map.on("load", async () => {
-  map.setProjection({ type: "globe" });
-  firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
+// Reads the branch's inits, leads and colour scale, then reloads the frames. Keeps the selected
+// init when the new branch has it.
+async function loadRef() {
   let times;
   try {
-    ({ times, leads } = await coords);
+    ({ times, leads, scale } = await coords);
   } catch (e) {
     $("status").textContent = `Could not reach the tiles service: ${e.message}`;
     return;
   }
+  const init = $("init").value;
   $("init").innerHTML = times.slice().reverse().map((t) => `<option>${t}</option>`).join("");
+  if (times.includes(init)) $("init").value = init;
   $("slider").max = leads.length - 1;
+  frame = Math.min(frame, leads.length - 1);
+  loadRun();
+}
+
+map.on("load", async () => {
+  map.setProjection({ type: "globe" });
+  firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
+  $("ref").innerHTML = [...new Set([...REFS, ref])].map((r) => `<option>${r}</option>`).join("");
+  $("ref").value = ref;
+  $("ref").onchange = () => {
+    ref = $("ref").value;
+    const url = new URL(location.href);
+    url.searchParams.set("ref", ref);
+    history.replaceState(null, "", url);
+    $("status").textContent = `Loading ${ref}…`;
+    coords = loadCoords();
+    loadRef();
+  };
   $("init").onchange = loadRun;
   const pills = document.querySelectorAll(".pill");
   for (const b of pills) b.onclick = () => {
@@ -199,8 +227,7 @@ map.on("load", async () => {
   };
   $("slider").oninput = (e) => { setPlaying(false); show(+e.target.value); };
   $("play").onclick = () => setPlaying(!timer);
-  loadRun();
-  show(0);
+  await loadRef();
   setPlaying(true);
 });
 </script>
