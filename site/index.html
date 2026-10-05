@@ -87,7 +87,8 @@
 const BASE = "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin";
 const REPO = "stormscope-eu_gtc_berlin_2026";
 // Branches offered in the dropdown; the tiles service has no public endpoint that lists them.
-const BRANCHES = ["main", "test-overviews", "test-uint8"];
+// Value is the colorscalerange: test-uint8 stores bytes, the others reflectance in 0..1.
+const BRANCHES = { main: "0,1", "test-overviews": "0,1", "test-uint8": "0,255" };
 const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
 const FRAME_MS = 800;
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
@@ -115,11 +116,11 @@ async function loadCoords(ref) {
     leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
   };
 }
-const coords = loadCoords(BRANCHES[0]); // runs while the basemap style loads
+const coords = loadCoords(Object.keys(BRANCHES)[0]); // runs while the basemap style loads
 
 function tileUrl(time, lead) {
   const p = new URLSearchParams({
-    variables: variable, style: "polygons/rgb", colorscalerange: "0,1",
+    variables: variable, style: "polygons/rgb", colorscalerange: BRANCHES[$("ref").value],
     time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
   return `${BASE}/${REPO}/${$("ref").value}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
@@ -214,7 +215,7 @@ async function useCoords(pending) {
 map.on("load", async () => {
   map.setProjection({ type: "globe" });
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
-  $("ref").innerHTML = BRANCHES.map((b) => `<option>${b}</option>`).join("");
+  $("ref").innerHTML = Object.keys(BRANCHES).map((b) => `<option>${b}</option>`).join("");
   if (!(await useCoords(coords))) return;
   $("ref").onchange = async () => {
     $("status").textContent = "Loading inits…";
