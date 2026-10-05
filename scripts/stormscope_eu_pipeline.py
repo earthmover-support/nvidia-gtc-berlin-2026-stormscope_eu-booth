@@ -12,6 +12,11 @@ forecast first and publishing once. It writes to the root group of
 accumulate: each one appends its init to `time` in a schema commit of its own,
 then fills it step by step.
 
+Without --start-time the script runs continuously: the model is loaded once
+(`StormScopeEUPipeline`), and `main()` polls the Data Store, starting a new run
+whenever a fresher initial condition becomes downloadable -- one every 10 minutes
+once the feed is caught up. With --start-time it runs that one init and exits.
+
 Publishing goes through Earth2Studio's `earth2studio.io.IceChunkBackend`
 directly, with no Arraylake-specific subclass:
 `arraylake.Client.get_icechunk_storage(name)` returns a plain
@@ -41,14 +46,15 @@ Install:
         python-dotenv icechunk arraylake xarray zarr eumdac
 
 Usage:
-    python scripts/stormscope_eu_pipeline.py --n-steps 3
-    python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
+    python scripts/stormscope_eu_pipeline.py --n-steps 3  # runs until interrupted
+    python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12  # one run
     python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
     python scripts/stormscope_eu_pipeline.py --help
 """
 
 import argparse
 import os
+import time
 from collections import OrderedDict
 from datetime import UTC, datetime, timedelta
 
@@ -71,6 +77,7 @@ from earth2studio.data.utils_eumetsat import eumetsat_credentials
 from earth2studio.io import IceChunkBackend
 from earth2studio.models.px.stormscope_meteosat import StormScopeMeteosatEU
 from earth2studio.utils.coords import map_coords
+from earth2studio.utils.type import CoordSystem
 from tqdm import tqdm
 from zarr.codecs import BloscCodec, ZstdCodec
 
@@ -183,6 +190,13 @@ MIN_LAG = timedelta(minutes=80)
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate the CLI flags.
+
+    `--start-time` comes back as a `np.datetime64` (or None), already checked against
+    `MeteosatFCI.available`. `--publish-target` falls back to `STORMSCOPE_PUBLISH_TARGET`,
+    then "local"; the Arraylake repo and token are checked here so a misconfigured run
+    fails before the model is loaded.
+    """
     p = argparse.ArgumentParser(
         description="StormScope EU nowcast: fetch MTG/FCI -> Earth2Studio rollout "
         "-> streaming Icechunk/ArrayLake publish",
@@ -323,7 +337,7 @@ def fetch_initial_condition(
     fci: dict,
     start_time: np.datetime64,
     device: torch.device,
-):
+) -> tuple[torch.Tensor, CoordSystem]:
     """Step 3: fetch the 6-frame sliding window of FCI observations."""
     in_coords = model.input_coords()
     variables = in_coords["variable"]
@@ -528,6 +542,7 @@ def step_writes(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[s
 
 
 def lead_minutes(lead_time: np.ndarray) -> np.ndarray:
+    """`timedelta64` lead times as whole minutes, for commit messages and metadata."""
     return (lead_time / np.timedelta64(1, "m")).astype(int)
 
 
@@ -580,7 +595,7 @@ def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
 def create_schema(
     backend: IceChunkBackend,
     model: StormScopeMeteosatEU,
-    coords: OrderedDict,
+    coords: CoordSystem,
     lead_time: np.ndarray,
 ) -> None:
     """Allocate the cube in an empty repo, sized for this run's init alone.
@@ -724,75 +739,150 @@ def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndar
     return f"stormscope-eu {init} extend schema"
 
 
-def main():
-    args = parse_args()
-    os.makedirs(args.output_dir, exist_ok=True)
+class StormScopeEUPipeline:
+    """StormScope-EU loaded once, run on any number of inits.
 
-    if args.device == "auto":
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    else:
-        device = torch.device(args.device)
+    Loading and compiling the model is the slow part, so it happens in `__init__`;
+    each call then fetches one initial condition, rolls it out and publishes it.
+    Nothing carries over between calls except the model and data sources: the
+    rollout state lives in the generator `create_iterator` returns, and the
+    Icechunk backend is reopened per call so it sees the `time` axis as stored.
+    """
 
-    model = load_model(device)
-    fci = build_data_sources()
-    in_coords = model.input_coords()
-
-    analysis_time = resolve_start_time(args.start_time, n_frames=len(in_coords["lead_time"]))
-    lag_min = (datetime.now(UTC) - analysis_time).total_seconds() / 60
-    print(f"analysis time {analysis_time:%Y-%m-%d %H:%M} UTC ({lag_min:.0f} min behind now)")
-    start_time = np.datetime64(analysis_time.replace(tzinfo=None))  # numpy carries no timezone
-
-    with torch.no_grad():
-        x, coords = fetch_initial_condition(model, fci, start_time, device)
-        x, coords = add_ensemble_dim(x, coords, ensemble_size=1)
-
-    channels = [str(v) for v in coords["variable"]]
-
-    backend, location = build_backend(args.publish_target, args.output_dir, args.arraylake_repo)
-    lead_time = np.arange(args.n_steps + 1) * model.output_times[0]
-    init = np.datetime_as_string(coords["time"][0], unit="m")
-    if "true_color" not in backend.root:
-        create_schema(backend, model, coords, lead_time)
-        message = f"stormscope-eu {init} schema"
-    else:
-        message = extend_schema(backend, coords["time"], lead_time)
-    if message is not None:
-        # Commit metadata makes `repo.ancestry()` filterable without reading data:
-        # `time` is the init, `lead_time` the minutes the commit covers.
-        metadata = {
-            "time": init,
-            "lead_time": lead_minutes(lead_time).tolist(),
-            "status": "schema_extended",
-        }
-        print("schema ->", backend.commit(message, metadata=metadata))
-
-    for step, (x_pred, coords_pred) in enumerate(
-        tqdm(model.create_iterator(x, coords), total=args.n_steps + 1)
+    def __init__(
+        self,
+        device: torch.device | str = "auto",
     ):
-        # Forecast only: step 0's five past observed frames are model input, not output.
-        x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
-        backend.write(*step_writes(x_pred_out, coords_pred_out, channels))
+        """Load the model onto `device` and build the FCI data sources.
 
-        lead = lead_minutes(coords_pred_out["lead_time"])
-        if step == 0:
-            message = f"stormscope-eu {init} analysis frame (lead {lead[-1]} min)"
+        `device` is a torch device, or "auto" for CUDA when available, else CPU.
+        """
+        if device == "auto":
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
-            message = f"stormscope-eu {init} +{lead[-1]} min"
-        # commit flushes the background writes above, then opens a fresh session --
-        # an Icechunk session is spent once committed. `rebase_with` lets the step
-        # land on top of a commit made meanwhile by another writer (another init's
-        # chunks, say); it still fails on a real conflict, such as that commit
-        # changing the metadata of an array this step writes.
-        metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
-        snapshot = backend.commit(
-            message, metadata=metadata, rebase_with=icechunk.ConflictDetector()
-        )
-        tqdm.write(f"{message} -> {snapshot}")
+            self.device = torch.device(device)
 
-        if step == args.n_steps:
-            break
+        self.model = load_model(self.device)
+        self.fci = build_data_sources()
 
-    print(f"Published to {args.publish_target} ({location})")
+    def __call__(
+        self,
+        start_time: np.datetime64,
+        n_steps: int,
+        publish_target: str,
+        output_dir: str,
+        arraylake_repo: str,
+    ):
+        """Run one nowcast from `start_time` and publish it step by step.
+
+        Fetches the FCI input window ending at `start_time`, adds this init to the
+        cube (creating the cube in an empty repo), then commits each of the
+        `n_steps + 1` forecast frames -- the analysis frame and `n_steps` 10-minute
+        steps -- as soon as it is produced. An init already in the repo is rerun and
+        its slice overwritten. `publish_target`, `output_dir` and `arraylake_repo`
+        choose the store, as in `build_backend`.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+
+        with torch.no_grad():
+            x, coords = fetch_initial_condition(self.model, self.fci, start_time, self.device)
+            x, coords = add_ensemble_dim(x, coords, ensemble_size=1)
+
+        channels = [str(v) for v in coords["variable"]]
+
+        backend, location = build_backend(publish_target, output_dir, arraylake_repo)
+        lead_time = np.arange(n_steps + 1) * self.model.output_times[0]
+        init = np.datetime_as_string(coords["time"][0], unit="m")
+        if "true_color" not in backend.root:
+            create_schema(backend, self.model, coords, lead_time)
+            message = f"stormscope-eu {init} schema"
+        else:
+            message = extend_schema(backend, coords["time"], lead_time)
+        if message is not None:
+            # Commit metadata makes `repo.ancestry()` filterable without reading data:
+            # `time` is the init, `lead_time` the minutes the commit covers.
+            metadata = {
+                "time": init,
+                "lead_time": lead_minutes(lead_time).tolist(),
+                "status": "schema_extended",
+            }
+            print("schema ->", backend.commit(message, metadata=metadata))
+
+        for step, (x_pred, coords_pred) in enumerate(
+            tqdm(self.model.create_iterator(x, coords), total=n_steps + 1)
+        ):
+            # Forecast only: step 0's five past observed frames are model input, not output.
+            x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
+            backend.write(*step_writes(x_pred_out, coords_pred_out, channels))
+
+            lead = lead_minutes(coords_pred_out["lead_time"])
+            if step == 0:
+                message = f"stormscope-eu {init} analysis frame (lead {lead[-1]} min)"
+            else:
+                message = f"stormscope-eu {init} +{lead[-1]} min"
+            # commit flushes the background writes above, then opens a fresh session --
+            # an Icechunk session is spent once committed. `rebase_with` lets the step
+            # land on top of a commit made meanwhile by another writer (another init's
+            # chunks, say); it still fails on a real conflict, such as that commit
+            # changing the metadata of an array this step writes.
+            metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
+            snapshot = backend.commit(
+                message, metadata=metadata, rebase_with=icechunk.ConflictDetector()
+            )
+            tqdm.write(f"{message} -> {snapshot}")
+
+            if step == n_steps:
+                break
+
+        print(f"Published to {publish_target} ({location})")
+
+
+def main():
+    """Load the model once, then run every new init as it becomes available.
+
+    Each pass resolves the freshest analysis time (see `resolve_start_time`) and runs
+    it unless it was the last one run, in which case it sleeps `wait_seconds` and
+    looks again. An exception in a pass is printed and the loop carries on. With
+    --start-time the pinned init is run once and the loop ends.
+    """
+    args = parse_args()
+    pipeline = StormScopeEUPipeline(device=args.device)
+
+    last_start = None
+    wait_seconds = 60
+
+    while True:
+        try:
+            analysis_time = resolve_start_time(
+                args.start_time, n_frames=len(pipeline.model.input_coords()["lead_time"])
+            )
+            lag_min = (datetime.now(UTC) - analysis_time).total_seconds() / 60
+            print(
+                f"analysis time {analysis_time:%Y-%m-%d %H:%M} UTC ({lag_min:.0f} min behind now)"
+            )
+            start_time = np.datetime64(
+                analysis_time.replace(tzinfo=None)
+            )  # numpy carries no timezone
+            if start_time == last_start:
+                time.sleep(wait_seconds)
+                continue
+
+            pipeline(
+                start_time=start_time,
+                n_steps=args.n_steps,
+                publish_target=args.publish_target,
+                output_dir=args.output_dir,
+                arraylake_repo=args.arraylake_repo,
+            )
+            last_start = start_time
+        except Exception as e:
+            print(
+                f"{datetime.now()}: Exception occurred: {e}, retrying after {wait_seconds} seconds"
+            )
+            time.sleep(wait_seconds)
+
+        if args.start_time is not None:
+            break  # run only one if start_time is fixed
 
 
 if __name__ == "__main__":
