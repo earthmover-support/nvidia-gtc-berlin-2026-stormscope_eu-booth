@@ -17,20 +17,19 @@ Related: [TILE_SERVER_PERFORMANCE.md](TILE_SERVER_PERFORMANCE.md) (tiles in deta
 | 5 | Inference + ingest | StormScope-EU produces the analysis frame (lead 0) and rolls forward 12 × 10 min. Each step's output is turned into the `true_color` / `airmass` composites and committed to Icechunk on Arraylake as it is produced. | 4.6 min (~23s/step) | - persistent GPU container [#19] 🟣, [#26] 🟣<br>- spatial chunks + zstd so each write is smaller [#7] 🟣<br>- uint8 composites, 4× smaller before compression ([#27] 🟢)<br>- async ingest, so writes overlap inference: a run takes ~1.5 min longer with `--publish-target arraylake` than with `local`, although `IceChunkBackend` defaults to `blocking=False` ([Slack][slack-async]) |
 | 6 | Visible to tiles service | Flux reads Icechunk directly, so a commit is renderable as soon as it lands. | 0 s | - none needed |
 | 7 | Discovered by client | Booth page: `server.py` polls Arraylake every 5 s, the browser polls `/api/state` every 4 s (worst case shown). Phone viewer (`site/`): reads the init list from `/tree` on page load only. | 9 s | - booth page with live polling [#2] 🟣<br>- phone viewer [#18] 🟣<br>- `extend schema` shown as a complete run until lead 0 lands (issue #13, open)<br>- phone viewer: fetch new inits every 10 s instead of only on page load ([#28] 🟢) |
-| 8 | First frame rendered | The tiles service renders the ~20 z4 tiles of one lead in one browser | 7–9 s | - spatial chunks + zstd [#7] 🟣<br>- `polygons/rgb` style, 2–3× faster per tile [#24] 🟣, [#25] 🟣- 2× overviews (trial [#23] 🟢) |
-| 9 | Full run rendered | All 13 leads loaded in one browser, one lead at a time in playback order. | 92 s | - load leads in playback order [#2] 🟣, [#18] 🟣<br>- snapshot-pinned tile URLs, so reloads come from the browser cache [#2] 🟣<br>- 2× overviews (trial, 39 s, [#23] 🟢)<br>- uint8 RGB (trial, 74 s, [#22] 🔴; in the pipeline [#27] 🟢)<br>- HTTP/2 on the service (asked, ~2× per frame expected) [arraylake#7938](https://github.com/earth-mover/arraylake/pull/7938) |
+| 8 | First frame rendered | The tiles service renders the ~20 z4 tiles of one lead in one browser | 7–9 s | - spatial chunks + zstd [#7] 🟣<br>- `polygons/rgb` style, 2–3× faster per tile [#24] 🟣, [#25] 🟣<br>- 2× overviews: rejected, visibly coarser image ([#23] 🔴) |
+| 9 | Full run rendered | All 13 leads loaded in one browser, one lead at a time in playback order. | 92 s | - load leads in playback order [#2] 🟣, [#18] 🟣<br>- snapshot-pinned tile URLs, so reloads come from the browser cache [#2] 🟣<br>- 2× overviews: 39 s, but rejected, visibly coarser image ([#23] 🔴)<br>- uint8 RGB (trial, 74 s, [#22] 🔴; in the pipeline [#27] 🟢)<br>- HTTP/2 on the service (asked, ~2× per frame expected) [arraylake#7938](https://github.com/earth-mover/arraylake/pull/7938) |
 
 PRs: 🟣 merged, 🟢 open, 🔴 closed without merging.
 
 ## What's left, by expected impact
 
 1. **NRT licence:** ~65 min. Account question with EUMETSAT, not engineering.
-2. **Overviews in the pipeline ([#23] → issue #9):** full run in the browser from ~92 s to ~39 s.
-3. **HTTP/2 on the tiles service:** about 2× per frame for one browser (issue #11).
-4. **Shorter poll (stage 4):** up to 60 s, at the cost of more Data Store searches.
-5. **uint8 RGB in the pipeline ([#27] 🟢):** full run in the browser from ~92 s to ~74 s,
+2. **HTTP/2 on the tiles service:** about 2× per frame for one browser (issue #11).
+3. **Shorter poll (stage 4):** up to 60 s, at the cost of more Data Store searches.
+4. **uint8 RGB in the pipeline ([#27] 🟢):** full run in the browser from ~92 s to ~74 s,
    measured on the trial branch ([#22] 🔴, superseded by #27). Needs Arraylake `main` reset
-   before the first uint8 run; not yet tried together with overviews.
+   before the first uint8 run.
 
 ## Sources and reproduce
 
