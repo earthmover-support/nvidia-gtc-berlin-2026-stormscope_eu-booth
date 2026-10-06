@@ -81,7 +81,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 
 .ticks { display: flex; gap: 6px; }
 .ticks div { flex: 1 1 0; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font: 13px var(--mono); color: var(--muted); border: 1px solid #23272E; }
-.ticks div.pending { color: var(--faint); border-style: dashed; }
 .ticks div.now { background: var(--text); color: var(--ground); border-color: var(--text); font-weight: 600; }
 
 .notice { position: absolute; z-index: 3; top: 120px; left: 22px; right: 22px; padding: 10px 14px; border-radius: 8px; background: #2A1A10; color: #FFD2A6; font: 13px var(--mono); }
@@ -205,6 +204,5 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .cells { display: flex; gap: 6px; }
 .cells div { flex: 1; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 5px; font: 12px var(--mono); background: #1A1D23; color: #6B7280; }
 .cells div.done { background: var(--lime); color: var(--lime-ink); font-weight: 600; }
-.cells div.writing { background: transparent; border: 2px solid var(--lime); color: var(--lime); }
 .cells div.flash { animation: flash 1.2s ease-out; }
 @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(183, 228, 0, .9); } 100% { box-shadow: 0 0 0 14px rgba(183, 228, 0, 0); } }

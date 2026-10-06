@@ -142,21 +142,18 @@ def ref_by_init(commits: list[dict]) -> dict[str, str]:
 def build_runs(times: list[str], commits: list[dict]) -> list[dict]:
     """One run per init in the repo's `time` coordinate, newest first.
 
-    The pipeline commits each init once, with every lead, so a run in `time` is
-    always complete.
+    The pipeline commits each init once, with every lead (`/api/config` lists them),
+    so a run in `time` is always complete.
 
     `ref` is the snapshot that committed the run; runs older than the history get the
     oldest snapshot in it. Snapshot tile URLs are immutable and cached for a month.
     """
-    full = all_leads()
     refs = ref_by_init(commits)
     oldest = commits[-1]["id"] if commits else None
     return [
         {
             "init": t[:16],
             "time": t,
-            "leads": full,
-            "complete": True,
             "ref": refs.get(t[:16], oldest),
         }
         for t in sorted(set(times), reverse=True)
@@ -235,6 +232,7 @@ def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
     base = now.replace(second=0, microsecond=0)
     base -= dt.timedelta(minutes=base.minute % interval)
     commits, times = [], []
+    last = all_leads()[-1]
     for k in range(CONFIG["max_runs"]):
         start = base - dt.timedelta(minutes=interval * k)
         init = start - dt.timedelta(minutes=90)  # ~80-90 min licence lag
@@ -242,7 +240,6 @@ def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
         if t > now:
             continue
         times.append(f"{init:%Y-%m-%dT%H:%M:%S}")
-        last = CONFIG["lead_steps"] * CONFIG["lead_step_min"]
         msg = f"stormscope-eu {init:%Y-%m-%dT%H:%M} lead 0-{last} min"
         sid = f"DEMO{init:%H%M}".ljust(20, "X")
         commits.append({"id": sid, "message": msg, "written_at": t.isoformat()})
@@ -265,12 +262,9 @@ def sql_host() -> str:
 
 
 def sql_text() -> str:
-    """The active query with {init} set to the newest complete run (tz-naive timestamp)."""
+    """The active query with {init} set to the newest run (tz-naive timestamp)."""
     runs = SHARED.get("state").get("runs") or []
-    done = [r for r in runs if r["complete"]]
-    init = (
-        done[0]["time"] if done else (runs[0]["time"] if runs else "1970-01-01T00:00:00")
-    ).replace("T", " ")
+    init = (runs[0]["time"] if runs else "1970-01-01T00:00:00").replace("T", " ")
     with SHARED.lock:
         template = SHARED.sql_template
     return template.replace("{init}", init)

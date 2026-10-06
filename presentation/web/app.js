@@ -36,7 +36,6 @@
     sql: null,
     sqlPlace: null, // city chip that produced the query, null once hand-edited
     sqlDirty: false, // textarea edited but not run yet
-    doneLeads: new Set(),
     doneInit: null,
   };
 
@@ -55,8 +54,8 @@
     return `${Math.floor(s / 3600)} h`;
   };
   const selectableRuns = () => S.runs.slice(0, S.cfg.max_runs);
-  // "Latest" = newest init that already has at least one forecast frame
-  const latestShown = () => selectableRuns().find((r) => r.leads.length) || null;
+  // "Latest" = newest init; the pipeline commits each init whole, so every run has all leads
+  const latestShown = () => selectableRuns()[0] || null;
   const selectedRun = () =>
     (S.selInit && selectableRuns().find((r) => r.init === S.selInit)) || latestShown();
 
@@ -226,7 +225,7 @@
     }
     const busy = [...layers.keys()].some((l) => !loaded.has(l));
     if (busy && Date.now() - addedAt < LOAD_TIMEOUT_MS) return;
-    const lead = run.leads.find((l) => !layers.has(l));
+    const lead = S.cfg.leads.find((l) => !layers.has(l));
     if (lead != null) {
       const id = `lead-${lead}`;
       map.addSource(id, {
@@ -247,7 +246,7 @@
 
   function showFrame() {
     const run = selectedRun();
-    const leads = run ? run.leads : [];
+    const leads = run ? S.cfg.leads : [];
     if (S.frame >= leads.length) S.frame = 0;
     const lead = leads[S.frame];
     for (const [l, id] of layers) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
@@ -261,13 +260,13 @@
     clearTimeout(animTimer);
     if (S.animPaused) return;
     const run = selectedRun();
-    const last = run && run.leads.length && S.frame === run.leads.length - 1;
+    const last = run && S.frame === S.cfg.leads.length - 1;
     animTimer = setTimeout(animate, SPEEDS[S.speed] * 1000 + (last ? S.cfg.hold_ms : 0));
   }
 
   function animate() {
     const run = selectedRun();
-    const n = run ? run.leads.length : 0;
+    const n = run ? S.cfg.leads.length : 0;
     if (n) {
       S.frame = (S.frame + 1) % n;
       showFrame();
@@ -340,18 +339,16 @@
     const runs = selectableRuns();
     const sel = selectedRun();
     runs.forEach((run, k) => {
-      const status = run.complete ? "" : ` · ${run.leads.length}/${S.cfg.lead_steps}`;
-      const text = `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${status}`;
+      const text = `${k === 0 ? "Latest " : ""}${hhmm(run.init)}`;
       const b = el("button", null, text);
       b.type = "button";
       b.setAttribute("aria-pressed", String(sel && run.init === sel.init));
-      if (!run.leads.length) b.disabled = true;
       b.addEventListener("click", () => selectInit(k));
       box.append(b);
     });
-    const [minLead, maxLead] = sel && sel.leads.length ? [Math.min(...sel.leads), Math.max(...sel.leads)] : [0, 0];
+    const leads = S.cfg.leads;
     $("#loopLabel span").textContent = sel
-      ? `+${minLead}→+${maxLead}${!S.selInit && !sel.complete ? " · live" : ""}${S.animPaused ? " · paused" : ""}`
+      ? `+${leads[0]}→+${leads.at(-1)}${S.animPaused ? " · paused" : ""}`
       : "";
     $("#initTitle").textContent = sel ? `${hhmm(sel.init)} UTC` : "--:-- UTC";
   }
@@ -359,7 +356,6 @@
   function selectInit(k) {
     const runs = selectableRuns();
     if (!runs[k]) return;
-    if (!runs[k].leads.length) return;
     S.selInit = runs[k] === latestShown() ? null : runs[k].init;
     renderInits();
     syncLayers();
@@ -369,11 +365,9 @@
   function renderTicks(run, current) {
     const box = $("#ticks");
     box.replaceChildren();
-    const have = new Set(run ? run.leads : []);
     for (const lead of S.cfg.leads) {
       const d = el("div", null, `+${lead}`);
       if (lead === current) d.classList.add("now");
-      else if (!have.has(lead)) d.classList.add("pending");
       box.append(d);
     }
   }
@@ -410,22 +404,16 @@
       for (const lead of c.leads) cells.append(el("div", null, `+${lead}`));
     }
     if (!latest) { $("#ingestLabel").textContent = "Waiting for Arraylake…"; return; }
-    if (S.doneInit !== latest.init) { S.doneInit = latest.init; S.doneLeads = new Set(); }
-    const have = new Set(latest.leads);
-    const next = c.leads.find((l) => !have.has(l));
-    const recent = head && Date.now() - new Date(head.written_at).getTime() < 5 * 60000;
-    [...cells.children].forEach((d, idx) => {
-      const lead = c.leads[idx];
-      const done = have.has(lead);
-      d.classList.toggle("done", done);
-      d.classList.toggle("writing", !done && !latest.complete && recent && lead === next);
-      if (done && !S.doneLeads.has(lead)) {
-        S.doneLeads.add(lead);
+    // One commit per init: a new init lands with every lead at once, so flash them together.
+    if (S.doneInit !== latest.init) {
+      S.doneInit = latest.init;
+      for (const d of cells.children) {
+        d.classList.add("done");
         d.classList.remove("flash"); void d.offsetWidth; d.classList.add("flash");
       }
-    });
+    }
     $("#ingestLabel").textContent =
-      `Run ${hhmm(latest.init)} · ${latest.complete ? "complete in Arraylake" : "ingesting to Arraylake"} · ${latest.leads.length} of ${c.lead_steps} steps committed`;
+      `Run ${hhmm(latest.init)} · complete in Arraylake · ${c.lead_steps} steps in one commit`;
   }
 
   // ------------------------------------------------------------------ panels
@@ -492,7 +480,7 @@
     const c = S.cfg;
     const latest = latestShown();
     if (latest) {
-      const lead = Math.max(...latest.leads);
+      const lead = c.leads.at(-1);
       const q = c.qr_tile;
       const url = tileTemplate(latest, "true_color", lead, q.size)
         .replace("{z}", q.z).replace("{y}", q.y).replace("{x}", q.x);
