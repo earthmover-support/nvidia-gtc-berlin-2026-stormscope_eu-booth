@@ -475,22 +475,24 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     """EUMETSAT-style "true-colour" RGB composite from the three VIS channels.
 
     Takes the (..., variable, y, x) array of a rollout step and returns
-    (..., y, x, rgb) floats in 0..1 -- display-ready, so plotting and tiling
-    need no per-channel scaling. Same recipe as `render_rgb`, vectorised
-    over every leading dim instead of a single (channel, y, x) frame.
+    (..., y, x, rgb) uint8 as stored -- display-ready, so plotting and tiling
+    need no per-channel scaling. Data is 1..255, so that a black pixel never reads
+    as missing; off-disk (NaN) pixels are `RGB_FILL`. Same recipe as `render_rgb`,
+    vectorised over every leading dim instead of a single (channel, y, x) frame.
     """
     idx = [list(variables).index(ch) for ch in RGB_CHANNELS]
     rgb = np.clip(arr[..., idx, :, :] / 24.0, 0, 1) * 255
-    rgb = np.interp(rgb, [0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255]) / 255.0
-    return np.moveaxis(rgb, -3, -1).astype("float32")
+    rgb = np.interp(rgb, [0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255])
+    rgb = np.where(np.isnan(rgb), RGB_FILL, np.clip(np.round(rgb), 1, 255))
+    return np.moveaxis(rgb, -3, -1).astype(RGB_DTYPE)
 
 
 def airmass(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     """EUMETSAT airmass RGB composite from the WV 6.3/7.3 and IR 9.7/10.5 um channels.
 
-    Same (..., variable, y, x) -> (..., y, x, rgb) 0..1 contract as `true_color`. The
-    radiances are converted to brightness temperatures (K) first. Off-disk pixels stay
-    NaN.
+    Same (..., variable, y, x) -> (..., y, x, rgb) uint8 contract as `true_color`. The
+    radiances are converted to brightness temperatures (K) first, and each band's
+    0..1 stretch is scaled to 1..255.
 
     EUMETSAT recipe (EUMeTrain, "Compilation of RGB Recipes", p. 4): red WV6.2 - WV7.3,
     green IR9.7 - IR10.8, blue WV6.2 inverted, gamma 1 -- on FCI, WV6.3 and IR10.5. The
@@ -503,16 +505,8 @@ def airmass(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     r = ((bt["fci63wv"] - bt["fci73wv"]) - (-23.8)) / (1.4 - (-23.8))
     g = ((bt["fci97ir"] - bt["fci105ir"]) - (-39.7)) / (4.1 - (-39.7))
     b = (bt["fci63wv"] - 244.5) / (209.4 - 244.5)  # WV6.3 inverted: dry upper levels -> blue
-    return np.clip(np.stack([r, g, b], axis=-1), 0, 1).astype("float32")
-
-
-def to_uint8(rgb: np.ndarray) -> np.ndarray:
-    """A 0..1 composite as stored: bytes 1..255, NaN -> `RGB_FILL`.
-
-    Data is clipped to 1 so that a black pixel never reads as missing.
-    """
-    data = np.clip(np.round(rgb * 255), 1, 255)
-    return np.where(np.isnan(rgb), RGB_FILL, data).astype(RGB_DTYPE)
+    rgb = np.stack([r, g, b], axis=-1) * 255
+    return np.where(np.isnan(rgb), RGB_FILL, np.clip(np.round(rgb), 1, 255)).astype(RGB_DTYPE)
 
 
 def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
@@ -535,9 +529,8 @@ def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
 def step_writes(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[str]):
     """One rollout step -> the `(tensors, coords, names)` to hand `write`.
 
-    Only the two composites are stored, not the raw channels, as uint8 (see
-    `to_uint8`). Both are `(ensemble, time, lead_time, y, x, rgb)`, so one `write`
-    call covers them.
+    Only the two composites are stored, not the raw channels. Both are `(ensemble,
+    time, lead_time, y, x, rgb)` uint8, so one `write` call covers them.
 
     `copy=True` because the generator keeps writing into its own buffers between
     yields -- and with non-blocking writes, the store write for this step may still be
@@ -551,10 +544,7 @@ def step_writes(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[s
     rgb_coords_step["rgb"] = RGB_VALUES
 
     return (
-        [
-            torch.from_numpy(to_uint8(true_color(arr, channels))),
-            torch.from_numpy(to_uint8(airmass(arr, channels))),
-        ],
+        [torch.from_numpy(true_color(arr, channels)), torch.from_numpy(airmass(arr, channels))],
         rgb_coords_step,
         ["true_color", "airmass"],
     )
