@@ -99,7 +99,9 @@ Reference layout: `earthmover-public/goes-16`, group `ABI-L2-MCMIPF/post-2023-04
   xarray-style string (`0 minutes`) or ISO 8601 (`PT10M`), not a number.
 - `raster/rgb` renders a 3-band composite from a dimension of length 3 (`rgb` =
   `red`/`green`/`blue`). Pass `variables=true_color` with no band selector.
-  `true_color` and `airmass` are stored stretched to 0-1, so use `colorscalerange=0,1`.
+  `true_color` and `airmass` are stored as uint8 0-255, so use `colorscalerange=0,255`.
+  Missing pixels are 0 and need CF `_FillValue: 0` as an attribute: the service ignores the
+  Zarr v3 `fill_value`, and without `_FillValue` they render opaque black.
 - `raster/rgb` maps a size-3 dim named `band` or `rgb` to R, G, B **by position**. Every
   rgb tile logs "Treating dimension as RGB bands in positional R, G, B order; no attributes
   confirm this." The warning is unconditional: xpublish-tiles (`pipeline.py`, `apply_query`,
@@ -168,7 +170,7 @@ SQL panel (#4) and any partial reads may benefit (not measured).
 - [ ] `x`/`y` with `standard_name` and `units`. `x` positive east.
 - [ ] Optional: `valid_min`/`valid_max` on each data variable so tile requests can omit
       `colorscalerange`. For `raster/rgb` composites they are the byte stretch, so write them:
-      `0`/`1` on `true_color` and `airmass`.
+      `0`/`255` on `true_color` and `airmass` (uint8), with `_FillValue: 0`.
 - [ ] RGB band dim named `rgb` (or `band`), size 3, values in R, G, B order, with
       `color_interpretation = "red green blue"` on the coordinate. The service still assumes
       position (see above), so never reorder the bands.

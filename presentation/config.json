@@ -10,8 +10,8 @@
   "max_tile_level": 7,
 
   "variables": {
-    "true_color": { "style": "polygons/rgb", "colorscalerange": "0,1", "available": true },
-    "airmass":    { "style": "polygons/rgb", "colorscalerange": "0,1", "available": true }
+    "true_color": { "style": "polygons/rgb", "colorscalerange": "0,255", "available": true },
+    "airmass":    { "style": "polygons/rgb", "colorscalerange": "0,255", "available": true }
   },
 
   "lead_steps": 12,

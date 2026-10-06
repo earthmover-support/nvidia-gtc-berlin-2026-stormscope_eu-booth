@@ -93,7 +93,13 @@ RGB_VALUES = np.array(["red", "green", "blue"])
 # is a record for readers, not something the service checks yet (see
 # docs/WEB_TILES_SERVICE_REQUIREMENTS.md).
 RGB_BAND_ATTRS = {"long_name": "colour band", "color_interpretation": " ".join(RGB_VALUES)}
-RGB_VALID_RANGE = {"valid_min": 0.0, "valid_max": 1.0}
+# Both composites are stored as bytes: 1..255 for data, 0 for missing (off the Earth's disk,
+# or a step not written yet). The tiles service ignores the Zarr v3 `fill_value`, so 0 is
+# also declared as CF `_FillValue` -- without it missing pixels render opaque black -- and
+# xarray decodes it back to NaN.
+RGB_DTYPE = "uint8"
+RGB_FILL = 0
+RGB_ENCODING = {"valid_min": 0, "valid_max": 255, "_FillValue": RGB_FILL}
 # FCI central wavelengths; `radiance_to_bt` takes their reciprocal, the wavenumber in cm-1.
 WAVELENGTH_CM = {
     "fci04vis": 0.444e-4,
@@ -500,6 +506,15 @@ def airmass(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     return np.clip(np.stack([r, g, b], axis=-1), 0, 1).astype("float32")
 
 
+def to_uint8(rgb: np.ndarray) -> np.ndarray:
+    """A 0..1 composite as stored: bytes 1..255, NaN -> `RGB_FILL`.
+
+    Data is clipped to 1 so that a black pixel never reads as missing.
+    """
+    data = np.clip(np.round(rgb * 255), 1, 255)
+    return np.where(np.isnan(rgb), RGB_FILL, data).astype(RGB_DTYPE)
+
+
 def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
     """Trim a rollout step to `lead_time >= 0` -- the forecast, analysis frame included.
 
@@ -520,8 +535,9 @@ def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
 def step_writes(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[str]):
     """One rollout step -> the `(tensors, coords, names)` to hand `write`.
 
-    Only the two composites are stored, not the raw channels. Both are `(ensemble,
-    time, lead_time, y, x, rgb)`, so one `write` call covers them.
+    Only the two composites are stored, not the raw channels, as uint8 (see
+    `to_uint8`). Both are `(ensemble, time, lead_time, y, x, rgb)`, so one `write`
+    call covers them.
 
     `copy=True` because the generator keeps writing into its own buffers between
     yields -- and with non-blocking writes, the store write for this step may still be
@@ -535,7 +551,10 @@ def step_writes(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[s
     rgb_coords_step["rgb"] = RGB_VALUES
 
     return (
-        [torch.from_numpy(true_color(arr, channels)), torch.from_numpy(airmass(arr, channels))],
+        [
+            torch.from_numpy(to_uint8(true_color(arr, channels))),
+            torch.from_numpy(to_uint8(airmass(arr, channels))),
+        ],
         rgb_coords_step,
         ["true_color", "airmass"],
     )
@@ -616,22 +635,33 @@ def create_schema(
     )
     rgb_coords = OrderedDict(**total_coords, rgb=RGB_VALUES)
 
-    backend.add_array(total_coords, [])  # coordinate arrays only
-    backend.add_array(rgb_coords, ["true_color", "airmass"], fill_value=float("nan"))
+    backend.add_array(rgb_coords, [])  # coordinate arrays only
+    # Created directly: `add_array` takes its dtype from initial data only, and passing
+    # data would write every chunk of the cube.
+    for name in ("true_color", "airmass"):
+        backend.root.create_array(
+            name,
+            shape=[len(values) for values in rgb_coords.values()],
+            chunks=[backend.chunks.get(dim, len(values)) for dim, values in rgb_coords.items()],
+            dtype=RGB_DTYPE,
+            fill_value=RGB_FILL,
+            dimension_names=list(rgb_coords),
+            compressors=backend.zarr_codecs,
+        )
     backend.root["true_color"].attrs.update(
         {
             **GEOREF,
-            **RGB_VALID_RANGE,
-            "long_name": "true-colour RGB composite (VIS 0.6/0.5/0.4 um), 0-1",
+            **RGB_ENCODING,
+            "long_name": "true-colour RGB composite (VIS 0.6/0.5/0.4 um), 0-255",
             "source_channels": " ".join(RGB_CHANNELS),
         }
     )
     backend.root["airmass"].attrs.update(
         {
             **GEOREF,
-            **RGB_VALID_RANGE,
+            **RGB_ENCODING,
             "long_name": "EUMETSAT airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, "
-            "WV 6.3 um inverted brightness temperatures), 0-1",
+            "WV 6.3 um inverted brightness temperatures), 0-255",
             "source_channels": " ".join(AIRMASS_CHANNELS),
         }
     )
@@ -708,12 +738,20 @@ TIME_ARRAYS = ("time", "valid_time", "true_color", "airmass")
 def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndarray) -> str | None:
     """Append this run's init to `time` in an existing cube. Returns the commit message.
 
-    The new `time` slice of every data array reads as NaN (fill value) until the
-    rollout steps write it. An init already in `time` is a rerun: it keeps its slice,
+    The new `time` slice of every data array reads as missing (fill value 0) until the
+    rollout steps write it. A repo whose composites are not uint8 (written before they
+    were stored as bytes) is refused rather than appended to. An init already in `time` is a rerun: it keeps its slice,
     which the steps overwrite in place, and there is nothing to commit (returns None).
     An init older than the newest one is still appended at the end, so `time` is in
     commit order, not necessarily sorted.
     """
+    for name in ("true_color", "airmass"):
+        if backend.root[name].dtype != RGB_DTYPE:
+            raise ValueError(
+                f"repo stores {name} as {backend.root[name].dtype}, this pipeline writes "
+                f"{RGB_DTYPE}; convert the repo's composites to {RGB_DTYPE} 0-255 (fill 0) "
+                "or publish to an empty repo or branch"
+            )
     stored_lead = backend.root["lead_time"][:]
     if not np.array_equal(stored_lead, lead_time):
         raise ValueError(
