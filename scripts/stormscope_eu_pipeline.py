@@ -122,7 +122,7 @@ WAVELENGTH_CM = {
 AIRMASS_CHANNELS = ["fci63wv", "fci73wv", "fci97ir", "fci105ir"]
 
 # 560 x 1216 spatial chunks: 2 x 2 = 4 per frame of the default Model_FCI_BBox
-# (y=1120, x=2432), ~8 MB per composite chunk instead of the whole frame (~33 MB). `rgb`
+# (y=1120, x=2432), ~2 MB (uint8) per composite chunk instead of the whole frame (~8 MB). `rgb`
 # is absent, and the backend leaves a dimension it has no chunk for unsplit, so a chunk
 # holds all three bands. `lat`/`lon` use the same y/x chunks (see add_coord).
 CHUNKS = {"ensemble": 1, "time": 1, "lead_time": 1, "y": 560, "x": 1216}
