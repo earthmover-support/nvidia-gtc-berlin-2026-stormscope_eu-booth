@@ -2,21 +2,9 @@
 
 How long it takes from the satellite scanning the disk to the forecast playing on the
 booth screen, stage by stage. `T` is the nominal FCI slot time, which the pipeline uses as
-the forecast init time. Latency is shown as initial → current where it changed: initial is
-the first end-to-end run on 2026-09-30/10-01 (manual Coiled notebook, XS tiles service),
-current the persistent pipeline on 2026-10-05/06 (S tiles service).
+the forecast init time.
 Related: [TILE_SERVER_PERFORMANCE.md](TILE_SERVER_PERFORMANCE.md) (tiles in detail).
 
-## TL;DR
-
-1. **The licence hold-off is most of the latency.** A slot is listed ~14 min after `T`,
-   but this account can only download it from ~`T`+70 min, so the pipeline waits until
-   `T`+80 min (`MIN_LAG`). Everything we control together adds ~8 min on top.
-2. **A full 2 h forecast is in Arraylake at ~`T`+87 min** (initially `T`+117 min), and
-   it plays complete on one screen ~1.5 min later. By then the forecast only reaches ~30 min
-   past wall-clock time.
-3. **The EUMETSAT NRT licence would save ~65 min.** That's more than every other
-   measure combined. With the licence the pipeline would run ~20 min behind real time.
 
 ## Stages
 
