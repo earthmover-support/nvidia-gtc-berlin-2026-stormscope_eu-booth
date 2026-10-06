@@ -518,7 +518,7 @@ def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
     return x_pred[:, :, start:], coords_out
 
 
-def step_writes(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[str]):
+def step_composites(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[str]):
     """One rollout step -> the `(tensors, coords, names)` to hand `write`.
 
     Only the two composites are stored, not the raw channels. Both are `(ensemble,
@@ -803,13 +803,9 @@ class StormScopeEUPipeline:
         ):
             # Forecast only: step 0's five past observed frames are model input, not output.
             x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
-            writes = step_writes(x_pred_out, coords_pred_out, channels)
             # Non-blocking: the backend's thread pool uploads while the GPU computes
-            # the next step. Flushing the previous step first keeps one step in
-            # flight, so host memory stays bounded and a failed upload stops the run
-            # now instead of surfacing at the final commit.
-            backend.flush()
-            backend.write(*writes)
+            # the next step.
+            backend.write(*step_composites(x_pred_out, coords_pred_out, channels))
 
             if step == n_steps:
                 break
