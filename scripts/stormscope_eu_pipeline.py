@@ -5,12 +5,13 @@ MTG/FCI observations (EUMETSAT) -> Earth2Studio inference (StormScopeMeteosatEU)
 
 It finds the freshest downloadable initial condition with
 `resolve_start_time()`'s EUMETSAT-Data-Store search, stores two composites,
-`true_color` and `airmass`, and writes one Icechunk commit per
-10-minute rollout step as it is produced, rather than computing the whole
-forecast first and publishing once. It writes to the root group of
+`true_color` and `airmass`, and writes one Icechunk commit per init. Each
+10-minute rollout step is handed to the backend's background writers as it is
+produced, so uploads overlap inference, and the commit at the end of the
+rollout publishes the whole init at once. It writes to the root group of
 `gtc-berlin/stormscope-eu_gtc_berlin_2026` (see ARRAYLAKE_REPO below). Runs
-accumulate: each one appends its init to `time` in a schema commit of its own,
-then fills it step by step.
+accumulate: each one appends its init to `time` in that same commit, so
+readers never see a partly written init.
 
 Without --start-time the script runs continuously: the model is loaded once
 (`StormScopeEUPipeline`), and `main()` polls the Data Store, starting a new run
@@ -705,14 +706,14 @@ def create_schema(
 TIME_ARRAYS = ("time", "valid_time", "true_color", "airmass")
 
 
-def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndarray) -> str | None:
-    """Append this run's init to `time` in an existing cube. Returns the commit message.
+def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndarray) -> None:
+    """Append this run's init to `time` in an existing cube, uncommitted.
 
-    The new `time` slice of every data array reads as NaN (fill value) until the
-    rollout steps write it. An init already in `time` is a rerun: it keeps its slice,
-    which the steps overwrite in place, and there is nothing to commit (returns None).
-    An init older than the newest one is still appended at the end, so `time` is in
-    commit order, not necessarily sorted.
+    The rollout steps then fill the new `time` slice of every data array in the same
+    session, and one commit publishes both. An init already in `time` is a rerun: it
+    keeps its slice, which the steps overwrite in place. An init older than the newest
+    one is still appended at the end, so `time` is in commit order, not necessarily
+    sorted.
     """
     stored_lead = backend.root["lead_time"][:]
     if not np.array_equal(stored_lead, lead_time):
@@ -724,7 +725,7 @@ def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndar
     stored_time = backend.coords["time"]
     if np.isin(time, stored_time).all():
         print(f"init {init} already in repo; overwriting its slice")
-        return None
+        return
 
     n = len(stored_time)
     for name in TIME_ARRAYS:
@@ -736,7 +737,6 @@ def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndar
     backend.root["valid_time"][n:] = time[:, None] + lead_time[None, :]
     # `write` locates slices through this in-memory copy, which is read once at open.
     backend.coords["time"] = np.concatenate([stored_time, time])
-    return f"stormscope-eu {init} extend schema"
 
 
 class StormScopeEUPipeline:
@@ -773,14 +773,14 @@ class StormScopeEUPipeline:
         output_dir: str,
         arraylake_repo: str,
     ):
-        """Run one nowcast from `start_time` and publish it step by step.
+        """Run one nowcast from `start_time` and publish it in one commit.
 
         Fetches the FCI input window ending at `start_time`, adds this init to the
-        cube (creating the cube in an empty repo), then commits each of the
+        cube (creating the cube in an empty repo), then writes each of the
         `n_steps + 1` forecast frames -- the analysis frame and `n_steps` 10-minute
-        steps -- as soon as it is produced. An init already in the repo is rerun and
-        its slice overwritten. `publish_target`, `output_dir` and `arraylake_repo`
-        choose the store, as in `build_backend`.
+        steps -- as soon as it is produced, and commits once after the last. An init
+        already in the repo is rerun and its slice overwritten. `publish_target`,
+        `output_dir` and `arraylake_repo` choose the store, as in `build_backend`.
         """
         os.makedirs(output_dir, exist_ok=True)
 
@@ -795,44 +795,33 @@ class StormScopeEUPipeline:
         init = np.datetime_as_string(coords["time"][0], unit="m")
         if "true_color" not in backend.root:
             create_schema(backend, self.model, coords, lead_time)
-            message = f"stormscope-eu {init} schema"
         else:
-            message = extend_schema(backend, coords["time"], lead_time)
-        if message is not None:
-            # Commit metadata makes `repo.ancestry()` filterable without reading data:
-            # `time` is the init, `lead_time` the minutes the commit covers.
-            metadata = {
-                "time": init,
-                "lead_time": lead_minutes(lead_time).tolist(),
-                "status": "schema_extended",
-            }
-            print("schema ->", backend.commit(message, metadata=metadata))
+            extend_schema(backend, coords["time"], lead_time)
 
         for step, (x_pred, coords_pred) in enumerate(
             tqdm(self.model.create_iterator(x, coords), total=n_steps + 1)
         ):
             # Forecast only: step 0's five past observed frames are model input, not output.
             x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
+            # Non-blocking: the backend's thread pool uploads while the GPU computes
+            # the next step.
             backend.write(*step_writes(x_pred_out, coords_pred_out, channels))
-
-            lead = lead_minutes(coords_pred_out["lead_time"])
-            if step == 0:
-                message = f"stormscope-eu {init} analysis frame (lead {lead[-1]} min)"
-            else:
-                message = f"stormscope-eu {init} +{lead[-1]} min"
-            # commit flushes the background writes above, then opens a fresh session --
-            # an Icechunk session is spent once committed. `rebase_with` lets the step
-            # land on top of a commit made meanwhile by another writer (another init's
-            # chunks, say); it still fails on a real conflict, such as that commit
-            # changing the metadata of an array this step writes.
-            metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
-            snapshot = backend.commit(
-                message, metadata=metadata, rebase_with=icechunk.ConflictDetector()
-            )
-            tqdm.write(f"{message} -> {snapshot}")
 
             if step == n_steps:
                 break
+
+        # commit flushes the background writes above, then publishes the schema change
+        # and every step together. Commit metadata makes `repo.ancestry()` filterable
+        # without reading data. `rebase_with` lets the init land on top of a commit
+        # made meanwhile by another writer; it still fails on a real conflict, such as
+        # that commit also resizing `time`.
+        message = f"stormscope-eu {init} lead 0-{lead_minutes(lead_time)[-1]} min"
+        snapshot = backend.commit(
+            message,
+            metadata={"time": init, "status": "ingested"},
+            rebase_with=icechunk.ConflictDetector(),
+        )
+        print(f"{message} -> {snapshot}")
 
         print(f"Published to {publish_target} ({location})")
 

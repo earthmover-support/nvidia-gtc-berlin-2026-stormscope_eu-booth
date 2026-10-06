@@ -52,8 +52,9 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    newest 6 (`max_runs`). The server re-reads the `time` coordinate whenever `main` moves,
    and each tile picks its frame with `time=` + `lead_time=` on the newest snapshot holding
    that run (`tile_ref_mode: "snapshot"`), so the browser can cache it.
-   The newest run only offers the leads already committed (parsed from commit messages
-   like `stormscope-eu 2026-09-15T11:00 +30 min`), so no unwritten tile gets cached.
+   The pipeline commits each init once, with all its leads, so every init in `time` is
+   complete; the server finds each run's snapshot from commit messages like
+   `stormscope-eu 2026-09-15T11:00 lead 0-120 min`.
    Quick check that the tile server is up:
    ```bash
    B=https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu_gtc_berlin_2026
@@ -72,6 +73,6 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 4. **Variables**: `true_color` and `airmass` are both 0-1 RGB composites
    (`polygons/rgb`, `colorscalerange` `0,1`). Add more under `variables` in `config.json`.
 5. **Run length**: the strip and scrubber assume 12 steps, +10 to +120 min
-   (`lead_steps`). Keep the commit-message format in the ingest: `... schema`,
-   `... analysis frame (lead 0 min)`, `... +N min`.
+   (`lead_steps`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
+   one commit per init.
 6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 6).
