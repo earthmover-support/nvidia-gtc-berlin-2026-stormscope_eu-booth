@@ -180,13 +180,16 @@ SCAN_STEP = timedelta(seconds=MeteosatFCI.SCAN_FREQUENCY)  # FCI repeat cycle: 1
 FCI_EPOCH = datetime(2000, 1, 1, tzinfo=UTC)  # anchor of the scan-slot grid
 SEARCH_LOOKBACK = timedelta(hours=6)  # how far back to hunt for a complete input window
 REALTIME_LAG = timedelta(hours=2)  # blind fallback when the Data Store cannot be searched
-# Youngest slot this account is allowed to *download*. The Data Store publishes a product
-# ~3 minutes after its scan ends and lists it immediately, but downloading one less than an
-# hour past its sensing end requires the EUMETSAT NRT licence on the account -- without it
-# the search still returns the slot and `fetch_data` then fails with a 403
-# "NRTLicense required to access this collection". 80 min is that boundary plus a margin;
-# holding the NRT licence lets this go to 0, moving the run to ~20 minutes behind real time.
-MIN_LAG = timedelta(minutes=80)
+# Youngest slot this account is allowed to *download*. The Data Store lists a product ~5
+# minutes after its scan ends (~14 min after the slot time), but downloading one less than
+# an hour past its *slot time* requires the EUMETSAT NRT licence on the account -- without
+# it the search still returns the slot and `fetch_data` then fails with a 403
+# "NRTLicense required to access this collection". Only the hourly :00 slots are free at
+# once, and the 6-frame input window always needs five sub-hourly ones. Measured with
+# scripts/measure_fci_latency.py on 2026-10-06, slots unlocked 60.1-60.4 min after their
+# slot time; 62 min is that boundary plus a margin. Holding the NRT licence lets this go to
+# 0, moving the run to ~15 minutes behind real time.
+MIN_LAG = timedelta(minutes=62)
 
 
 def parse_args() -> argparse.Namespace:
