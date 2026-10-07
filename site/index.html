@@ -121,7 +121,7 @@ const coords = loadCoords(BRANCHES[0]); // runs while the basemap style loads
 
 function tileUrl(time, lead) {
   const p = new URLSearchParams({
-    variables: variable, style: "polygons/rgb", colorscalerange: COLORSCALERANGE,
+    variables: variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
     time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
   return `${BASE}/${REPO}/${$("ref").value}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;

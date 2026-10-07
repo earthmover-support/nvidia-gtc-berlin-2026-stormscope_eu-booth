@@ -47,7 +47,7 @@ Render parameters that matter for `true_color`:
 
 | Parameter | Value | Why |
 | --- | --- | --- |
-| `style` | `polygons/rgb` | Real 3-band composite, rendered 2-3x faster than `raster/rgb`; pass `variables=true_color` with no `rgb` selector. The only styles the service has are `raster` and `polygons`. |
+| `style` | `raster/rgb` | Real 3-band composite (`polygons/rgb` renders 2-3x faster per tile); pass `variables=true_color` with no `rgb` selector. The only styles the service has are `raster` and `polygons`. |
 | `colorscalerange` | `0,0.15` | The band is 0–1 linear reflectance with no gamma. The default `0,1` renders almost black. |
 | `lead_time` | `PT10M` | Four frames: 0, 10, 20, 30 minutes. 0 is the observed analysis, the rest forecast. ISO 8601 and `"10 minutes"` both work. |
 | `ensemble` | `0` | Single member; required because every variable is 5-D. |
