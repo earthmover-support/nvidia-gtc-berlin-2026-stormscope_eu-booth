@@ -40,7 +40,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 | P | pause / resume the forecast loop |
 | S | cycle playback speed (slow / normal / fast) |
 | T / A | `true_color` / `airmass` |
-| 1–6, L | pick an initialisation (1 = L = latest) |
+| 1–9, L | pick an initialisation (1 = L = latest) |
 
 ## Before the event
 
@@ -49,7 +49,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    Disable it again after booth hours.
 2. **Inits**: the page reads `gtc-berlin/stormscope-eu_gtc_berlin_2026` (root group). The
    pipeline appends every run's init to `time` and never drops one; the page offers the
-   newest 6 (`max_runs`). The server re-reads the `time` coordinate whenever `main` moves,
+   newest 12 (`max_runs`). The server re-reads the `time` coordinate whenever `main` moves,
    and each tile picks its frame with `time=` + `lead_time=` on the newest snapshot holding
    that run (`tile_ref_mode: "snapshot"`), so the browser can cache it.
    The pipeline commits each init once, with all its leads, so every init in `time` is
