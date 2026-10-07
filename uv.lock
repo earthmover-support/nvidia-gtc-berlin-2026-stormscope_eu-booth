@@ -509,8 +509,8 @@ wheels = [
 
 [[package]]
 name = "earth2studio"
-version = "0.19.0a0"
-source = { git = "https://github.com/NVIDIA/earth2studio.git#d654ad243d54a69b3d0251275dc29e0c96d402a1" }
+version = "0.20.0a0"
+source = { git = "https://github.com/NVIDIA/earth2studio.git#e79aa3d45765d8516ea5911871bedbd4ccae0321" }
 dependencies = [
     { name = "cftime" },
     { name = "fsspec" },

@@ -25,10 +25,7 @@ directly, with no Arraylake-specific subclass:
 `storage` parameter already accepts -- it calls
 `icechunk.Repository.open_or_create(storage, ...)` internally either way, so
 the hosted-vs-local choice is just which `storage` object gets passed in.
-The one subclass here, `ReopenableIceChunkBackend`, only works around base
-`IceChunkBackend` failing to reopen a repo that holds a scalar array (the CF
-grid mapping), which appending to an existing cube requires. `add_coord()`
-below covers the one thing base `IceChunkBackend` lacks -- writing a
+`add_coord()` below covers the one thing base `IceChunkBackend` lacks -- writing a
 non-dimension 2-D coordinate (`lat`/`lon`) without it being taken for a new
 index dimension -- as a plain function against `backend.root` (a zarr Group).
 
@@ -550,29 +547,6 @@ def step_composites(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: li
     )
 
 
-class ReopenableIceChunkBackend(IceChunkBackend):
-    """`IceChunkBackend` that can reopen a repo holding a scalar array.
-
-    Runs append to the existing cube, so the repo is reopened on every run. Base
-    `_read_store_state` iterates each array's `dimension_names`, and zarr stores a
-    scalar's `()` as None -- the CF grid mapping (see add_grid_mapping) is a scalar,
-    so opening fails with a TypeError. Scalars have no dims or chunks to record, so
-    this version of the scan just skips them.
-    """
-
-    def _read_store_state(self, chunks: dict[str, int]) -> None:
-        self.coords = OrderedDict()
-        self.chunks = chunks.copy()
-        arrays = [(name, array) for name, array in self.root.arrays() if array.ndim > 0]
-        for _, array in arrays:
-            for dim in array.metadata.dimension_names:
-                if dim not in self.coords:
-                    self.coords[dim] = self.root[dim][:]
-        for name, array in arrays:
-            if name not in self.coords:
-                self.chunks.update(zip(array.metadata.dimension_names, array.chunks, strict=True))
-
-
 def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
     """Open the Icechunk store to publish into, keeping earlier runs. Returns (backend, location)."""
     if publish_target == "arraylake":
@@ -582,7 +556,7 @@ def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
         storage, location = client.get_icechunk_storage(arraylake_repo), arraylake_repo
     else:
         storage = location = os.path.join(output_dir, "stormscope_eu.icechunk")
-    backend = ReopenableIceChunkBackend(storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR])
+    backend = IceChunkBackend(storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR])
     return backend, location
 
 
