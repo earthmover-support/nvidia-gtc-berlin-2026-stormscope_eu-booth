@@ -1,16 +1,21 @@
 # Booth screen
 
-Local web app for the GTC Berlin booth: a MapLibre globe fixed on Europe showing the
+Web app for the GTC Berlin booth: a MapLibre globe fixed on Europe showing the
 latest StormScope-EU run from Arraylake, rotating explainer panels, a live ingest strip,
-QR codes and a live Zax-SQL query.
+QR codes and a live Zax-SQL query. It runs locally on the booth machine and is also
+[hosted on Vercel](#hosted-on-vercel) for internal sharing, with the SQL editor locked.
 
 ```
 presentation/
-  server.py      stdlib HTTP server + Arraylake/SQL pollers (uv inline deps)
-  config.json    everything tunable: tile service, variables, timings, station, SQL
-  package.json   MapLibre GL + qrcode-generator, vendored so the booth runs without CDNs
-                 (the dark CARTO basemap and the Flux tiles still need the network)
-  web/           index.html, app.css, app.js
+  server.py        booth: stdlib HTTP server + Arraylake/SQL pollers (uv inline deps)
+  booth.py         logic shared by server.py and api/: runs, commits, SQL, public config
+  api/             hosted: Vercel Python functions for /api/config, /api/state, /api/sql
+  requirements.txt hosted: the functions' dependencies
+  vercel.json      hosted: build, output directory, function timeout
+  config.json      everything tunable: tile service, variables, timings, station, SQL
+  package.json     MapLibre GL + qrcode-generator, vendored so the booth runs without CDNs
+                   (the dark CARTO basemap and the Flux tiles still need the network)
+  web/             index.html, app.css, app.js
 ```
 
 ## Run
@@ -63,7 +68,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 3. **SQL**: `al compute enable gtc-berlin sql --sku-code xs`; its hostname goes in
    `config.json` (`sql.host`) or `.env` (`ARRAYLAKE_SQL_HOST=...`, wins). The service
    scales to zero: the first query after a sleep takes ~50 s, later ones ~20 s (each
-   lead reads a full 1120 × 2432 frame). Fire one query before visitors arrive.
+   lead reads a full 1120 × 2432 frame; 8–16 s measured warm on 2026-10-07). Fire one query before visitors arrive.
    Panel 06 is a live editor: click a city chip (`sql.places`) or type any single
    `SELECT`/`WITH` statement and press Run or ⌘/Ctrl+Enter; Esc leaves the box.
    Nothing runs on its own: chips and Reset only fill the editor, and the server runs
@@ -76,3 +81,48 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    (`lead_steps`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
 6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 6).
+
+## Hosted on Vercel
+
+The same page, for internal sharing at an unlisted URL. Earthmover owns the Vercel project
+and the token. Differences from the booth:
+
+- **SQL is locked.** `/api/config` answers `sql_editable: false`: the editor is read-only,
+  Reset is hidden, and the city chips pick the query. Run sends
+  `GET /api/sql?place=<city>&init=<newest init>`. The function only runs the `config.json`
+  query for a `sql.places` entry, and only for an init on the 10-minute grid from the last
+  7 days. It rejects anything else, including query text and POSTs. The CDN keeps each
+  answer for a day, so each city costs at most one SQL run per forecast run, however
+  many people press Run.
+- **No pollers.** `/api/state` reads commits and the `time` coordinate on each request
+  (about 1.5 s warm, 8 s cold) and the CDN caches it for 5 s with
+  stale-while-revalidate, so viewers polling every 4 s rarely wait.
+- **Windows smaller than 1920 × 1080** show the booth layout zoomed down to fit. At
+  1920 × 1080 the booth is unaffected.
+- The vendored libraries are copied into `web/vendor/` at build time (`npm run vendor`),
+  so the page loads them from its own origin, as at the booth.
+
+Vercel project settings: root directory `presentation`, framework preset "Other";
+install, build and output directory come from `vercel.json`. Environment variables:
+
+| Variable | Value |
+| --- | --- |
+| `ARRAYLAKE_API_TOKEN` | read-only token with access to `gtc-berlin/stormscope-eu_gtc_berlin_2026`; also the SQL password |
+| `ARRAYLAKE_SQL_HOST` | optional, overrides `sql.host` in `config.json` |
+
+The tiles and SQL services must stay up while the link is shared. Functions may run 60 s
+(`maxDuration`, allowed on Hobby and Pro), enough for a cold SQL service. `vercel.json`
+skips deploys of commits that change nothing under `presentation/`.
+
+Check a build locally without deploying anything. With a made-up local project link,
+`vercel build` works offline. It writes a `pyproject.toml` and `uv.lock` generated from
+`requirements.txt` next to them, so build in a throwaway copy:
+
+```bash
+B=$(mktemp -d) && git -C presentation ls-files -co --exclude-standard | grep -v '^node_modules' \
+  | tar -C presentation -cf - -T - | tar -C "$B" -xf -
+mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"framework":null}}' > "$B/.vercel/project.json"
+(cd "$B" && vercel build --yes)    # -> .vercel/output/static (the page) and .vercel/output/functions/api/*.func
+```
+
+Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
