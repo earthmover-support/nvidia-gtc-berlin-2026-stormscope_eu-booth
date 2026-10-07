@@ -74,6 +74,17 @@
       <button class="pill" data-var="airmass">Airmass RGB</button>
     </div>
   </div>
+  <div>
+    <div class="label">Tile style · format</div>
+    <div class="row" id="styles">
+      <button class="pill active" data-style="raster">Raster</button>
+      <button class="pill" data-style="polygons">Polygons</button>
+    </div>
+    <div class="row" id="formats" style="margin-top: 6px">
+      <button class="pill active" data-format="png">PNG</button>
+      <button class="pill" data-format="jpeg">JPEG</button>
+    </div>
+  </div>
   <div id="playback">
     <div class="label">Lead time</div>
     <div class="row"><div id="lead"></div><button id="collapse" aria-controls="panel" aria-expanded="true" title="Collapse panel">▴</button></div>
@@ -119,7 +130,7 @@ function tzName(d) {
   return /^(GMT|UTC)[+-]/.test(gb) ? name("en-US") : gb;
 }
 $("tz").textContent = tzName(new Date());
-let leads = [], variable = "true_color", frame = 0, added = 0, addedAt = 0, timer = null, firstLabel;
+let leads = [], variable = "true_color", style = "raster", format = "png", frame = 0, added = 0, addedAt = 0, timer = null, firstLabel;
 const loaded = new Set(); // indices of frames whose tiles have all arrived
 
 const map = new maplibregl.Map({
@@ -145,8 +156,8 @@ const coords = loadCoords(); // runs while the basemap style loads
 
 function tileUrl(time, lead) {
   const p = new URLSearchParams({
-    variables: variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
-    time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
+    variables: variable, style: `${style}/rgb`, colorscalerange: COLORSCALERANGE,
+    time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: format,
   });
   return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
 }
@@ -242,12 +253,18 @@ map.on("load", async () => {
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
   if (!(await useCoords(coords))) return;
   $("init").onchange = loadRun;
-  const pills = document.querySelectorAll(".pill");
-  for (const b of pills) b.onclick = () => {
-    for (const p of pills) p.classList.toggle("active", p === b);
-    variable = b.dataset.var;
-    loadRun();
+  // Each pill group sets one tile parameter and reloads the run with it.
+  const group = (id, set) => {
+    const pills = $(id).querySelectorAll(".pill");
+    for (const b of pills) b.onclick = () => {
+      for (const p of pills) p.classList.toggle("active", p === b);
+      set(b.dataset);
+      loadRun();
+    };
   };
+  group("vars", (d) => (variable = d.var));
+  group("styles", (d) => (style = d.style));
+  group("formats", (d) => (format = d.format));
   $("slider").oninput = (e) => { setPlaying(false); show(+e.target.value); };
   $("play").onclick = () => setPlaying(!timer);
   loadRun();
