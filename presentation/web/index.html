@@ -124,15 +124,15 @@
         <ol class="steps">
           <li><i>1</i><div><b>Fetch</b><span>Latest 6 FCI frames from the EUMETSAT Data Store</span></div></li>
           <li><i>2</i><div><b>Predict</b><span>StormScope-EU rolls forward 12 × 10 min on the GPU</span></div></li>
-          <li class="split"><i>3</i><div><b>Write</b><span>Each step lands in Icechunk on Arraylake as one commit</span></div></li>
+          <li class="split"><i>3</i><div><b>Write</b><span>Steps upload to Icechunk on Arraylake while the GPU runs; one commit publishes the run</span></div></li>
           <li class="violet"><i>4</i><div><b>Serve</b><span>Arraylake compute renders map tiles</span></div></li>
         </ol>
       </article>
 
       <article class="panel em" data-panel="arraylake">
         <div class="kicker">05 · THE DATA LAKE</div>
-        <h2>Every forecast step is a commit</h2>
-        <p>Each 10-minute step lands in Arraylake as a versioned Icechunk commit seconds after the GPU produces it. Readers never see a half-written forecast.</p>
+        <h2>Every forecast run is a commit</h2>
+        <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Readers never see a half-written forecast.</p>
         <div class="commits" id="commitList"></div>
         <div class="two">
           <div class="card"><b>Transactional</b><span>Icechunk: open-source, cloud-native Zarr storage</span></div>
