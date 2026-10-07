@@ -49,11 +49,8 @@ CONFIG = json.loads((HERE / "config.json").read_text())
 
 log = logging.getLogger("booth")
 
-# "stormscope-eu 2026-09-15T23:50 +30 min" / "... analysis frame (lead 0 min)" / "... schema"
-MSG_RE = re.compile(
-    r"stormscope-eu\s+(?P<init>\d{4}-\d{2}-\d{2}T\d{2}:\d{2})\s+"
-    r"(?:\+(?P<lead>\d+)\s*min|analysis frame|schema)"
-)
+# "stormscope-eu 2026-09-15T23:50 lead 0-120 min": one commit per init
+MSG_RE = re.compile(r"stormscope-eu\s+(?P<init>\d{4}-\d{2}-\d{2}T\d{2}:\d{2})\b")
 
 # URL prefix -> directory for vendored front-end libraries (npm install in ./presentation)
 VENDOR = {
@@ -132,50 +129,35 @@ SHARED = Shared()
 # --------------------------------------------------------------------------- runs
 
 
-def leads_by_init(commits: list[dict]) -> dict[str, dict]:
-    """Forecast leads (> 0 min) seen in commit messages, per init 'YYYY-MM-DDTHH:MM'."""
-    out: dict[str, dict] = {}
+def ref_by_init(commits: list[dict]) -> dict[str, str]:
+    """Newest snapshot id whose commit message names each init 'YYYY-MM-DDTHH:MM'."""
+    out: dict[str, str] = {}
     for c in commits:  # newest first
         m = MSG_RE.search(c.get("message") or "")
-        if not m:
-            continue
-        rec = out.setdefault(m["init"], {"leads": set(), "ref": c["id"]})
-        if m["lead"] and int(m["lead"]) > 0:
-            rec["leads"].add(int(m["lead"]))
+        if m:
+            out.setdefault(m["init"], c["id"])
     return out
 
 
 def build_runs(times: list[str], commits: list[dict]) -> list[dict]:
     """One run per init in the repo's `time` coordinate, newest first.
 
-    A run whose commits are in the recent history and have not reached the last lead
-    is in progress: only its committed leads are offered, so no browser ever caches
-    a tile that has not been written yet. Anything else is complete.
+    The pipeline commits each init once, with every lead (`/api/config` lists them),
+    so a run in `time` is always complete.
 
-    `ref` is the newest snapshot holding the run; runs older than the history get the
+    `ref` is the snapshot that committed the run; runs older than the history get the
     oldest snapshot in it. Snapshot tile URLs are immutable and cached for a month.
     """
-    full = all_leads()
-    seen = leads_by_init(commits)
+    refs = ref_by_init(commits)
     oldest = commits[-1]["id"] if commits else None
-    runs = []
-    for t in sorted(set(times), reverse=True):
-        init = t[:16]
-        rec = seen.get(init)
-        if rec is None or (rec["leads"] and max(rec["leads"]) >= full[-1]):
-            leads, complete = full, True
-        else:
-            leads, complete = sorted(rec["leads"]), False
-        runs.append(
-            {
-                "init": init,
-                "time": t,
-                "leads": leads,
-                "complete": complete,
-                "ref": rec["ref"] if rec else oldest,
-            }
-        )
-    return runs
+    return [
+        {
+            "init": t[:16],
+            "time": t,
+            "ref": refs.get(t[:16], oldest),
+        }
+        for t in sorted(set(times), reverse=True)
+    ]
 
 
 def read_times(repo) -> list[str]:
@@ -242,27 +224,25 @@ def poll_arraylake(stop: threading.Event) -> None:
 
 
 def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
-    """Fake history: a run every 10 min, 13 commits (0..120) written over ~3 min.
+    """Fake history: a run every 10 min, one commit each, written ~3 min after its start.
 
-    Returns (commits newest first, init times in the rolling window).
+    Returns (commits newest first, committed init times in the rolling window).
     """
     interval = CONFIG["run_interval_min"]
     base = now.replace(second=0, microsecond=0)
     base -= dt.timedelta(minutes=base.minute % interval)
     commits, times = [], []
+    last = all_leads()[-1]
     for k in range(CONFIG["max_runs"]):
         start = base - dt.timedelta(minutes=interval * k)
         init = start - dt.timedelta(minutes=90)  # ~80-90 min licence lag
+        t = start + dt.timedelta(minutes=3)
+        if t > now:
+            continue
         times.append(f"{init:%Y-%m-%dT%H:%M:%S}")
-        for i in range(CONFIG["lead_steps"] + 1):
-            t = start + dt.timedelta(seconds=15 * i)
-            if t > now:
-                break
-            msg = f"stormscope-eu {init:%Y-%m-%dT%H:%M} " + (
-                "analysis frame (lead 0 min)" if i == 0 else f"+{i * CONFIG['lead_step_min']} min"
-            )
-            sid = f"DEMO{init:%H%M}{i:02d}".ljust(20, "X")
-            commits.append({"id": sid, "message": msg, "written_at": t.isoformat()})
+        msg = f"stormscope-eu {init:%Y-%m-%dT%H:%M} lead 0-{last} min"
+        sid = f"DEMO{init:%H%M}".ljust(20, "X")
+        commits.append({"id": sid, "message": msg, "written_at": t.isoformat()})
     commits.sort(key=lambda c: c["written_at"], reverse=True)
     return commits, times
 
@@ -282,12 +262,9 @@ def sql_host() -> str:
 
 
 def sql_text() -> str:
-    """The active query with {init} set to the newest complete run (tz-naive timestamp)."""
+    """The active query with {init} set to the newest run (tz-naive timestamp)."""
     runs = SHARED.get("state").get("runs") or []
-    done = [r for r in runs if r["complete"]]
-    init = (
-        done[0]["time"] if done else (runs[0]["time"] if runs else "1970-01-01T00:00:00")
-    ).replace("T", " ")
+    init = (runs[0]["time"] if runs else "1970-01-01T00:00:00").replace("T", " ")
     with SHARED.lock:
         template = SHARED.sql_template
     return template.replace("{init}", init)

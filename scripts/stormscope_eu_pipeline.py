@@ -5,12 +5,13 @@ MTG/FCI observations (EUMETSAT) -> Earth2Studio inference (StormScopeMeteosatEU)
 
 It finds the freshest downloadable initial condition with
 `resolve_start_time()`'s EUMETSAT-Data-Store search, stores two composites,
-`true_color` and `airmass`, and writes one Icechunk commit per
-10-minute rollout step as it is produced, rather than computing the whole
-forecast first and publishing once. It writes to the root group of
+`true_color` and `airmass`, and writes one Icechunk commit per init. Each
+10-minute rollout step is handed to the backend's background writers as it is
+produced, so uploads overlap inference, and the commit at the end of the
+rollout publishes the whole init at once. It writes to the root group of
 `gtc-berlin/stormscope-eu_gtc_berlin_2026` (see ARRAYLAKE_REPO below). Runs
-accumulate: each one appends its init to `time` in a schema commit of its own,
-then fills it step by step.
+accumulate: each one appends its init to `time` in that same commit, so
+readers never see a partly written init.
 
 Without --start-time the script runs continuously: the model is loaded once
 (`StormScopeEUPipeline`), and `main()` polls the Data Store, starting a new run
@@ -93,7 +94,13 @@ RGB_VALUES = np.array(["red", "green", "blue"])
 # is a record for readers, not something the service checks yet (see
 # docs/WEB_TILES_SERVICE_REQUIREMENTS.md).
 RGB_BAND_ATTRS = {"long_name": "colour band", "color_interpretation": " ".join(RGB_VALUES)}
-RGB_VALID_RANGE = {"valid_min": 0.0, "valid_max": 1.0}
+# Both composites are stored as bytes: 1..255 for data, 0 for missing (off the Earth's disk,
+# or a step not written yet). The tiles service ignores the Zarr v3 `fill_value`, so 0 is
+# also declared as CF `_FillValue` -- without it missing pixels render opaque black -- and
+# xarray decodes it back to NaN.
+RGB_DTYPE = "uint8"
+RGB_FILL = 0
+RGB_ENCODING = {"valid_min": 0, "valid_max": 255, "_FillValue": RGB_FILL}
 # FCI central wavelengths; `radiance_to_bt` takes their reciprocal, the wavenumber in cm-1.
 WAVELENGTH_CM = {
     "fci04vis": 0.444e-4,
@@ -116,7 +123,7 @@ WAVELENGTH_CM = {
 AIRMASS_CHANNELS = ["fci63wv", "fci73wv", "fci97ir", "fci105ir"]
 
 # 560 x 1216 spatial chunks: 2 x 2 = 4 per frame of the default Model_FCI_BBox
-# (y=1120, x=2432), ~8 MB per composite chunk instead of the whole frame (~33 MB). `rgb`
+# (y=1120, x=2432), ~2 MB (uint8) per composite chunk instead of the whole frame (~8 MB). `rgb`
 # is absent, and the backend leaves a dimension it has no chunk for unsplit, so a chunk
 # holds all three bands. `lat`/`lon` use the same y/x chunks (see add_coord).
 CHUNKS = {"ensemble": 1, "time": 1, "lead_time": 1, "y": 560, "x": 1216}
@@ -472,22 +479,24 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     """EUMETSAT-style "true-colour" RGB composite from the three VIS channels.
 
     Takes the (..., variable, y, x) array of a rollout step and returns
-    (..., y, x, rgb) floats in 0..1 -- display-ready, so plotting and tiling
-    need no per-channel scaling. Same recipe as `render_rgb`, vectorised
-    over every leading dim instead of a single (channel, y, x) frame.
+    (..., y, x, rgb) uint8 as stored -- display-ready, so plotting and tiling
+    need no per-channel scaling. Data is 1..255, so that a black pixel never reads
+    as missing; off-disk (NaN) pixels are `RGB_FILL`. Same recipe as `render_rgb`,
+    vectorised over every leading dim instead of a single (channel, y, x) frame.
     """
     idx = [list(variables).index(ch) for ch in RGB_CHANNELS]
     rgb = np.clip(arr[..., idx, :, :] / 24.0, 0, 1) * 255
-    rgb = np.interp(rgb, [0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255]) / 255.0
-    return np.moveaxis(rgb, -3, -1).astype("float32")
+    rgb = np.interp(rgb, [0, 30, 60, 120, 190, 255], [0, 110, 160, 210, 240, 255])
+    rgb = np.where(np.isnan(rgb), RGB_FILL, np.clip(np.round(rgb), 1, 255))
+    return np.moveaxis(rgb, -3, -1).astype(RGB_DTYPE)
 
 
 def airmass(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     """EUMETSAT airmass RGB composite from the WV 6.3/7.3 and IR 9.7/10.5 um channels.
 
-    Same (..., variable, y, x) -> (..., y, x, rgb) 0..1 contract as `true_color`. The
-    radiances are converted to brightness temperatures (K) first. Off-disk pixels stay
-    NaN.
+    Same (..., variable, y, x) -> (..., y, x, rgb) uint8 contract as `true_color`. The
+    radiances are converted to brightness temperatures (K) first, and each band's
+    0..1 stretch is scaled to 1..255.
 
     EUMETSAT recipe (EUMeTrain, "Compilation of RGB Recipes", p. 4): red WV6.2 - WV7.3,
     green IR9.7 - IR10.8, blue WV6.2 inverted, gamma 1 -- on FCI, WV6.3 and IR10.5. The
@@ -500,7 +509,8 @@ def airmass(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     r = ((bt["fci63wv"] - bt["fci73wv"]) - (-23.8)) / (1.4 - (-23.8))
     g = ((bt["fci97ir"] - bt["fci105ir"]) - (-39.7)) / (4.1 - (-39.7))
     b = (bt["fci63wv"] - 244.5) / (209.4 - 244.5)  # WV6.3 inverted: dry upper levels -> blue
-    return np.clip(np.stack([r, g, b], axis=-1), 0, 1).astype("float32")
+    rgb = np.stack([r, g, b], axis=-1) * 255
+    return np.where(np.isnan(rgb), RGB_FILL, np.clip(np.round(rgb), 1, 255)).astype(RGB_DTYPE)
 
 
 def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
@@ -520,11 +530,11 @@ def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
     return x_pred[:, :, start:], coords_out
 
 
-def step_writes(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[str]):
+def step_composites(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: list[str]):
     """One rollout step -> the `(tensors, coords, names)` to hand `write`.
 
     Only the two composites are stored, not the raw channels. Both are `(ensemble,
-    time, lead_time, y, x, rgb)`, so one `write` call covers them.
+    time, lead_time, y, x, rgb)` uint8, so one `write` call covers them.
 
     `copy=True` because the generator keeps writing into its own buffers between
     yields -- and with non-blocking writes, the store write for this step may still be
@@ -619,22 +629,33 @@ def create_schema(
     )
     rgb_coords = OrderedDict(**total_coords, rgb=RGB_VALUES)
 
-    backend.add_array(total_coords, [])  # coordinate arrays only
-    backend.add_array(rgb_coords, ["true_color", "airmass"], fill_value=float("nan"))
+    backend.add_array(rgb_coords, [])  # coordinate arrays only
+    # Created directly: `add_array` takes its dtype from initial data only, and passing
+    # data would write every chunk of the cube.
+    for name in ("true_color", "airmass"):
+        backend.root.create_array(
+            name,
+            shape=[len(values) for values in rgb_coords.values()],
+            chunks=[backend.chunks.get(dim, len(values)) for dim, values in rgb_coords.items()],
+            dtype=RGB_DTYPE,
+            fill_value=RGB_FILL,
+            dimension_names=list(rgb_coords),
+            compressors=backend.zarr_codecs,
+        )
     backend.root["true_color"].attrs.update(
         {
             **GEOREF,
-            **RGB_VALID_RANGE,
-            "long_name": "true-colour RGB composite (VIS 0.6/0.5/0.4 um), 0-1",
+            **RGB_ENCODING,
+            "long_name": "true-colour RGB composite (VIS 0.6/0.5/0.4 um), 0-255",
             "source_channels": " ".join(RGB_CHANNELS),
         }
     )
     backend.root["airmass"].attrs.update(
         {
             **GEOREF,
-            **RGB_VALID_RANGE,
+            **RGB_ENCODING,
             "long_name": "EUMETSAT airmass RGB composite (WV 6.3-7.3, IR 9.7-10.5, "
-            "WV 6.3 um inverted brightness temperatures), 0-1",
+            "WV 6.3 um inverted brightness temperatures), 0-255",
             "source_channels": " ".join(AIRMASS_CHANNELS),
         }
     )
@@ -708,15 +729,23 @@ def create_schema(
 TIME_ARRAYS = ("time", "valid_time", "true_color", "airmass")
 
 
-def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndarray) -> str | None:
-    """Append this run's init to `time` in an existing cube. Returns the commit message.
+def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndarray) -> None:
+    """Append this run's init to `time` in an existing cube, uncommitted.
 
-    The new `time` slice of every data array reads as NaN (fill value) until the
-    rollout steps write it. An init already in `time` is a rerun: it keeps its slice,
-    which the steps overwrite in place, and there is nothing to commit (returns None).
-    An init older than the newest one is still appended at the end, so `time` is in
-    commit order, not necessarily sorted.
+    The rollout steps then fill the new `time` slice of every data array in the same
+    session, and one commit publishes both. A repo whose composites are not uint8
+    (written before they were stored as bytes) is refused rather than appended to. An
+    init already in `time` is a rerun: it keeps its slice, which the steps overwrite in
+    place. An init older than the newest one is still appended at the end, so `time` is
+    in commit order, not necessarily sorted.
     """
+    for name in ("true_color", "airmass"):
+        if backend.root[name].dtype != RGB_DTYPE:
+            raise ValueError(
+                f"repo stores {name} as {backend.root[name].dtype}, this pipeline writes "
+                f"{RGB_DTYPE}; convert the repo's composites to {RGB_DTYPE} 0-255 (fill 0) "
+                "or publish to an empty repo or branch"
+            )
     stored_lead = backend.root["lead_time"][:]
     if not np.array_equal(stored_lead, lead_time):
         raise ValueError(
@@ -727,7 +756,7 @@ def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndar
     stored_time = backend.coords["time"]
     if np.isin(time, stored_time).all():
         print(f"init {init} already in repo; overwriting its slice")
-        return None
+        return
 
     n = len(stored_time)
     for name in TIME_ARRAYS:
@@ -739,7 +768,6 @@ def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndar
     backend.root["valid_time"][n:] = time[:, None] + lead_time[None, :]
     # `write` locates slices through this in-memory copy, which is read once at open.
     backend.coords["time"] = np.concatenate([stored_time, time])
-    return f"stormscope-eu {init} extend schema"
 
 
 class StormScopeEUPipeline:
@@ -776,14 +804,14 @@ class StormScopeEUPipeline:
         output_dir: str,
         arraylake_repo: str,
     ):
-        """Run one nowcast from `start_time` and publish it step by step.
+        """Run one nowcast from `start_time` and publish it in one commit.
 
         Fetches the FCI input window ending at `start_time`, adds this init to the
-        cube (creating the cube in an empty repo), then commits each of the
+        cube (creating the cube in an empty repo), then writes each of the
         `n_steps + 1` forecast frames -- the analysis frame and `n_steps` 10-minute
-        steps -- as soon as it is produced. An init already in the repo is rerun and
-        its slice overwritten. `publish_target`, `output_dir` and `arraylake_repo`
-        choose the store, as in `build_backend`.
+        steps -- as soon as it is produced, and commits once after the last. An init
+        already in the repo is rerun and its slice overwritten. `publish_target`,
+        `output_dir` and `arraylake_repo` choose the store, as in `build_backend`.
         """
         os.makedirs(output_dir, exist_ok=True)
 
@@ -798,44 +826,33 @@ class StormScopeEUPipeline:
         init = np.datetime_as_string(coords["time"][0], unit="m")
         if "true_color" not in backend.root:
             create_schema(backend, self.model, coords, lead_time)
-            message = f"stormscope-eu {init} schema"
         else:
-            message = extend_schema(backend, coords["time"], lead_time)
-        if message is not None:
-            # Commit metadata makes `repo.ancestry()` filterable without reading data:
-            # `time` is the init, `lead_time` the minutes the commit covers.
-            metadata = {
-                "time": init,
-                "lead_time": lead_minutes(lead_time).tolist(),
-                "status": "schema_extended",
-            }
-            print("schema ->", backend.commit(message, metadata=metadata))
+            extend_schema(backend, coords["time"], lead_time)
 
         for step, (x_pred, coords_pred) in enumerate(
             tqdm(self.model.create_iterator(x, coords), total=n_steps + 1)
         ):
             # Forecast only: step 0's five past observed frames are model input, not output.
             x_pred_out, coords_pred_out = forecast_only(x_pred, coords_pred)
-            backend.write(*step_writes(x_pred_out, coords_pred_out, channels))
-
-            lead = lead_minutes(coords_pred_out["lead_time"])
-            if step == 0:
-                message = f"stormscope-eu {init} analysis frame (lead {lead[-1]} min)"
-            else:
-                message = f"stormscope-eu {init} +{lead[-1]} min"
-            # commit flushes the background writes above, then opens a fresh session --
-            # an Icechunk session is spent once committed. `rebase_with` lets the step
-            # land on top of a commit made meanwhile by another writer (another init's
-            # chunks, say); it still fails on a real conflict, such as that commit
-            # changing the metadata of an array this step writes.
-            metadata = {"time": init, "lead_time": int(lead[-1]), "status": "ingested"}
-            snapshot = backend.commit(
-                message, metadata=metadata, rebase_with=icechunk.ConflictDetector()
-            )
-            tqdm.write(f"{message} -> {snapshot}")
+            # Non-blocking: the backend's thread pool uploads while the GPU computes
+            # the next step.
+            backend.write(*step_composites(x_pred_out, coords_pred_out, channels))
 
             if step == n_steps:
                 break
+
+        # commit flushes the background writes above, then publishes the schema change
+        # and every step together. Commit metadata makes `repo.ancestry()` filterable
+        # without reading data. `rebase_with` lets the init land on top of a commit
+        # made meanwhile by another writer; it still fails on a real conflict, such as
+        # that commit also resizing `time`.
+        message = f"stormscope-eu {init} lead 0-{lead_minutes(lead_time)[-1]} min"
+        snapshot = backend.commit(
+            message,
+            metadata={"time": init, "status": "ingested"},
+            rebase_with=icechunk.ConflictDetector(),
+        )
+        print(f"{message} -> {snapshot}")
 
         print(f"Published to {publish_target} ({location})")
 
