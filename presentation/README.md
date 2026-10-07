@@ -58,7 +58,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    Quick check that the tile server is up:
    ```bash
    B=https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu_gtc_berlin_2026
-   curl -o t.png -w '%{http_code}\n' "$B/main/tiles/WebMercatorQuad/3/2/4?variables=true_color&style=polygons/rgb&colorscalerange=0,1&time=<INIT>&lead_time=10%20minutes&ensemble=0&f=png"
+   curl -o t.png -w '%{http_code}\n' "$B/main/tiles/WebMercatorQuad/3/2/4?variables=true_color&style=polygons/rgb&colorscalerange=0,255&time=<INIT>&lead_time=10%20minutes&ensemble=0&f=png"
    ```
 3. **SQL**: `al compute enable gtc-berlin sql --sku-code xs`; its hostname goes in
    `config.json` (`sql.host`) or `.env` (`ARRAYLAKE_SQL_HOST=...`, wins). The service
@@ -70,8 +70,8 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    a query (with the token; the browser never sees it) only when Run is pressed. `{init}` is replaced by the newest complete
    init; `{lat}`/`{lon}`/`{box}` in `sql.query` are filled per city. `lat`/`lon` are
    2-D pixel coordinates, so filter on a `BETWEEN` box, never on equality.
-4. **Variables**: `true_color` and `airmass` are both 0-1 RGB composites
-   (`polygons/rgb`, `colorscalerange` `0,1`). Add more under `variables` in `config.json`.
+4. **Variables**: `true_color` and `airmass` are both uint8 0-255 RGB composites
+   (`polygons/rgb`, `colorscalerange` `0,255`). Add more under `variables` in `config.json`.
 5. **Run length**: the strip and scrubber assume 12 steps, +10 to +120 min
    (`lead_steps`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
