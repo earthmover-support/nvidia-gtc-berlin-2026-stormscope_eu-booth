@@ -17,8 +17,8 @@ Related: [TILE_SERVER_PERFORMANCE.md](TILE_SERVER_PERFORMANCE.md) (tiles in deta
 | 5 | Inference + ingest | StormScope-EU produces the analysis frame (lead 0) and rolls forward 12 × 10 min. Each step's output is turned into the `true_color` / `airmass` composites and uploaded to Icechunk on Arraylake in the background while the next step runs; one commit after the last step publishes the whole init ([#32] 🟣). Eight steady-state runs on 2026-10-07 committed a median `T`+67.7 min, so stages 4 + 5 take ~5.7 min from `T`+62; minus stage 4 that leaves ~3.6 min (was 4.6 min, ~23 s/step, with a commit per step). | 3.6 min (~17 s/step) | - persistent GPU container [#19] 🟣, [#26] 🟣<br>- spatial chunks + zstd so each write is smaller [#7] 🟣<br>- uint8 composites, 4× smaller before compression ([#27] 🟣)<br>- one commit per init, so uploads overlap inference: with a commit per step, each commit waited for its upload and a run took ~1.5 min longer with `--publish-target arraylake` than with `local` ([#31], [#32] 🟣) |
 | 6 | Visible to tiles service | Flux reads Icechunk directly, so a commit is renderable as soon as it lands. With one commit per init, all 13 leads land at once. | 0 s | - none needed |
 | 7 | Discovered by client | Booth page: `server.py` polls Arraylake every 5 s, the browser polls `/api/state` every 4 s (worst case shown). Phone viewer (`site/`): re-reads the init list from `/tree` every 60 s. | 9 s (phone: 60 s) | - booth page with live polling [#2] 🟣<br>- phone viewer [#18] 🟣<br>- `extend schema` shown as a complete run until lead 0 lands (issue #13): gone with one commit per init, an init only appears once complete ([#32] 🟣)<br>- phone viewer: check for new inits every 60 s instead of only on page load ([#33] 🟣; [#28] asked for 10 s) |
-| 8 | First frame rendered | The tiles service renders the ~20 z4 tiles of one lead in one browser | 7–9 s | - spatial chunks + zstd [#7] 🟣<br>- `polygons/rgb` style, 2–3× faster per tile [#24] 🟣, [#25] 🟣; back to `raster/rgb` once the service rendered it as fast [#33] 🟣<br>- 2× overviews: rejected, visibly coarser image ([#23] 🔴) |
-| 9 | Full run rendered | All 13 leads loaded in one browser, one lead at a time in playback order. | 92 s | - load leads in playback order [#2] 🟣, [#18] 🟣<br>- snapshot-pinned tile URLs, so reloads come from the browser cache [#2] 🟣<br>- 2× overviews: 39 s, but rejected, visibly coarser image ([#23] 🔴)<br>- uint8 RGB (trial, 74 s, [#22] 🔴; in the pipeline [#27] 🟣)<br>- HTTP/2 on the service (asked, ~2× per frame expected) [arraylake#7938](https://github.com/earth-mover/arraylake/pull/7938) |
+| 8 | First frame rendered | The tiles service renders the ~20 z4 tiles of one lead in one browser. Waking a sleeping service (0 replicas) adds ~23 s: 29 s for the first frame. | 6 s (was 7–9 s) | - spatial chunks + zstd [#7] 🟣<br>- `polygons/rgb` style, 2–3× faster per tile [#24] 🟣, [#25] 🟣; back to `raster/rgb` once the service rendered it as fast [#33] 🟣<br>- 2× overviews: rejected, visibly coarser image ([#23] 🔴) |
+| 9 | Full run rendered | All 13 leads loaded in one browser, one lead at a time in playback order. With uint8 composites ([#27] 🟣), ~3.6 s per lead after the first. | 49 s (was 92 s) | - load leads in playback order [#2] 🟣, [#18] 🟣<br>- snapshot-pinned tile URLs, so reloads come from the browser cache [#2] 🟣<br>- 2× overviews: 39 s, but rejected, visibly coarser image ([#23] 🔴)<br>- uint8 RGB (trial, 74 s, [#22] 🔴; in the pipeline [#27] 🟣: 92 → 49 s)<br>- HTTP/2 on the service (asked, ~2× per frame expected) [arraylake#7938](https://github.com/earth-mover/arraylake/pull/7938) |
 
 PRs: 🟣 merged, 🟢 open, 🔴 closed without merging.
 
@@ -42,7 +42,11 @@ PRs: 🟣 merged, 🟢 open, 🔴 closed without merging.
   `run_phases_s` in `presentation/config.json`); stage 5 is that total minus stage 4.
 - Stage 4 download: issue #1.
 - Stages 8–9: issue #11 and [TILE_SERVER_PERFORMANCE.md](TILE_SERVER_PERFORMANCE.md).
-  Current numbers are Chrome on `site/`, cold service, `cache: "no-store"`.
+  Current numbers: 2026-10-07, headless Chrome (1512×725) on `site/` with `cache: "no-store"`
+  on tile requests, SKU S with 1 replica, init 2026-10-07T13:10 (uint8), 221 tiles of 512 px.
+  First run woke the sleeping service (frame 0 at 29.0 s, all 13 at 74.2 s); second run on
+  the awake pod (frame 0 at 6.2 s, all 13 at 48.9 s). The earlier 92 s / 7–9 s were float RGB
+  on a freshly restarted pod (2026-10-05).
 
 [#1]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/1
 [#2]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/2
