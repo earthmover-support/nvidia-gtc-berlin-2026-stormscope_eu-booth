@@ -27,9 +27,6 @@ PRs: 🟣 merged, 🟢 open, 🔴 closed without merging.
 1. **NRT licence:** ~48 min. Account question with EUMETSAT, not engineering.
 2. **HTTP/2 on the tiles service:** about 2× per frame for one browser (issue #11).
 3. **Shorter poll (stage 4):** up to 60 s, at the cost of more Data Store searches.
-4. **uint8 RGB in the pipeline ([#27] 🟣):** full run in the browser from ~92 s to ~74 s,
-   measured on the trial branch ([#22] 🔴, superseded by #27). Needs Arraylake `main` reset
-   before the first uint8 run.
 
 ## Sources and reproduce
 
