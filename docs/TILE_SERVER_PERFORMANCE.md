@@ -1,9 +1,10 @@
 # Flux tiles service performance for the booth
 
 How fast the [Flux tiles service](https://docs.earthmover.io/compute/tiles) (`gtc-berlin`,
-service `tiles-4f49272b`) renders what the booth globe needs, what slows it down, and what
-the booth page does about it. Measured on 2026-10-01 against
-`gtc-berlin/stormscope-eu_gtc_berlin_2026`, runs `2026-09-30T09:00` and `09:10`.
+service [`tiles-4f49272b`](https://app.earthmover.io/gtc-berlin/services/tiles-4f49272b))
+renders what the booth globe needs, what slows it down, and what the booth page does about
+it. Measured on 2026-10-01 against `gtc-berlin/stormscope-eu_gtc_berlin_2026`, runs
+`2026-09-30T09:00` and `09:10`.
 Related: [WEB_TILES_SERVICE_REQUIREMENTS.md](WEB_TILES_SERVICE_REQUIREMENTS.md) (metadata), issues
 #5 (cache/replicas), #9 (pyramids), #10 (RGB band order), #11 (throughput).
 
@@ -70,8 +71,8 @@ Not measured: `min_replicas: 1`, more than 4 replicas, SKU M.
 
 The service itself has `cache_max_age: 0` and no CLI option to change it. With branch URLs,
 every tile the page asks for again (camera sway, reload) shows up as a `3xx` (304) in the
-service dashboard. That was most of the traffic in the dashboard's 10:30 bucket (731 of
-969 requests).
+[service dashboard](https://app.earthmover.io/gtc-berlin/services/tiles-4f49272b). That was
+most of the traffic in the dashboard's 10:30 bucket (731 of 969 requests).
 
 The booth page now pins each run to the newest snapshot holding it (`ref` in `/api/state`).
 Runs older than the commit history get the oldest snapshot in it. Measured in headless
