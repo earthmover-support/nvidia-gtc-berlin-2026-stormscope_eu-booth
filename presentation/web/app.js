@@ -700,13 +700,11 @@
     const rows = yi > 0 ? r.rows.filter((row) => typeof row[yi] === "number") : [];
     status.textContent = `${r.status === "demo" ? "demo · " : ""}ran ${ago(r.ran_at)} ago · ${r.seconds} s · ${r.cached ? "cached · " : ""}${(r.rows || []).length} rows`;
     if (!rows.length) { empty(); return; }
-    const ys = rows.map((row) => row[yi]);
-    const lo = Math.min(...ys), hi = Math.max(...ys);
     bars.replaceChildren();
     for (const row of rows.slice(0, 60)) {
       const y = row[yi];
       const d = el("div");
-      d.style.height = `${hi > lo ? 15 + (85 * (y - lo)) / (hi - lo) : 60}%`;
+      d.style.height = `${Math.min(100, Math.max(0, (100 * y) / 255))}%`; // fixed 0-255 true_color scale, so heights read as absolute brightness
       d.title = `${row[0]}: ${y.toFixed(2)}`;
       bars.append(d);
     }
