@@ -578,6 +578,13 @@
       : "Your query · PostgreSQL wire protocol";
   }
 
+  // the box shows the init the server filled in last; send it back as {init} so Run
+  // always queries the newest run (UTC) instead of pinning an old one
+  const withInitSlot = (query) => {
+    const m = /TIMESTAMP '([^']*)'/.exec((S.sql && S.sql.query) || "");
+    return m ? query.split(`TIMESTAMP '${m[1]}'`).join("TIMESTAMP '{init}'") : query;
+  };
+
   async function runSql(query) {
     holdPanel();
     S.sqlDirty = false;
@@ -585,7 +592,7 @@
       const res = await fetch("/api/sql", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query: withInitSlot(query) }),
       });
       const out = await res.json();
       if (!res.ok) { S.sql = { status: "error", query, error: out.error }; renderSql(); return; }
