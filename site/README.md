@@ -15,7 +15,7 @@ uv run --no-project python -m http.server 8765 --directory site
 ```
 
 Then open http://localhost:8765. The tiles service must be up and public (see
-`docs/TILE_SERVER_PERFORMANCE.md`). The first frames take a while because the XS service
+[Viz](../README.md#viz) in the top-level README). The first frames take a while because the XS service
 renders slowly.
 
 ## Hosting
