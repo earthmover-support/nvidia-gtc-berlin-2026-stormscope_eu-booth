@@ -363,7 +363,7 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
             result = dict(
                 status="demo",
                 query=query,
-                columns=["lead_time", "brightness"],
+                columns=["lead_time", "cloudiness"],
                 rows=rows,
                 seconds=0.4,
                 ran_at=utcnow().isoformat(),
