@@ -596,7 +596,7 @@
       return b;
     }));
     $("#sqlFoot").textContent = S.sqlPlace
-      ? `Brightness over ${S.sqlPlace}, next 2 h · PostgreSQL wire protocol`
+      ? `How cloudy over ${S.sqlPlace}, next 2 h · PostgreSQL wire protocol`
       : "Your query · PostgreSQL wire protocol";
   }
 
