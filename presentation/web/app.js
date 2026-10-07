@@ -59,9 +59,7 @@
   })();
   const HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const HMS = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
-  const fmtTime = (d) => HM.format(d);
-  const fmtTimeSec = (d) => HMS.format(d);
-  const hhmm = (init) => (init ? fmtTime(initDate(init)) : "--:--");
+  const hhmm = (init) => (init ? HM.format(initDate(init)) : "--:--");
   // Zone abbreviation for `d` (CEST vs CET depends on the date). en-GB names the European
   // zones, en-US the American ones; anywhere else this is an offset like "GMT+3".
   const tzName = (d) => {
@@ -97,10 +95,8 @@
       width: String(size),
       height: String(size),
     });
-    const r = c.tile_ref_mode === "snapshot" && run.ref ? run.ref : c.branch;
-    // the group goes in the path; a `group=` query parameter still opens the whole (unaligned) repo
-    const g = c.group ? `/${c.group}` : "";
-    return `${c.tile_base}/${encodeURIComponent(r)}${g}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+    const r = run.ref || c.branch; // a snapshot id makes the tile URL immutable, so it caches
+    return `${c.tile_base}/${encodeURIComponent(r)}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
   }
 
   // ------------------------------------------------------------------ globe
@@ -277,7 +273,7 @@
     if (S.frame >= leads.length) S.frame = 0;
     const lead = leads[S.frame];
     for (const [l, id] of layers) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
-    renderTicks(run, lead);
+    renderTicks(lead);
     renderValid(run, lead);
   }
 
@@ -341,19 +337,17 @@
   function renderVarToggle() {
     const box = $("#varToggle");
     box.replaceChildren();
-    for (const [name, v] of Object.entries(S.cfg.variables)) {
+    for (const name of Object.keys(S.cfg.variables)) {
       const b = el("button", null, name);
       b.type = "button";
       b.setAttribute("aria-pressed", String(name === S.variable));
-      if (!v.available) { b.disabled = true; b.title = "coming soon"; }
       b.addEventListener("click", () => setVariable(name));
       box.append(b);
     }
   }
 
   function setVariable(name) {
-    const v = S.cfg.variables[name];
-    if (!v || !v.available || name === S.variable) return;
+    if (!(name in S.cfg.variables) || name === S.variable) return;
     S.variable = name;
     renderVarToggle();
     syncLayers();
@@ -389,7 +383,7 @@
     showFrame();
   }
 
-  function renderTicks(run, current) {
+  function renderTicks(current) {
     const box = $("#ticks");
     box.replaceChildren();
     for (const lead of S.cfg.leads) {
@@ -403,7 +397,7 @@
     if (!run || lead == null) { $("#validLabel").textContent = "waiting for the first frame…"; return; }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
     const what = lead ? `+${lead} min forecast` : "observed satellite";
-    $("#validLabel").textContent = `valid ${fmtTime(t)} ${tzName(t)} · ${what}`;
+    $("#validLabel").textContent = `valid ${HM.format(t)} ${tzName(t)} · ${what}`;
   }
 
   function showNotice(text) {
@@ -431,7 +425,7 @@
   function renderStrip() {
     const c = S.cfg;
     const now = new Date();
-    $("#clock").textContent = `${S.status === "demo" ? "DEMO" : "LIVE"} · ${fmtTimeSec(now)} ${tzName(now)}`;
+    $("#clock").textContent = `${S.status === "demo" ? "DEMO" : "LIVE"} · ${HMS.format(now)} ${tzName(now)}`;
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
@@ -498,7 +492,7 @@
     const next = new Date(initDate(latest.init).getTime() + c.run_interval_min * 60000);
     $("#countdownLabel").textContent = "COMMIT IN";
     $("#countdown").textContent = mmss(Math.max(0, total - elapsed));
-    $("#ingestLabel").textContent = `Run start ${fmtTime(next)} · ${phases[active].busy}`;
+    $("#ingestLabel").textContent = `Run start ${HM.format(next)} · ${phases[active].busy}`;
   }
 
   // ------------------------------------------------------------------ panels

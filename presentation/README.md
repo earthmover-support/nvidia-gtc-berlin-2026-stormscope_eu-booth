@@ -57,7 +57,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    pipeline appends every run's init to `time` and never drops one; the page offers the
    newest 12 (`max_runs`). The server re-reads the `time` coordinate whenever `main` moves,
    and each tile picks its frame with `time=` + `lead_time=` on the newest snapshot holding
-   that run (`tile_ref_mode: "snapshot"`), so the browser can cache it.
+   that run, so the browser can cache it.
    The pipeline commits each init once, with all its leads, so every init in `time` is
    complete; the server finds each run's snapshot from commit messages like
    `stormscope-eu 2026-09-15T11:00 lead 0-120 min`.
