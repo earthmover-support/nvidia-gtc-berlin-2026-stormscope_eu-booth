@@ -53,12 +53,14 @@ straight from the browser, which can't attach an `Authorization` header; rendere
 reachable by anyone holding the URL, the underlying chunks stay private. Bring it up with:
 
 ```
-al compute enable gtc-berlin tiles --sku-code xs --is-public
+al compute enable gtc-berlin tiles --sku-code s --is-public
+al compute update gtc-berlin tiles-4f49272b --min-replicas 8 --max-replicas 8
 ```
 
-It reaches `available` in about a minute and cold-starts the first tile in ~2.7 s
-thereafter, so `min_replicas: 0` is fine — no need to pin a replica for the booth.
-Tear it down again with `al compute disable gtc-berlin tiles-4f49272b`. The deployment id
+It reaches `available` in about a minute. While the booth is showing it, run it on S
+(2× the tile throughput of XS) with 8 replicas pinned, as agreed with Earthmover, so
+nothing waits on a cold start or a scale-up. After booth hours set `--min-replicas 0`, and
+tear it down after the event with `al compute disable gtc-berlin tiles-4f49272b`. The deployment id
 and hostname are deterministic, so they survive the cycle.
 
 Render parameters that matter for `true_color` and `airmass`:
