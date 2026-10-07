@@ -49,9 +49,10 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 
 ## Before the event
 
-1. **Tiles**: `al compute enable gtc-berlin tiles --sku-code xs --is-public`. The service is
-   public, so browsers and phones fetch tiles without a token.
-   Disable it again after booth hours.
+1. **Tiles**: `al compute enable gtc-berlin tiles --sku-code s --is-public`, then
+   `al compute update gtc-berlin tiles-4f49272b --min-replicas 8 --max-replicas 8`
+   (see [Viz](../README.md#viz)). The service is public, so browsers and phones fetch
+   tiles without a token. Set `--min-replicas 0` again after booth hours.
 2. **Inits**: the page reads `gtc-berlin/stormscope-eu_gtc_berlin_2026` (root group). The
    pipeline appends every run's init to `time` and never drops one; the page offers the
    newest 12 (`max_runs`). The server re-reads the `time` coordinate whenever `main` moves,

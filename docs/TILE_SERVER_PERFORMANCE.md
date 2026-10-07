@@ -122,9 +122,9 @@ show partly drawn and fill in from +10 onward.
 ```bash
 # check the service shape and replicas
 uvx --from arraylake al compute status gtc-berlin tiles-4f49272b
-# resize for a test, then restore the booth settings
-uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku s
-uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku xs --min-replicas 0 --max-replicas 4
+# resize for a test, then restore the booth settings (S, 8 replicas; min 0 outside booth hours)
+uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku xs
+uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku s --min-replicas 8 --max-replicas 8
 ```
 
 Each SKU bills while it runs. The service is deliberately public and deliberately disabled
