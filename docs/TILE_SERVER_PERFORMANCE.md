@@ -14,7 +14,7 @@ Related: [WEB_TILES_SERVICE_REQUIREMENTS.md](WEB_TILES_SERVICE_REQUIREMENTS.md) 
    (`X-Multiscale-Level: root`) and costs about 1 CPU-second. A full booth run takes ~4 min
    on XS and ~2 min on S for one browser. The target (a run in ~10 s) is ~20× away.
 2. **Use snapshot-pinned tile URLs.** Branch URLs come back with `max-age=0`, snapshot URLs
-   with `max-age=2628000` (a month). The booth page uses snapshots (`tile_ref_mode: "snapshot"`).
+   with `max-age=2628000` (a month). The booth page uses snapshots.
 3. **Load leads in playback order.** The service is the bottleneck, so requesting all 12
    leads at once leaves every frame half drawn for minutes. In order, the first complete
    frame arrives in ~20 s.
@@ -122,9 +122,9 @@ show partly drawn and fill in from +10 onward.
 ```bash
 # check the service shape and replicas
 uvx --from arraylake al compute status gtc-berlin tiles-4f49272b
-# resize for a test, then restore the booth settings
-uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku s
-uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku xs --min-replicas 0 --max-replicas 4
+# resize for a test, then restore the booth settings (S, 8 replicas; min 0 outside booth hours)
+uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku xs
+uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku s --min-replicas 8 --max-replicas 8
 ```
 
 Each SKU bills while it runs. The service is deliberately public and deliberately disabled

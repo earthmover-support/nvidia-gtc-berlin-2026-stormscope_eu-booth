@@ -248,22 +248,19 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(WEB), **kwargs)
 
-    def _json(self, payload: dict, code: int = 200) -> None:
-        send_json(self, payload, code)
-
     def do_GET(self):  # noqa: N802
         path = self.path.split("?", 1)[0]
         if path == "/api/config":
-            return self._json(public_config(sql_editable=True))
+            return send_json(self, public_config(sql_editable=True))
         if path == "/api/state":
-            return self._json(SHARED.get("state"))
+            return send_json(self, SHARED.get("state"))
         if path == "/api/sql":
-            return self._json(SHARED.get("sql"))
+            return send_json(self, SHARED.get("sql"))
         return super().do_GET()
 
     def do_POST(self):  # noqa: N802
         if self.path.split("?", 1)[0] != "/api/sql":
-            return self._json({"error": "not found"}, 404)
+            return send_json(self, {"error": "not found"}, 404)
         try:
             body = json.loads(
                 self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 16384)) or b"{}"
@@ -272,8 +269,8 @@ class Handler(SimpleHTTPRequestHandler):
                 default_sql() if body.get("reset") else check_sql(str(body.get("query", "")))
             )
         except (ValueError, TypeError) as exc:
-            return self._json({"error": str(exc)}, 400)
-        return self._json({"ok": True})
+            return send_json(self, {"error": str(exc)}, 400)
+        return send_json(self, {"ok": True})
 
     def translate_path(self, path):
         clean = path.split("?", 1)[0].split("#", 1)[0]
