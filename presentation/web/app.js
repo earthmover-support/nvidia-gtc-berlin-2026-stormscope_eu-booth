@@ -154,13 +154,13 @@
     map.touchZoomRotate.disableRotation();
 
     // Camera: always looking at Europe, gentle sway of the bearing around a fixed centre.
-    // Visitors can zoom in and pan; after camera.idle_reset_s without input it eases home.
+    // Visitors can zoom (out to camera.min_zoom) and pan; after camera.idle_reset_s without input it eases home.
     const cam = c.camera;
     const center = [cam.lon, cam.lat];
     let home = cam.zoom;
     const fitZoom = () => {
       home = Math.max(cam.zoom, coverZoom(cam, map.getContainer()));
-      map.setMinZoom(home); // never zoom out past the covered view
+      map.setMinZoom(Math.min(cam.min_zoom ?? home, home)); // visitors may zoom out to camera.min_zoom
       map.jumpTo({ center, zoom: home });
     };
     fitZoom();
