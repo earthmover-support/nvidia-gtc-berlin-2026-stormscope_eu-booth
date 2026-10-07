@@ -94,12 +94,12 @@ RGB_VALUES = np.array(["red", "green", "blue"])
 # docs/WEB_TILES_SERVICE_REQUIREMENTS.md).
 RGB_BAND_ATTRS = {"long_name": "colour band", "color_interpretation": " ".join(RGB_VALUES)}
 # Both composites are stored as bytes: 1..255 for data, 0 for missing (off the Earth's disk,
-# or a step not written yet). The tiles service ignores the Zarr v3 `fill_value`, so 0 is
-# also declared as CF `_FillValue` -- without it missing pixels render opaque black -- and
-# xarray decodes it back to NaN.
+# or a step not written yet), as the Zarr v3 `fill_value`. No CF `_FillValue` attribute: the
+# tiles service decodes it by upcasting the bytes to float32, which costs a 4x larger array
+# per tile (see extend_schema, which strips it from older repos).
 RGB_DTYPE = "uint8"
 RGB_FILL = 0
-RGB_ENCODING = {"valid_min": 0, "valid_max": 255, "_FillValue": RGB_FILL}
+RGB_ENCODING = {"valid_min": 0, "valid_max": 255}
 # FCI central wavelengths; `radiance_to_bt` takes their reciprocal, the wavenumber in cm-1.
 WAVELENGTH_CM = {
     "fci04vis": 0.444e-4,
@@ -727,6 +727,7 @@ def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndar
                 f"{RGB_DTYPE}; convert the repo's composites to {RGB_DTYPE} 0-255 (fill 0) "
                 "or publish to an empty repo or branch"
             )
+        backend.root[name].attrs.pop("_FillValue", None)  # ponytail: drop once main is rewritten
     stored_lead = backend.root["lead_time"][:]
     if not np.array_equal(stored_lead, lead_time):
         raise ValueError(
