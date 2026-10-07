@@ -44,9 +44,31 @@
 
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
-  const hhmm = (init) => (init || "").slice(11, 16);
-  const initDate = (init) => new Date(init + ":00Z");
-  const fmtUTC = (d) => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+  const initDate = (init) => new Date(init + ":00Z"); // inits are stored in UTC
+  // Times show in the viewer's own zone, or Berlin's when the browser reports none.
+  const TZ = (() => {
+    try {
+      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      new Intl.DateTimeFormat("en", { timeZone: zone }); // throws on a zone it doesn't know
+      return zone || "Europe/Berlin";
+    } catch {
+      return "Europe/Berlin";
+    }
+  })();
+  const HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const HMS = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+  const fmtTime = (d) => HM.format(d);
+  const fmtTimeSec = (d) => HMS.format(d);
+  const hhmm = (init) => (init ? fmtTime(initDate(init)) : "--:--");
+  // Zone abbreviation for `d` (CEST vs CET depends on the date). en-GB names the European
+  // zones, en-US the American ones; anywhere else this is an offset like "GMT+3".
+  const tzName = (d) => {
+    const name = (locale) =>
+      new Intl.DateTimeFormat(locale, { timeZone: TZ, timeZoneName: "short" })
+        .formatToParts(d).find((p) => p.type === "timeZoneName").value;
+    const gb = name("en-GB");
+    return /^(GMT|UTC)[+-]/.test(gb) ? name("en-US") : gb;
+  };
   const ago = (iso) => {
     const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
     if (s < 60) return `${s} s`;
@@ -350,7 +372,7 @@
     $("#loopLabel span").textContent = sel
       ? `+${leads[0]}→+${leads.at(-1)}${S.animPaused ? " · paused" : ""}`
       : "";
-    $("#initTitle").textContent = sel ? `${hhmm(sel.init)} UTC` : "--:-- UTC";
+    $("#initTitle").textContent = sel ? `${hhmm(sel.init)} ${tzName(initDate(sel.init))}` : "--:--";
   }
 
   function selectInit(k) {
@@ -375,7 +397,7 @@
   function renderValid(run, lead) {
     if (!run || lead == null) { $("#validLabel").textContent = "waiting for the first frame…"; return; }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
-    $("#validLabel").textContent = `valid ${fmtUTC(t)} UTC · +${lead} min forecast`;
+    $("#validLabel").textContent = `valid ${fmtTime(t)} ${tzName(t)} · +${lead} min forecast`;
   }
 
   function showNotice(text) {
@@ -402,7 +424,7 @@
   function renderStrip() {
     const c = S.cfg;
     const now = new Date();
-    $("#clock").textContent = `${S.status === "demo" ? "DEMO" : "LIVE"} · ${fmtUTC(now)}:${pad(now.getUTCSeconds())} UTC`;
+    $("#clock").textContent = `${S.status === "demo" ? "DEMO" : "LIVE"} · ${fmtTimeSec(now)} ${tzName(now)}`;
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
@@ -469,7 +491,7 @@
     const next = new Date(initDate(latest.init).getTime() + c.run_interval_min * 60000);
     $("#countdownLabel").textContent = "COMMIT IN";
     $("#countdown").textContent = mmss(Math.max(0, total - elapsed));
-    $("#ingestLabel").textContent = `Run start ${fmtUTC(next)} · ${phases[active].busy}`;
+    $("#ingestLabel").textContent = `Run start ${fmtTime(next)} · ${phases[active].busy}`;
   }
 
   // ------------------------------------------------------------------ panels
