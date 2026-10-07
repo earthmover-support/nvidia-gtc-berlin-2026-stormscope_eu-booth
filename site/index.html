@@ -93,6 +93,7 @@ const COLORSCALERANGE = "0,255";
 const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
 const FRAME_MS = 800;
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
+const POLL_MS = 60000; // how often to look for a new init
 
 const $ = (id) => document.getElementById(id);
 
@@ -134,7 +135,7 @@ map.addControl(new maplibregl.NavigationControl());
 // /info fails on this repo; /tree (xarray's HTML repr) carries the coordinate arrays. Past 200
 // values xarray abbreviates an array to its first and last three, so the "..." entry is dropped.
 async function loadCoords(ref) {
-  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${ref}/tree`)).text();
+  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${ref}/tree`, { cache: "no-store" })).text();
   const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
   const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, "")).filter((v) => v !== "...");
   return {
@@ -146,7 +147,7 @@ const coords = loadCoords(BRANCHES[0]); // runs while the basemap style loads
 
 function tileUrl(time, lead) {
   const p = new URLSearchParams({
-    variables: variable, style: "polygons/rgb", colorscalerange: COLORSCALERANGE,
+    variables: variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
     time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
   return `${BASE}/${REPO}/${$("ref").value}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
@@ -259,7 +260,20 @@ map.on("load", async () => {
   loadRun();
   show(0);
   setPlaying(true);
+  setInterval(pollInits, POLL_MS);
 });
+
+// Switches to the newest init once the pipeline has committed one; a failed check waits for the next.
+async function pollInits() {
+  const ref = $("ref").value, newest = $("init").options[0]?.value;
+  let c;
+  try { c = await loadCoords(ref); } catch { return; }
+  const latest = c.times.at(-1);
+  if (latest === newest || ref !== $("ref").value) return;
+  await useCoords(c);
+  $("init").value = latest;
+  loadRun();
+}
 </script>
 </body>
 </html>
