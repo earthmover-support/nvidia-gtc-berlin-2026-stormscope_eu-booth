@@ -185,7 +185,18 @@ def run_sql_once(query: str) -> dict:
     )
 
 
-# --------------------------------------------------------------------------- config
+# --------------------------------------------------------------------------- HTTP
+
+
+def send_json(handler, payload: dict, code: int = 200, cache: str = "no-store") -> None:
+    """Answer `handler` (a BaseHTTPRequestHandler) with `payload` as JSON."""
+    body = json.dumps(payload, default=str).encode()
+    handler.send_response(code)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Cache-Control", cache)
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
 
 
 def public_config(sql_editable: bool) -> dict:
