@@ -67,8 +67,8 @@ Credentials come from a local `.env` (see [`.env.example`](.env.example)):
   <https://api.eumetsat.int/api-key/>
 - `ARRAYLAKE_API_TOKEN` — ingest target (read by the script)
 
-Stopping a run partway leaves the steps already committed. Rerunning the same init
-overwrites its slice.
+Each init is one commit, made after its last step, so stopping a run partway publishes
+nothing. Rerunning the same init overwrites its slice.
 
 ### Docker
 
@@ -118,11 +118,12 @@ docker compose run --rm --build pipeline bash
 MTG observations → Earth2Studio inference → Icechunk/ArrayLake publish → tile dashboard
 ```
 
-It searches for the freshest downloadable slot (`MIN_LAG`) and streams one commit per step.
+It searches for the freshest downloadable slot (`MIN_LAG`) and makes one commit per init;
+steps upload in the background while the next one is computed.
 It publishes through plain `earth2studio.io.IceChunkBackend` with
 `arraylake.Client.get_icechunk_storage`, so it needs no backend subclass, and writes to the
 root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026` (the default for `--arraylake-repo`). Each run
-extends the schema by its init time and appends along `time`, keeping earlier inits; every
+extends the schema by its init time and appends along `time` in that same commit, keeping earlier inits; every
 run must therefore use the same `--n-steps` (lead-time layout).
 
 ```bash
