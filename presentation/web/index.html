@@ -113,7 +113,7 @@
         <ul class="facts">
           <li>Conditioned on orography and land–sea mask</li>
           <li>Ensemble-of-experts denoising across noise levels</li>
-          <li>[GPU MODEL] · [N] s per 10-minute step</li>
+          <li>NVIDIA H200 · ~<span id="stepSeconds">20</span> s per 10-minute step</li>
         </ul>
       </article>
 
@@ -163,14 +163,14 @@
 
       <footer class="panel-foot">
         <div class="progress" id="progress"></div>
-        <div class="keys">← → panels · space pause · P play · S speed · T/A variable · 1–6 init</div>
+        <div class="keys">← → panels · space pause · P play · S speed · T/A variable · 1–9 init</div>
       </footer>
     </section>
   </main>
 
   <!-- ============ ingest strip ============ -->
   <footer class="strip">
-    <div class="next"><div class="eyebrow">NEXT RUN IN</div><div class="big mono" id="countdown">--:--</div></div>
+    <div class="next"><div class="eyebrow" id="countdownLabel">NEXT RUN IN</div><div class="big mono" id="countdown">--:--</div></div>
     <div class="ingest">
       <div class="muted" id="ingestLabel">Waiting for Arraylake…</div>
       <div class="cells" id="cells"></div>

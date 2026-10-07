@@ -385,41 +385,98 @@
   }
 
   // ------------------------------------------------------------------ strip
+  const mmss = (s) => `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}`;
+
+  // A run's phases as the strip draws them, each with its estimated length (config
+  // `run_phases_s`). The pipeline only commits once per init, so nothing reports
+  // progress while it runs: the strip times these phases from the last commit instead.
+  function runPhases() {
+    const p = S.cfg.run_phases_s;
+    return [
+      { label: "download initial conditions", busy: "downloading initial conditions", s: p.ic },
+      ...S.cfg.leads.map((lead) => ({ label: `+${lead}`, busy: `inference +${lead} min`, s: p.step })),
+      { label: "commit", busy: "committing to Arraylake", s: p.commit, cls: "commit" },
+    ];
+  }
+
   function renderStrip() {
     const c = S.cfg;
     const now = new Date();
-    const ms = c.run_interval_min * 60000;
-    const left = ms - (now.getTime() % ms);
-    $("#countdown").textContent = `${pad(Math.floor(left / 60000))}:${pad(Math.floor((left % 60000) / 1000))}`;
     $("#clock").textContent = `${S.status === "demo" ? "DEMO" : "LIVE"} · ${fmtUTC(now)}:${pad(now.getUTCSeconds())} UTC`;
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
     $("#lastCommit").textContent = head ? `${head.id.slice(0, 8)} · ${ago(head.written_at)} ago` : "—";
 
-    const latest = S.runs[0];
+    const phases = runPhases();
     const cells = $("#cells");
-    if (cells.children.length !== c.lead_steps) {
+    if (cells.children.length !== phases.length) {
       cells.replaceChildren();
-      for (const lead of c.leads) cells.append(el("div", null, `+${lead}`));
+      for (const ph of phases) {
+        const d = el("div", ph.cls || null);
+        d.style.flexGrow = ph.s; // width proportional to the phase's estimated length
+        d.append(el("i"), el("span", null, ph.label));
+        cells.append(d);
+      }
     }
-    if (!latest) { $("#ingestLabel").textContent = "Waiting for Arraylake…"; return; }
+
+    const latest = S.runs[0];
+    if (!latest || !head) {
+      $("#countdownLabel").textContent = "NEXT RUN IN";
+      $("#countdown").textContent = "--:--";
+      $("#ingestLabel").textContent = "Waiting for Arraylake…";
+      return;
+    }
     // One commit per init: a new init lands with every lead at once, so flash them together.
     if (S.doneInit !== latest.init) {
       S.doneInit = latest.init;
-      for (const d of cells.children) {
-        d.classList.add("done");
-        d.classList.remove("flash"); void d.offsetWidth; d.classList.add("flash");
-      }
+      for (const d of cells.children) { d.classList.remove("flash"); void d.offsetWidth; d.classList.add("flash"); }
     }
-    $("#ingestLabel").textContent =
-      `Run ${hhmm(latest.init)} · complete in Arraylake · ${c.lead_steps} steps in one commit`;
+
+    // Steady state: one commit per `run_interval_min`, so the next run is taken to end one
+    // interval after the last commit and to start one run-length before that.
+    const total = phases.reduce((sum, ph) => sum + ph.s, 0);
+    const start = new Date(head.written_at).getTime() + c.run_interval_min * 60000 - total * 1000;
+    const elapsed = (now.getTime() - start) / 1000;
+
+    if (elapsed < 0) {
+      // Between runs: the last committed run stays complete until the next one starts.
+      $("#countdownLabel").textContent = "NEXT RUN IN";
+      $("#countdown").textContent = mmss(-elapsed);
+      for (const d of cells.children) {
+        d.classList.remove("past", "active");
+        d.classList.add("done");
+        d.firstChild.style.width = "";
+      }
+      $("#ingestLabel").textContent =
+        `Run ${hhmm(latest.init)} · complete in Arraylake · ${c.lead_steps} steps in one commit`;
+      return;
+    }
+
+    // A run in progress, estimated. Past the estimate it holds on a pulsing commit cell
+    // until the real commit lands.
+    let end = 0;
+    const ends = phases.map((ph) => (end += ph.s));
+    const active = elapsed < total ? ends.findIndex((e) => elapsed < e) : phases.length - 1;
+    phases.forEach((ph, k) => {
+      const d = cells.children[k];
+      d.classList.remove("done", "flash");
+      d.classList.toggle("past", k < active);
+      d.classList.toggle("active", k === active);
+      const frac = Math.min(1, Math.max(0, (elapsed - ends[k] + ph.s) / ph.s));
+      d.firstChild.style.width = `${frac * 100}%`;
+    });
+    const next = new Date(initDate(latest.init).getTime() + c.run_interval_min * 60000);
+    $("#countdownLabel").textContent = "COMMIT IN";
+    $("#countdown").textContent = mmss(Math.max(0, total - elapsed));
+    $("#ingestLabel").textContent = `Run start ${fmtUTC(next)} · ${phases[active].busy}`;
   }
 
   // ------------------------------------------------------------------ panels
   const panels = () => [...document.querySelectorAll(".panel")];
 
   function initPanels() {
+    $("#stepSeconds").textContent = S.cfg.run_phases_s.step; // same estimate the strip uses
     const prog = $("#progress");
     prog.replaceChildren(...panels().map(() => el("span")));
     showPanel(0);

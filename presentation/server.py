@@ -223,8 +223,17 @@ def poll_arraylake(stop: threading.Event) -> None:
 # --------------------------------------------------------------------------- demo poller
 
 
+def run_seconds() -> float:
+    """Estimated length of one run: download IC, every forecast step, commit."""
+    p = CONFIG["run_phases_s"]
+    return p["ic"] + CONFIG["lead_steps"] * p["step"] + p["commit"]
+
+
 def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
-    """Fake history: a run every 10 min, one commit each, written ~3 min after its start.
+    """Fake history: a run every 10 min, one commit each, written `run_seconds()` after its start.
+
+    So the booth strip's estimate (next start = last commit + interval - run length)
+    lines up exactly with the demo cadence.
 
     Returns (commits newest first, committed init times in the rolling window).
     """
@@ -236,7 +245,7 @@ def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
     for k in range(CONFIG["max_runs"]):
         start = base - dt.timedelta(minutes=interval * k)
         init = start - dt.timedelta(minutes=90)  # ~80-90 min licence lag
-        t = start + dt.timedelta(minutes=3)
+        t = start + dt.timedelta(seconds=run_seconds())
         if t > now:
             continue
         times.append(f"{init:%Y-%m-%dT%H:%M:%S}")
@@ -366,6 +375,7 @@ def public_config() -> dict:
         "variables",
         "lead_steps",
         "run_interval_min",
+        "run_phases_s",
         "max_runs",
         "panel_seconds",
         "playback_speed",
@@ -456,6 +466,14 @@ def main() -> None:
         log.warning(
             "ARRAYLAKE_API_TOKEN not set: commit polling will fail (use --demo to rehearse)"
         )
+    if not args.demo:
+        try:
+            import psycopg  # noqa: F401
+        except ImportError:
+            log.warning(
+                "psycopg missing: SQL panel will fail. Start with `uv run presentation/server.py` "
+                "(inline deps), not `uv run python presentation/server.py` (project venv)"
+            )
 
     stop = threading.Event()
     poller = poll_demo if args.demo else poll_arraylake
