@@ -45,7 +45,7 @@
     "query": [
       "SELECT lead_time, AVG(true_color) AS brightness  -- 0-255: high means cloudy, low means sunny or dark",
       "FROM \"stormscope-eu_gtc_berlin_2026\".\"root\"",
-      "WHERE time = TIMESTAMP '{init}' AND lead_time > INTERVAL '0 minutes'",
+      "WHERE time = TIMESTAMP '{init}'",
       "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",
       "  AND lon BETWEEN {lon} - {box} AND {lon} + {box}",
       "GROUP BY lead_time ORDER BY lead_time;"

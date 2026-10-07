@@ -27,8 +27,8 @@ def utcnow() -> dt.datetime:
 
 
 def all_leads() -> list[int]:
-    """Every forecast lead in minutes: lead_step_min, 2 * lead_step_min, ... lead_steps of them."""
-    return [CONFIG["lead_step_min"] * (i + 1) for i in range(CONFIG["lead_steps"])]
+    """Every stored lead in minutes: 0 (the observed satellite frame), then lead_steps forecast steps."""
+    return [CONFIG["lead_step_min"] * i for i in range(CONFIG["lead_steps"] + 1)]
 
 
 def place_queries() -> dict[str, str]:

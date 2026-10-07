@@ -165,6 +165,9 @@
     });
     map.on("load", () => {
       mapReady = true;
+      // compact attribution opens expanded until the first drag, which a booth screen never
+      // gets: fold it to the (i) button so the credits stop covering the lead-time ticks
+      document.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
       syncLayers();
       showFrame();
     });
@@ -390,7 +393,7 @@
     const box = $("#ticks");
     box.replaceChildren();
     for (const lead of S.cfg.leads) {
-      const d = el("div", null, `+${lead}`);
+      const d = el("div", lead ? null : "obs", lead ? `+${lead}` : "+0 · satellite");
       if (lead === current) d.classList.add("now");
       box.append(d);
     }
@@ -399,7 +402,8 @@
   function renderValid(run, lead) {
     if (!run || lead == null) { $("#validLabel").textContent = "waiting for the first frame…"; return; }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
-    $("#validLabel").textContent = `valid ${fmtTime(t)} ${tzName(t)} · +${lead} min forecast`;
+    const what = lead ? `+${lead} min forecast` : "observed satellite";
+    $("#validLabel").textContent = `valid ${fmtTime(t)} ${tzName(t)} · ${what}`;
   }
 
   function showNotice(text) {
@@ -417,8 +421,9 @@
   function runPhases() {
     const p = S.cfg.run_phases_s;
     return [
-      { label: "download initial conditions", busy: "downloading initial conditions", s: p.ic },
-      ...S.cfg.leads.map((lead) => ({ label: `+${lead}`, busy: `inference +${lead} min`, s: p.step })),
+      // +0 is the newest observed frame, part of the initial conditions, not an inference step
+      { label: "+0 · download satellite", busy: "downloading initial conditions (satellite −50…+0 min)", s: p.ic },
+      ...S.cfg.leads.slice(1).map((lead) => ({ label: `+${lead}`, busy: `inference +${lead} min`, s: p.step })),
       { label: "commit", busy: "committing to Arraylake", s: p.commit, cls: "commit" },
     ];
   }

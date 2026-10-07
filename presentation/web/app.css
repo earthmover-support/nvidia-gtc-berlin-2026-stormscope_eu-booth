@@ -88,6 +88,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 
 .ticks { display: flex; gap: 6px; }
 .ticks div { flex: 1 1 0; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font: 13px var(--mono); color: var(--muted); border: 1px solid #23272E; }
+.ticks div.obs { flex-grow: 2.5; } /* "+0 · satellite" needs more room than "+10" */
 .ticks div.now { background: var(--text); color: var(--ground); border-color: var(--text); font-weight: 600; }
 
 .notice { position: absolute; z-index: 3; top: 120px; left: 22px; right: 22px; padding: 10px 14px; border-radius: 8px; background: #2A1A10; color: #FFD2A6; font: 13px var(--mono); }
