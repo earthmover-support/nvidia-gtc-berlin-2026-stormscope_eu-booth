@@ -33,6 +33,8 @@ arbitrary SQL.
 
 ## For Earthmover (Vercel project setup)
 
+- [ ] Create a read-only Arraylake token for the hosted presentation (access to
+      `gtc-berlin/stormscope-eu_gtc_berlin_2026`; also the SQL password)
 - New Vercel project, root directory `presentation`, framework preset "Other"; the rest
   comes from `vercel.json`.
 - Env vars: `ARRAYLAKE_API_TOKEN` (read-only, access to
