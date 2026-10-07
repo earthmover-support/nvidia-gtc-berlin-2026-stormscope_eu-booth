@@ -661,20 +661,23 @@
     if (!r) { status.textContent = "connecting…"; empty(); return; }
     if (r.status === "idle") { status.textContent = "press Run ▸"; empty(); return; }
     if (r.status === "disabled") { status.textContent = "SQL service off"; status.classList.add("err"); empty(); return; }
-    if (r.status === "error") {
-      status.textContent = "query failed";
+    const failed = r.status === "error";
+    if (failed) {
+      // the server keeps the last result's rows on a failed re-run: show those, marked stale
+      status.textContent = r.rows && r.rows.length ? `query failed · showing result from ${ago(r.ran_at)} ago` : "query failed";
       status.classList.add("err");
       status.title = r.error || "";
-      $("#sqlFoot").textContent = (r.error || "query failed").split("\n")[0];
-      empty();
-      return;
+      $("#sqlFoot").textContent = r.message || (r.error || "query failed").split("\n")[0];
+      if (!(r.rows && r.rows.length)) { empty(); return; }
     }
     if (running) { status.textContent = "running… (a cold start takes ~30 s)"; return; } // keep the old bars, dimmed
-    renderSqlPlaces(); // restores the foot text after an error
     // first numeric column after the x column, so hand-written queries still plot
     const yi = (r.rows && r.rows[0] ? r.rows[0].findIndex((v, i) => i > 0 && typeof v === "number") : -1);
     const rows = yi > 0 ? r.rows.filter((row) => typeof row[yi] === "number") : [];
-    status.textContent = `${r.status === "demo" ? "demo · " : ""}ran ${ago(r.ran_at)} ago · ${r.seconds} s · ${r.cached ? "cached · " : ""}${(r.rows || []).length} rows`;
+    if (!failed) {
+      renderSqlPlaces(); // restores the foot text after an error
+      status.textContent = `${r.status === "demo" ? "demo · " : ""}ran ${ago(r.ran_at)} ago · ${r.seconds} s · ${r.cached ? "cached · " : ""}${(r.rows || []).length} rows`;
+    }
     if (!rows.length) { empty(); return; }
     const ys = rows.map((row) => row[yi]);
     const lo = Math.min(...ys), hi = Math.max(...ys);

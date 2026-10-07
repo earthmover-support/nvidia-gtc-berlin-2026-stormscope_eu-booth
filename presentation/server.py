@@ -296,9 +296,7 @@ def run_sql_once(query: str) -> dict:
     """Run `query` on the Zax-SQL service; returns the fields for `SHARED.set_sql`."""
     import psycopg
 
-    notices: list[str] = []
-    t0 = time.perf_counter()
-    with psycopg.connect(
+    kw = dict(
         host=sql_host(),
         port=5432,
         sslmode="require",
@@ -307,7 +305,18 @@ def run_sql_once(query: str) -> dict:
         password=os.environ["ARRAYLAKE_API_TOKEN"],
         autocommit=True,
         connect_timeout=15,
-    ) as conn:
+    )
+    notices: list[str] = []
+    t0 = time.perf_counter()
+    try:
+        conn = psycopg.connect(**kw)
+    except psycopg.OperationalError as exc:
+        # retry a failed connect once: no query was sent yet. A query dropped mid-run is
+        # not retried, it may still be pending on the service (issue #36)
+        log.warning("sql connect failed, retrying: %s", exc)
+        time.sleep(3)
+        conn = psycopg.connect(**kw)
+    with conn:
         conn.add_notice_handler(lambda d: notices.append(d.message_primary or ""))
         cur = conn.execute(query)
         cols = [d.name for d in cur.description or []]
@@ -321,6 +330,16 @@ def run_sql_once(query: str) -> dict:
         notices=notices[-3:],
         ran_at=utcnow().isoformat(),
     )
+
+
+def sql_error_message(exc: Exception) -> str:
+    """One short line for the page; the full error goes to the log and the tooltip."""
+    text = str(exc).strip()
+    if getattr(exc, "sqlstate", True) is None:  # psycopg error without SQLSTATE: no connection
+        if "timeout" in text or text.startswith("connection failed"):
+            return "SQL service did not answer, try again in a minute"
+        return "SQL service dropped the connection, try again in a minute"
+    return (text.splitlines() or ["query failed"])[0][:160]
 
 
 def head_id() -> str | None:
@@ -375,7 +394,15 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
                 result = run_sql_once(query)
             except Exception as exc:
                 log.warning("sql failed: %s", exc)
-                SHARED.set_sql(status="error", query=query, error=str(exc)[:300])
+                # keep the last result's bars on screen, the page marks them as stale
+                last = {k: prev[k] for k in ("columns", "rows", "seconds", "ran_at") if k in prev}
+                SHARED.set_sql(
+                    **last,
+                    status="error",
+                    query=query,
+                    error=str(exc)[:300],
+                    message=sql_error_message(exc),
+                )
                 continue
         cache[query] = result
         SHARED.set_sql(**result)
