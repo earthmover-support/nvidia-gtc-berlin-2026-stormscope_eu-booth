@@ -17,7 +17,8 @@
   "lead_steps": 12,
   "lead_step_min": 10,
   "run_interval_min": 10,
-  "max_runs": 6,
+  "run_phases_s": { "ic": 100, "step": 17, "commit": 6 },
+  "max_runs": 12,
   "poll_seconds": 5,
   "history_depth": 120,
 
@@ -27,7 +28,7 @@
 
   "station": { "name": "STATION Berlin", "lat": 52.4999581, "lon": 13.3757385 },
   "camera": { "lon": 12.0, "lat": 49.0, "zoom": 3.2, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,
-              "cover": [-12, 34, 40, 64], "max_zoom": 8.5, "idle_reset_s": 30 },
+              "cover": [-12, 34, 40, 64], "min_zoom": 2, "max_zoom": 8.5, "idle_reset_s": 30 },
 
   "viewer_url": "https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/",
   "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
@@ -42,7 +43,7 @@
       "London":    [51.5072, -0.1276]
     },
     "query": [
-      "SELECT lead_time, AVG(true_color) AS brightness",
+      "SELECT lead_time, AVG(true_color) AS brightness  -- 0-255: high means cloudy, low means sunny or dark",
       "FROM \"stormscope-eu_gtc_berlin_2026\".\"root\"",
       "WHERE time = TIMESTAMP '{init}' AND lead_time > INTERVAL '0 minutes'",
       "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",

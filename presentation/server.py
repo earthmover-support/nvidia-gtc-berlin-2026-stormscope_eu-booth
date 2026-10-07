@@ -223,8 +223,17 @@ def poll_arraylake(stop: threading.Event) -> None:
 # --------------------------------------------------------------------------- demo poller
 
 
+def run_seconds() -> float:
+    """Estimated length of one run: download IC, every forecast step, commit."""
+    p = CONFIG["run_phases_s"]
+    return p["ic"] + CONFIG["lead_steps"] * p["step"] + p["commit"]
+
+
 def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
-    """Fake history: a run every 10 min, one commit each, written ~3 min after its start.
+    """Fake history: a run every 10 min, one commit each, written `run_seconds()` after its start.
+
+    So the booth strip's estimate (next start = last commit + interval - run length)
+    lines up exactly with the demo cadence.
 
     Returns (commits newest first, committed init times in the rolling window).
     """
@@ -236,7 +245,7 @@ def demo_commits(now: dt.datetime) -> tuple[list[dict], list[str]]:
     for k in range(CONFIG["max_runs"]):
         start = base - dt.timedelta(minutes=interval * k)
         init = start - dt.timedelta(minutes=90)  # ~80-90 min licence lag
-        t = start + dt.timedelta(minutes=3)
+        t = start + dt.timedelta(seconds=run_seconds())
         if t > now:
             continue
         times.append(f"{init:%Y-%m-%dT%H:%M:%S}")
@@ -283,11 +292,11 @@ def _jsonable(v):
         return str(v)
 
 
-def run_sql_once() -> None:
+def run_sql_once(query: str) -> dict:
+    """Run `query` on the Zax-SQL service; returns the fields for `SHARED.set_sql`."""
     import psycopg
 
     notices: list[str] = []
-    query = sql_text()
     t0 = time.perf_counter()
     with psycopg.connect(
         host=sql_host(),
@@ -303,7 +312,7 @@ def run_sql_once() -> None:
         cur = conn.execute(query)
         cols = [d.name for d in cur.description or []]
         rows = [[_jsonable(v) for v in row] for row in cur.fetchmany(CONFIG["sql"]["max_rows"])]
-    SHARED.set_sql(
+    return dict(
         status="ok",
         query=query,
         columns=cols,
@@ -314,9 +323,21 @@ def run_sql_once() -> None:
     )
 
 
+def head_id() -> str | None:
+    """Snapshot id of the newest commit, so cached SQL results expire with each run."""
+    commits = SHARED.get("state").get("commits") or []
+    return commits[0]["id"] if commits else None
+
+
 def poll_sql(stop: threading.Event, demo: bool) -> None:
-    """Run the query only when the page asks for it (Run on panel 06), never on a timer."""
+    """Run the query only when the page asks for it (Run on panel 06), never on a timer.
+
+    Results are cached per (head commit, query text): pressing Run again before the next
+    run lands shows the stored result, marked `cached`, without querying the service.
+    """
     wake = SHARED.sql_wake
+    cache: dict[str, dict] = {}  # query text -> result, for commit `cache_head`
+    cache_head = None
     while not stop.is_set():
         if not demo and not sql_host():
             SHARED.set_sql(
@@ -328,27 +349,36 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
         if not wake.wait(1):
             continue
         wake.clear()
+        query = sql_text()
+        if head_id() != cache_head:
+            cache, cache_head = {}, head_id()
+        if query in cache:
+            SHARED.set_sql(**cache[query], cached=True)
+            continue
         if demo:
             import math
 
-            phase = time.time() / 600 + len(sql_text()) % 7
+            phase = time.time() / 600 + len(query) % 7
             rows = [[m, 60 + 25 * math.sin(m / 20 + phase)] for m in all_leads()]
-            SHARED.set_sql(
+            result = dict(
                 status="demo",
-                query=sql_text(),
+                query=query,
                 columns=["lead_time", "brightness"],
                 rows=rows,
                 seconds=0.4,
                 ran_at=utcnow().isoformat(),
             )
-            continue
-        prev = SHARED.get("sql")
-        SHARED.set_sql(**{**prev, "status": "running", "query": sql_text()})
-        try:
-            run_sql_once()
-        except Exception as exc:
-            log.warning("sql failed: %s", exc)
-            SHARED.set_sql(status="error", query=sql_text(), error=str(exc)[:300])
+        else:
+            prev = SHARED.get("sql")
+            SHARED.set_sql(**{**prev, "status": "running", "query": query, "cached": False})
+            try:
+                result = run_sql_once(query)
+            except Exception as exc:
+                log.warning("sql failed: %s", exc)
+                SHARED.set_sql(status="error", query=query, error=str(exc)[:300])
+                continue
+        cache[query] = result
+        SHARED.set_sql(**result)
 
 
 # --------------------------------------------------------------------------- HTTP
@@ -366,6 +396,7 @@ def public_config() -> dict:
         "variables",
         "lead_steps",
         "run_interval_min",
+        "run_phases_s",
         "max_runs",
         "panel_seconds",
         "playback_speed",
@@ -456,6 +487,14 @@ def main() -> None:
         log.warning(
             "ARRAYLAKE_API_TOKEN not set: commit polling will fail (use --demo to rehearse)"
         )
+    if not args.demo:
+        try:
+            import psycopg  # noqa: F401
+        except ImportError:
+            log.warning(
+                "psycopg missing: SQL panel will fail. Start with `uv run presentation/server.py` "
+                "(inline deps), not `uv run python presentation/server.py` (project venv)"
+            )
 
     stop = threading.Event()
     poller = poll_demo if args.demo else poll_arraylake
