@@ -141,7 +141,12 @@ uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arr
 | `--device` | `auto` | `auto` \| `cuda` \| `cpu` |
 
 It stores only two RGB composites, not the 16 raw channels. Both are
-`(ensemble, time, lead_time, y, x, rgb)` float32 in 0–1:
+`(ensemble, time, lead_time, y, x, rgb)` uint8 in 0–255: each composite is computed in
+0–1, then stored as `round(x * 255)` clipped to 1–255. Missing pixels (off the Earth's disk,
+or a step not written yet) are 0, declared as CF `_FillValue` so the tiles service renders
+them transparent; `valid_min`/`valid_max` are 0/255. Tile requests use
+`colorscalerange=0,255`. The pipeline refuses to append to a repo whose composites are still
+float.
 
 - `true_color`: the VIS 0.6/0.5/0.4 µm recipe.
 - `airmass`: the
