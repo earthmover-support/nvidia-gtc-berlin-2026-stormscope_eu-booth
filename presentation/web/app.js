@@ -5,6 +5,8 @@
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
  *   /api/sql     -> latest Zax-SQL result (polled every 10 s, 1 s while a query runs)
  *                   POST {query} runs what is in the panel 06 editor; only Run sends it
+ *                   Hosted page (`sql_editable: false`): the editor is read-only and Run
+ *                   sends GET ?place=&init=, answered once the query is done (CDN-cached)
  * Tiles are fetched by MapLibre straight from the public Flux tiles service,
  * one raster layer per (init time, lead time) selected with the `time` and
  * `lead_time` query parameters on the branch (or pinned to a snapshot id).
@@ -610,6 +612,7 @@
   async function runSql(query) {
     holdPanel();
     S.sqlDirty = false;
+    if (!S.cfg.sql_editable) return runPlaceSql();
     try {
       const res = await fetch("/api/sql", {
         method: "POST",
@@ -626,6 +629,22 @@
     S.sql = { ...(S.sql || {}), status: "running", ran_at: null };
     renderSql();
     pollSqlFast();
+  }
+
+  // hosted page: the server runs only a city chip's query, for the newest init
+  async function runPlaceSql() {
+    const run = latestShown();
+    if (!run || !S.sqlPlace) return;
+    S.sql = { ...(S.sql || {}), status: "running", ran_at: null };
+    renderSql();
+    try {
+      const res = await fetch(`/api/sql?${new URLSearchParams({ place: S.sqlPlace, init: run.time })}`);
+      const cache = res.headers.get("x-vercel-cache");
+      S.sql = { ...(await res.json()), cached: cache === "HIT" || cache === "STALE" };
+    } catch (e) {
+      S.sql = { status: "error", error: String(e) };
+    }
+    renderSql();
   }
 
   // poll every second until the query we just sent has finished
@@ -693,6 +712,10 @@
     S.sqlPlace = placeOf(defaultSql());
     box.value = defaultSql();
     renderSqlPlaces();
+    if (!S.cfg.sql_editable) {
+      box.readOnly = true; // hosted page: the chips pick the query, nobody types one
+      $("#sqlReset").hidden = true;
+    }
     box.addEventListener("focus", holdPanel);
     box.addEventListener("input", () => {
       holdPanel();
@@ -719,8 +742,11 @@
       const res = await fetch("/api/state", { cache: "no-store" });
       const st = await res.json();
       S.status = st.status;
-      S.commits = st.commits || [];
-      S.runs = st.runs || [];
+      // the hosted page answers a failed read with no runs: keep showing the last ones
+      if (st.status !== "error" || (st.runs || []).length) {
+        S.commits = st.commits || [];
+        S.runs = st.runs || [];
+      }
       showNotice(st.status === "error" ? `Arraylake unreachable, showing last known data · ${st.error}` : "");
     } catch (e) {
       S.status = "error";
@@ -762,8 +788,21 @@
     });
   }
 
+  // ------------------------------------------------------------------ fit
+  // the page is laid out for the 1920 x 1080 booth TV; smaller windows get it zoomed down
+  function fitStage() {
+    const app = $(".app");
+    const fit = Math.min(1, window.innerWidth / 1920, window.innerHeight / 1080);
+    app.classList.toggle("fit", fit < 1);
+    app.style.setProperty("--fit", fit);
+    // centre it vertically; margins are in the zoomed element's own pixels
+    app.style.marginTop = fit < 1 ? `${(window.innerHeight / fit - 1080) / 2}px` : "";
+  }
+
   // ------------------------------------------------------------------ boot
   async function boot() {
+    fitStage();
+    window.addEventListener("resize", fitStage);
     S.cfg = await (await fetch("/api/config")).json();
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
     initSqlEditor();
@@ -775,8 +814,13 @@
     initKeys();
     await refreshState();
     setInterval(refreshState, 4000);
-    refreshSql();
-    setInterval(refreshSql, 10000);
+    if (S.cfg.sql_editable) {
+      refreshSql();
+      setInterval(refreshSql, 10000);
+    } else {
+      S.sql = { status: "idle" }; // nothing to poll: Run waits for its own answer
+      renderSql();
+    }
     setInterval(() => { renderStrip(); renderCommits(); }, 1000);
     scheduleAnim();
   }

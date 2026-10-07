@@ -34,6 +34,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
   grid-template-rows: 56px minmax(0, 1fr) 108px;
   gap: 20px;
 }
+/* smaller than the booth TV (a laptop opening the hosted page): the 1920 x 1080 layout,
+   zoomed down to fit; app.js sets --fit */
+.app.fit { width: 1920px; height: 1080px; zoom: var(--fit); margin: 0 auto; }
 
 /* ---------------- header ---------------- */
 .top { display: flex; align-items: center; gap: 20px; min-width: 0; }
