@@ -25,11 +25,11 @@ see `MIN_LAG` in the script), so it can be run on a schedule as is. See
 
 The forecasts reach screens in three ways:
 
-| | Runs as | Live SQL | Audience |
-|---|---|---|---|
-| **Booth presentation** ([`presentation/`](presentation/)) | `uv run presentation/server.py` on the booth machine, full screen on the TV | editable | GTC Berlin visitors |
-| **Hosted presentation** ([`presentation/`](presentation/)) | Vercel project, root directory `presentation` | fixed: the Berlin / Paris / London queries only, cached per init | internal sharing, unlisted public URL |
-| **Mobile site** ([`site/`](site/)) | Vercel project, root directory `site`, static | none | phones, via the booth QR code |
+| | Runs as | Live SQL | Audience | Link |
+|---|---|---|---|---|
+| **Booth presentation** ([`presentation/`](presentation/)) | `uv run presentation/server.py` on the booth machine, full screen on the TV | editable | GTC Berlin visitors | |
+| **Hosted presentation** ([`presentation/`](presentation/)) | Vercel project, root directory `presentation` | fixed: the Berlin / Paris / London queries only, cached per init | internal sharing, unlisted public URL | [Vercel project](https://vercel.com/earthmover/nvidia-gtc-berlin-2026-stormscope-eu-booth) |
+| **Mobile site** ([`site/`](site/)) | Vercel project, root directory `site`, static | none | phones, via the booth QR code | [nvidia-gtc-berlin-2026-stormscopeeu.vercel.app](https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/) ([Vercel project](https://vercel.com/earthmover/nvidia-gtc-berlin-2026-stormscope_eu-booth-site)) |
 
 Both presentation deployments serve the same `presentation/web/` page and the same logic in
 `presentation/booth.py`. The difference is the `sql_editable` flag in `/api/config`: `server.py`
