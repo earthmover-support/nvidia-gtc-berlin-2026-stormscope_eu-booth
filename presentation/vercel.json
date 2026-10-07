@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run vendor",
+  "outputDirectory": "web",
+  "functions": {
+    "api/*.py": { "maxDuration": 60, "excludeFiles": "{node_modules/**,web/**,server.py}" }
+  }
+}

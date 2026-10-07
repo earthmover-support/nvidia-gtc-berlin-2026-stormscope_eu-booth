@@ -21,6 +21,26 @@ see `MIN_LAG` in the script), so it can be run on a schedule as is. See
 **Ingest target:**
 [gtc-berlin/stormscope-eu_gtc_berlin_2026](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
 
+## Deployments
+
+The forecasts reach screens in three ways:
+
+| | Runs as | Live SQL | Audience |
+|---|---|---|---|
+| **Booth presentation** ([`presentation/`](presentation/)) | `uv run presentation/server.py` on the booth machine, full screen on the TV | editable | GTC Berlin visitors |
+| **Hosted presentation** ([`presentation/`](presentation/)) | Vercel project, root directory `presentation` | fixed: the Berlin / Paris / London queries only, cached per init | internal sharing, unlisted public URL |
+| **Mobile site** ([`site/`](site/)) | Vercel project, root directory `site`, static | none | phones, via the booth QR code |
+
+Both presentation deployments serve the same `presentation/web/` page and the same logic in
+`presentation/booth.py`. The difference is the `sql_editable` flag in `/api/config`: `server.py`
+answers `true`, the Vercel functions in `presentation/api/` answer `false`. Each Vercel project
+skips commits that change nothing under its own root directory, so a presentation change
+does not redeploy the mobile site, and the other way round.
+
+Earthmover owns both Vercel projects and the read-only Arraylake token the hosted
+presentation uses. The hosted presentation needs the tiles and SQL services up for as long
+as it is shared.
+
 ## Viz
 
 [Browse the dataset on Arraylake](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
