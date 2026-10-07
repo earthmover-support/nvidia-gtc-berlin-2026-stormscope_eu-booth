@@ -2,16 +2,14 @@
   "org": "gtc-berlin",
   "repo": "gtc-berlin/stormscope-eu_gtc_berlin_2026",
   "branch": "main",
-  "group": "",
 
   "tile_base": "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu_gtc_berlin_2026",
-  "tile_ref_mode": "snapshot",
   "data_bounds": [-63.76155, 29.80654, 72.30417, 75.78313],
   "max_tile_level": 7,
 
   "variables": {
-    "true_color": { "style": "raster/rgb", "colorscalerange": "0,255", "available": true },
-    "airmass":    { "style": "raster/rgb", "colorscalerange": "0,255", "available": true }
+    "true_color": { "style": "raster/rgb", "colorscalerange": "0,255" },
+    "airmass":    { "style": "raster/rgb", "colorscalerange": "0,255" }
   },
 
   "lead_steps": 12,

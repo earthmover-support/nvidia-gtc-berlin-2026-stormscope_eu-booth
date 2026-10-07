@@ -119,19 +119,14 @@ def read_commits(repo) -> list[dict]:
 
 
 def read_times(repo) -> list[str]:
-    """Init times currently held in the repo (the `time` coordinate, NaT slots dropped).
-
-    With `init` set in config.json ("YYYY-MM-DDTHH:MM"), only that run is offered.
-    """
+    """Init times currently held in the repo (the `time` coordinate, NaT slots dropped)."""
     import numpy as np
     import zarr
 
     session = repo.readonly_session(branch=CONFIG["branch"])
-    group = zarr.open_group(session.store, mode="r", path=CONFIG.get("group", "") or None)
+    group = zarr.open_group(session.store, mode="r")
     values = np.asarray(group["time"][:])
-    times = [np.datetime_as_string(v, unit="s") for v in values if not np.isnat(v)]
-    pin = CONFIG.get("init")
-    return [t for t in times if t.startswith(pin)] if pin else times
+    return [np.datetime_as_string(v, unit="s") for v in values if not np.isnat(v)]
 
 
 # --------------------------------------------------------------------------- SQL
@@ -204,9 +199,7 @@ def public_config(sql_editable: bool) -> dict:
     keys = [
         "org",
         "repo",
-        "group",
         "tile_base",
-        "tile_ref_mode",
         "data_bounds",
         "max_tile_level",
         "variables",

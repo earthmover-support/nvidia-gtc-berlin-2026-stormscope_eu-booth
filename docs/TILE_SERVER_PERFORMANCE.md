@@ -14,7 +14,7 @@ Related: [WEB_TILES_SERVICE_REQUIREMENTS.md](WEB_TILES_SERVICE_REQUIREMENTS.md) 
    (`X-Multiscale-Level: root`) and costs about 1 CPU-second. A full booth run takes ~4 min
    on XS and ~2 min on S for one browser. The target (a run in ~10 s) is ~20× away.
 2. **Use snapshot-pinned tile URLs.** Branch URLs come back with `max-age=0`, snapshot URLs
-   with `max-age=2628000` (a month). The booth page uses snapshots (`tile_ref_mode: "snapshot"`).
+   with `max-age=2628000` (a month). The booth page uses snapshots.
 3. **Load leads in playback order.** The service is the bottleneck, so requesting all 12
    leads at once leaves every frame half drawn for minutes. In order, the first complete
    frame arrives in ~20 s.
