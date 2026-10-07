@@ -66,7 +66,6 @@
       </a>
     </div>
   </div>
-  <div><div class="label">Arraylake branch</div><select id="ref"></select></div>
   <div><div class="label">Init (<span id="tz">UTC</span>)</div><select id="init"></select></div>
   <div>
     <div class="label">Variable</div>
@@ -86,9 +85,8 @@
 // Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
 const BASE = "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin";
 const REPO = "stormscope-eu_gtc_berlin_2026";
-// Branches offered in the dropdown; the tiles service has no public endpoint that lists them.
-// Every listed branch stores the RGB composites as uint8 bytes, hence one colour scale.
-const BRANCHES = ["main"];
+const REF = "main";
+// The RGB composites are stored as uint8 bytes, hence one colour scale.
 const COLORSCALERANGE = "0,255";
 const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
 const FRAME_MS = 800;
@@ -134,8 +132,8 @@ map.addControl(new maplibregl.NavigationControl());
 
 // /info fails on this repo; /tree (xarray's HTML repr) carries the coordinate arrays. Past 200
 // values xarray abbreviates an array to its first and last three, so the "..." entry is dropped.
-async function loadCoords(ref) {
-  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${ref}/tree`, { cache: "no-store" })).text();
+async function loadCoords() {
+  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${REF}/tree`, { cache: "no-store" })).text();
   const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
   const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, "")).filter((v) => v !== "...");
   return {
@@ -143,14 +141,14 @@ async function loadCoords(ref) {
     leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
   };
 }
-const coords = loadCoords(BRANCHES[0]); // runs while the basemap style loads
+const coords = loadCoords(); // runs while the basemap style loads
 
 function tileUrl(time, lead) {
   const p = new URLSearchParams({
     variables: variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
     time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
-  return `${BASE}/${REPO}/${$("ref").value}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+  return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
 }
 
 // One raster layer per lead time, all kept loaded; playback only flips opacity.
@@ -222,7 +220,7 @@ function setPlaying(on) {
   $("play").textContent = on ? "❚❚" : "▶";
 }
 
-// Fills the init selector from a branch's coordinates, keeping the selected init if the branch has it.
+// Fills the init selector from the coordinates, keeping the selected init if it is still there.
 async function useCoords(pending) {
   let times;
   try {
@@ -242,12 +240,7 @@ async function useCoords(pending) {
 map.on("load", async () => {
   map.setProjection({ type: "globe" });
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
-  $("ref").innerHTML = BRANCHES.map((b) => `<option>${b}</option>`).join("");
   if (!(await useCoords(coords))) return;
-  $("ref").onchange = async () => {
-    $("status").textContent = "Loading inits…";
-    if (await useCoords(loadCoords($("ref").value))) loadRun();
-  };
   $("init").onchange = loadRun;
   const pills = document.querySelectorAll(".pill");
   for (const b of pills) b.onclick = () => {
@@ -265,11 +258,11 @@ map.on("load", async () => {
 
 // Switches to the newest init once the pipeline has committed one; a failed check waits for the next.
 async function pollInits() {
-  const ref = $("ref").value, newest = $("init").options[0]?.value;
+  const newest = $("init").options[0]?.value;
   let c;
-  try { c = await loadCoords(ref); } catch { return; }
+  try { c = await loadCoords(); } catch { return; }
   const latest = c.times.at(-1);
-  if (latest === newest || ref !== $("ref").value) return;
+  if (latest === newest) return;
   await useCoords(c);
   $("init").value = latest;
   loadRun();
