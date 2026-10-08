@@ -93,8 +93,9 @@ animate. Measured with headless Chrome (1920×1080, cold browser cache, 180 s):
 | one source at a time, in playback order | 17–25 s | 7–12 of 12 |
 
 The page adds the next lead's source once the previous one has loaded, or after 20 s if a
-tile hangs. The loop still cycles through all leads. Frames that haven't loaded
-show partly drawn and fill in from +10 onward.
+tile hangs. The loop holds the first frame until every lead has loaded (or timed out), so it
+never shows a half-drawn frame. A new init loads behind the run on screen, which keeps
+looping until the new run is complete.
 
 ## Other observations
 
