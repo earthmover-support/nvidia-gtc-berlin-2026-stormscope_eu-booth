@@ -109,6 +109,7 @@ const TZ = (() => {
 const HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const YMD = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
 const utc = (t) => new Date(Date.parse(t + "Z"));
+const initLabel = (t) => `${YMD.format(utc(t))} ${HM.format(utc(t))}`;
 // Zone abbreviation for `d` (CEST vs CET depends on the date). en-GB names the European
 // zones, en-US the American ones; anywhere else this is an offset like "GMT+3".
 function tzName(d) {
@@ -119,8 +120,11 @@ function tzName(d) {
   return /^(GMT|UTC)[+-]/.test(gb) ? name("en-US") : gb;
 }
 $("tz").textContent = tzName(new Date());
-let leads = [], variable = "true_color", frame = 0, added = 0, addedAt = 0, timer = null, firstLabel;
-const loaded = new Set(); // indices of frames whose tiles have all arrived
+let leads = [], variable = "true_color", frame = 0, timer = null, firstLabel, runs = 0;
+// A run is one init and variable: { id, time, variable, added, addedAt, loaded }, where
+// `loaded` holds the indices of frames whose tiles have all arrived.
+let run = null; // on screen
+let next = null; // a newer init loading in the background; replaces `run` once complete
 
 const map = new maplibregl.Map({
   container: "map",
@@ -143,10 +147,10 @@ async function loadCoords() {
 }
 const coords = loadCoords(); // runs while the basemap style loads
 
-function tileUrl(time, lead) {
+function tileUrl(r, lead) {
   const p = new URLSearchParams({
-    variables: variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
-    time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
+    variables: r.variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
+    time: r.time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
   return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
 }
@@ -154,54 +158,107 @@ function tileUrl(time, lead) {
 // One raster layer per lead time, all kept loaded; playback only flips opacity.
 // Frames are added one at a time, each once the previous one has loaded (or timed out):
 // the service renders slowly, and asking for every lead at once leaves all frames half drawn.
-function loadRun() {
-  for (let i = 0; i < added; i++) {
-    map.removeLayer(`frame-${i}`);
-    map.removeSource(`frame-${i}`);
-  }
-  added = 0;
-  loaded.clear();
-  addNext();
-  show(frame); // the valid-time label depends on the init
+// A run the visitor picks replaces the one on screen at once; a new init found by polling
+// loads behind it, so the animation keeps going until the new run is complete.
+function startRun(time, background = false) {
+  const keep = !background && next?.time === time && next.variable === variable; // keeps the frames it has
+  if (next && !keep) dropRun(next);
+  const r = keep ? next : { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
+  next = background ? r : null;
+  if (!background) promote(r, 0);
+  tick();
 }
 
-function addNext() {
-  const i = added;
-  if (i >= leads.length || (i > 0 && !loaded.has(i - 1) && Date.now() - addedAt < LOAD_TIMEOUT_MS)) return;
-  const id = `frame-${i}`;
-  map.addSource(id, { type: "raster", tiles: [tileUrl($("init").value, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
+const fid = (r, i) => `frame-${r.id}-${i}`;
+
+function promote(r, k) {
+  if (run) dropRun(run);
+  run = r;
+  next = null;
+  $("init").value = r.time;
+  show(k);
+}
+
+function dropRun(r) {
+  for (let i = 0; i < r.added; i++) {
+    map.removeLayer(fid(r, i));
+    map.removeSource(fid(r, i));
+  }
+}
+
+// Every frame has been added, and the last one has loaded or timed out.
+const complete = (r) =>
+  r.added === leads.length && (r.loaded.has(leads.length - 1) || Date.now() - r.addedAt >= LOAD_TIMEOUT_MS);
+
+// The background run only loads once the one on screen is complete, so the two never
+// compete for the tiles service.
+function tick() {
+  addNext(run);
+  if (next && complete(run)) {
+    addNext(next);
+    if (complete(next)) promote(next, next.loaded.has(frame) ? frame : 0); // keep the loop's place if that frame loaded
+  }
+  status();
+}
+
+function addNext(r) {
+  const i = r.added;
+  if (i >= leads.length || (i > 0 && !r.loaded.has(i - 1) && Date.now() - r.addedAt < LOAD_TIMEOUT_MS)) return;
+  const id = fid(r, i);
+  map.addSource(id, { type: "raster", tiles: [tileUrl(r, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
   map.addLayer({
     id, type: "raster", source: id,
-    paint: { "raster-opacity": i === frame ? 0.9 : 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 },
+    paint: { "raster-opacity": r === run && i === frame ? 0.9 : 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 },
   }, firstLabel);
-  added++;
-  addedAt = Date.now();
-  setTimeout(addNext, LOAD_TIMEOUT_MS);
-  status();
+  r.added++;
+  r.addedAt = Date.now();
+  setTimeout(tick, LOAD_TIMEOUT_MS);
 }
 
 map.on("sourcedata", (e) => {
-  const i = Number(e.sourceId?.replace("frame-", "")); // NaN for the basemap's sources
-  if (!e.tile || !(i < added) || loaded.has(i) || !map.isSourceLoaded(e.sourceId)) return;
-  loaded.add(i);
-  status();
-  addNext();
+  const [, id, i] = e.sourceId?.match(/^frame-(\d+)-(\d+)$/) ?? []; // none for the basemap's sources
+  const r = [run, next].find((r) => r?.id === Number(id));
+  if (!e.tile || !r || r.loaded.has(+i) || !map.isSourceLoaded(e.sourceId)) return;
+  r.loaded.add(+i);
+  tick();
 });
 
-const status = () => ($("status").textContent = `${loaded.size}/${leads.length} frames loaded`);
+// With the globe turned away from Europe a frame has no tile in view, so it never gets a tile
+// event above; once the map is idle, every source it draws has loaded.
+map.on("idle", () => {
+  if (!run) return;
+  for (const r of [run, next]) for (let i = 0; r && i < r.added; i++) r.loaded.add(i);
+  tick();
+});
+
+function status() {
+  $("status").textContent =
+    `${run.loaded.size}/${leads.length} frames loaded${complete(run) ? "" : ", playing once all are in"}` +
+    (next ? ` · newer run ${next.loaded.size}/${leads.length}` : "");
+  renderOptions();
+}
+
+// The init selector's labels; the init loading in the background shows its progress.
+function renderOptions() {
+  for (const o of $("init").options) {
+    o.textContent = initLabel(o.value) + (o.value === next?.time ? ` · loading ${next.loaded.size}/${leads.length}` : "");
+  }
+}
 
 function show(k) {
-  if (map.getLayer(`frame-${frame}`)) map.setPaintProperty(`frame-${frame}`, "raster-opacity", 0);
+  if (map.getLayer(fid(run, frame))) map.setPaintProperty(fid(run, frame), "raster-opacity", 0);
   frame = k;
-  if (map.getLayer(`frame-${k}`)) map.setPaintProperty(`frame-${k}`, "raster-opacity", 0.9);
+  if (map.getLayer(fid(run, k))) map.setPaintProperty(fid(run, k), "raster-opacity", 0.9);
   $("slider").value = k;
-  const valid = new Date(utc($("init").value).getTime() + leads[k] * 60e3);
+  const valid = new Date(utc(run.time).getTime() + leads[k] * 60e3);
   $("lead").textContent = `${leads[k] === 0 ? "analysis" : "+" + leads[k] + " min"} · valid ${HM.format(valid)} ${tzName(valid)}`;
 }
 
-// Playback steps through the frames that have finished loading.
+// Playback holds the first frame until the run is complete, then steps through the frames
+// that have finished loading (a frame that timed out is skipped).
 function step() {
-  const ready = [...loaded].sort((a, b) => a - b);
+  if (!complete(run)) return;
+  const ready = [...run.loaded].sort((a, b) => a - b);
   if (ready.length) show(ready.find((k) => k > frame) ?? ready[0]);
 }
 
@@ -230,7 +287,8 @@ async function useCoords(pending) {
     return false;
   }
   const prev = $("init").value;
-  $("init").innerHTML = times.slice().reverse().map((t) => `<option value="${t}">${YMD.format(utc(t))} ${HM.format(utc(t))}</option>`).join("");
+  $("init").innerHTML = times.slice().reverse().map((t) => `<option value="${t}"></option>`).join("");
+  renderOptions();
   if (times.includes(prev)) $("init").value = prev;
   $("slider").max = leads.length - 1;
   frame = Math.min(frame, leads.length - 1);
@@ -241,31 +299,30 @@ map.on("load", async () => {
   map.setProjection({ type: "globe" });
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
   if (!(await useCoords(coords))) return;
-  $("init").onchange = loadRun;
+  $("init").onchange = () => startRun($("init").value);
   const pills = document.querySelectorAll(".pill");
   for (const b of pills) b.onclick = () => {
     for (const p of pills) p.classList.toggle("active", p === b);
     variable = b.dataset.var;
-    loadRun();
+    startRun(next?.time ?? $("init").value); // picks up a newer init still loading in the background
   };
   $("slider").oninput = (e) => { setPlaying(false); show(+e.target.value); };
   $("play").onclick = () => setPlaying(!timer);
-  loadRun();
-  show(0);
+  startRun($("init").value);
   setPlaying(true);
   setInterval(pollInits, POLL_MS);
 });
 
-// Switches to the newest init once the pipeline has committed one; a failed check waits for the next.
+// Loads the newest init once the pipeline has committed one; a failed check waits for the next.
 async function pollInits() {
   const newest = $("init").options[0]?.value;
   let c;
   try { c = await loadCoords(); } catch { return; }
   const latest = c.times.at(-1);
-  if (latest === newest) return;
+  const sameLeads = c.leads.join() === leads.join(); // runs count their frames against `leads`
+  if (latest === newest && sameLeads) return;
   await useCoords(c);
-  $("init").value = latest;
-  loadRun();
+  startRun(latest, sameLeads);
 }
 </script>
 </body>
