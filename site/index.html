@@ -94,6 +94,10 @@ const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's til
 const FRAME_MS = 800;
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
 
+// Keep tiles across variable switches and reloads; see sw.js.
+// Service workers need https or localhost; opened as a file:// page, tiles aren't cached.
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.warn("No tile cache:", e.message));
+
 const $ = (id) => document.getElementById(id);
 let leads = [], variable = "true_color", frame = 0, added = 0, addedAt = 0, timer = null, firstLabel;
 const loaded = new Set(); // indices of frames whose tiles have all arrived
