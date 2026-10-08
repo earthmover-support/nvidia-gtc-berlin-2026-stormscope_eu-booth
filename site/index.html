@@ -223,6 +223,14 @@ map.on("sourcedata", (e) => {
   tick();
 });
 
+// With the globe turned away from Europe a frame has no tile in view, so it never gets a tile
+// event above; once the map is idle, every source it draws has loaded.
+map.on("idle", () => {
+  if (!run) return;
+  for (const r of [run, next]) for (let i = 0; r && i < r.added; i++) r.loaded.add(i);
+  tick();
+});
+
 function status() {
   $("status").textContent =
     `${run.loaded.size}/${leads.length} frames loaded${complete(run) ? "" : ", playing once all are in"}` +
