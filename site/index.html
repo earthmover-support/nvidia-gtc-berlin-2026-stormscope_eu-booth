@@ -93,6 +93,10 @@ const FRAME_MS = 800;
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
 const POLL_MS = 60000; // how often to look for a new init
 
+// Keep tiles across variable switches and reloads; see sw.js.
+// Service workers need https or localhost; opened as a file:// page, tiles aren't cached.
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.warn("No tile cache:", e.message));
+
 const $ = (id) => document.getElementById(id);
 
 // Times show in the viewer's own zone, or Berlin's when the browser reports none. Inits are
