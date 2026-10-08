@@ -161,23 +161,27 @@ function tileUrl(r, lead) {
 // loads behind it, so the animation keeps going until the new run is complete.
 function startRun(time, background = false) {
   if (next) dropRun(next);
+  next = null;
   const r = { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
-  if (background) {
-    next = r;
-  } else {
-    if (run) dropRun(run);
-    run = r;
-    next = null;
-    frame = 0;
-  }
-  addNext(r);
-  if (!background) show(0);
+  if (background) next = r;
+  else promote(r, 0);
+  tick();
+}
+
+const fid = (r, i) => `frame-${r.id}-${i}`;
+
+function promote(r, k) {
+  if (run) dropRun(run);
+  run = r;
+  next = null;
+  $("init").value = r.time;
+  show(k);
 }
 
 function dropRun(r) {
   for (let i = 0; i < r.added; i++) {
-    map.removeLayer(`frame-${r.id}-${i}`);
-    map.removeSource(`frame-${r.id}-${i}`);
+    map.removeLayer(fid(r, i));
+    map.removeSource(fid(r, i));
   }
 }
 
@@ -185,28 +189,29 @@ function dropRun(r) {
 const complete = (r) =>
   r.added === leads.length && (r.loaded.has(leads.length - 1) || Date.now() - r.addedAt >= LOAD_TIMEOUT_MS);
 
-function addNext(r) {
-  if (r !== run && r !== next) return; // dropped while a timeout was pending
-  const i = r.added;
-  if (i < leads.length && (i === 0 || r.loaded.has(i - 1) || Date.now() - r.addedAt >= LOAD_TIMEOUT_MS)) {
-    const id = `frame-${r.id}-${i}`;
-    map.addSource(id, { type: "raster", tiles: [tileUrl(r, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
-    map.addLayer({
-      id, type: "raster", source: id,
-      paint: { "raster-opacity": r === run && i === frame ? 0.9 : 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 },
-    }, firstLabel);
-    r.added++;
-    r.addedAt = Date.now();
-    setTimeout(() => addNext(r), LOAD_TIMEOUT_MS);
-  }
-  if (r === next && complete(r)) {
-    dropRun(run);
-    run = next;
-    next = null;
-    $("init").value = run.time;
-    show(frame);
+// The background run only loads once the one on screen is complete, so the two never
+// compete for the tiles service.
+function tick() {
+  addNext(run);
+  if (next && complete(run)) {
+    addNext(next);
+    if (complete(next)) promote(next, frame);
   }
   status();
+}
+
+function addNext(r) {
+  const i = r.added;
+  if (i >= leads.length || (i > 0 && !r.loaded.has(i - 1) && Date.now() - r.addedAt < LOAD_TIMEOUT_MS)) return;
+  const id = fid(r, i);
+  map.addSource(id, { type: "raster", tiles: [tileUrl(r, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
+  map.addLayer({
+    id, type: "raster", source: id,
+    paint: { "raster-opacity": r === run && i === frame ? 0.9 : 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 },
+  }, firstLabel);
+  r.added++;
+  r.addedAt = Date.now();
+  setTimeout(tick, LOAD_TIMEOUT_MS);
 }
 
 map.on("sourcedata", (e) => {
@@ -214,7 +219,7 @@ map.on("sourcedata", (e) => {
   const r = [run, next].find((r) => r?.id === Number(id));
   if (!e.tile || !r || r.loaded.has(+i) || !map.isSourceLoaded(e.sourceId)) return;
   r.loaded.add(+i);
-  addNext(r);
+  tick();
 });
 
 const status = () => ($("status").textContent =
@@ -222,9 +227,9 @@ const status = () => ($("status").textContent =
   (next ? ` · newer run ${next.loaded.size}/${leads.length}` : ""));
 
 function show(k) {
-  if (map.getLayer(`frame-${run.id}-${frame}`)) map.setPaintProperty(`frame-${run.id}-${frame}`, "raster-opacity", 0);
+  if (map.getLayer(fid(run, frame))) map.setPaintProperty(fid(run, frame), "raster-opacity", 0);
   frame = k;
-  if (map.getLayer(`frame-${run.id}-${k}`)) map.setPaintProperty(`frame-${run.id}-${k}`, "raster-opacity", 0.9);
+  if (map.getLayer(fid(run, k))) map.setPaintProperty(fid(run, k), "raster-opacity", 0.9);
   $("slider").value = k;
   const valid = new Date(utc(run.time).getTime() + leads[k] * 60e3);
   $("lead").textContent = `${leads[k] === 0 ? "analysis" : "+" + leads[k] + " min"} · valid ${HM.format(valid)} ${tzName(valid)}`;
@@ -279,7 +284,7 @@ map.on("load", async () => {
   for (const b of pills) b.onclick = () => {
     for (const p of pills) p.classList.toggle("active", p === b);
     variable = b.dataset.var;
-    startRun($("init").value);
+    startRun(next?.time ?? $("init").value); // picks up a newer init still loading in the background
   };
   $("slider").oninput = (e) => { setPlaying(false); show(+e.target.value); };
   $("play").onclick = () => setPlaying(!timer);

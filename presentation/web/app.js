@@ -107,7 +107,7 @@
   let map = null;
   let mapReady = false;
   let labelsLayer; // forecast frames go under the basemap's first label layer
-  // A frame set is one run and variable: { id, key, run, variable, layers, loaded, addedAt },
+  // A frame set is one run and variable: { id, run, variable, layers, loaded, addedAt },
   // where `layers` maps lead -> MapLibre source/layer id and `loaded` holds the leads whose
   // source has finished loading once.
   let shown = null; // on screen
@@ -175,7 +175,7 @@
       if (!set || set.loaded.has(+lead) || !map.isSourceLoaded(e.sourceId)) return;
       set.loaded.add(+lead);
       syncLayers();
-      showFrame();
+      if (set === shown) showFrame();
     });
 
     map.touchZoomRotate.disableRotation();
@@ -249,28 +249,31 @@
     if (!mapReady) return;
     const run = selectedRun();
     if (!run) return;
-    const key = `${run.init}|${S.variable}`;
-    if (key !== (pending || shown)?.key) {
+    const same = (set) => set?.run.init === run.init && set.variable === S.variable;
+    if (!same(pending || shown)) {
       if (pending) dropSet(pending);
-      const set = { id: sets++, key, run, variable: S.variable, layers: new Map(), loaded: new Set(), addedAt: 0 };
-      if (background && shown) {
-        pending = set;
-      } else {
-        if (shown) dropSet(shown);
-        shown = set;
-        pending = null;
-        S.frame = 0;
-        renderInits();
+      pending = null;
+      if (!same(shown)) {
+        const set = { id: sets++, run, variable: S.variable, layers: new Map(), loaded: new Set(), addedAt: 0 };
+        if (background && shown) pending = set;
+        else promote(set);
       }
     }
-    for (const set of [shown, pending]) if (set) addNext(set);
-    if (pending && complete(pending)) {
-      dropSet(shown);
-      shown = pending;
-      pending = null;
-      renderInits();
-      showFrame();
+    addNext(shown);
+    // the background set only loads once the one on screen is complete, so the two never
+    // compete for the tiles service
+    if (pending && complete(shown)) {
+      addNext(pending);
+      if (complete(pending)) promote(pending);
     }
+  }
+
+  function promote(set) {
+    if (shown) dropSet(shown);
+    if (set !== pending) S.frame = 0; // a run swapped in from the background keeps the loop's place
+    shown = set;
+    pending = null;
+    renderInits();
   }
 
   function addNext(set) {
@@ -301,8 +304,7 @@
     const lead = leads[S.frame];
     for (const [l, id] of shown?.layers ?? []) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
     renderTicks(lead);
-    renderValid(run, lead);
-    if (run && !complete(shown)) $("#validLabel").textContent += ` · loading ${shown.loaded.size}/${leads.length}`;
+    renderValid(run, lead, shown && !complete(shown) ? ` · loading ${shown.loaded.size}/${leads.length}` : "");
   }
 
   // One pending timer; restarting it makes play/pause and speed changes take effect at once.
@@ -421,11 +423,11 @@
     }
   }
 
-  function renderValid(run, lead) {
+  function renderValid(run, lead, suffix) {
     if (!run || lead == null) { $("#validLabel").textContent = "waiting for the first frame…"; return; }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
     const what = lead ? `+${lead} min forecast` : "observed satellite";
-    $("#validLabel").textContent = `valid ${HM.format(t)} ${tzName(t)} · ${what}`;
+    $("#validLabel").textContent = `valid ${HM.format(t)} ${tzName(t)} · ${what}${suffix}`;
   }
 
   function showNotice(text) {
