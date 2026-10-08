@@ -37,4 +37,5 @@ renders slowly.
 Earthmover hosts this page on Vercel, deployed from `main` with root directory `site`,
 framework preset "Other" and no build command. `vercel.json` sets an ignored build step,
 so Vercel skips deploying commits that change nothing under `site/`. The tiles service sends
-`Access-Control-Allow-Origin: *`, so the page works from any domain.
+`Access-Control-Allow-Origin: *`, so the page works from any domain. Only `main` deploys to
+production; pushes to other branches make preview deployments.
