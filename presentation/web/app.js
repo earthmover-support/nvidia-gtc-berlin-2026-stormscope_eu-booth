@@ -107,11 +107,13 @@
   let map = null;
   let mapReady = false;
   let labelsLayer; // forecast frames go under the basemap's first label layer
-  let layerKey = "";
-  const layers = new Map(); // lead -> MapLibre source/layer id
-  const loaded = new Set(); // leads whose source has finished loading once
+  // A frame set is one run and variable: { id, key, run, variable, layers, loaded, addedAt },
+  // where `layers` maps lead -> MapLibre source/layer id and `loaded` holds the leads whose
+  // source has finished loading once.
+  let shown = null; // on screen
+  let pending = null; // a newer run loading in the background; replaces `shown` once complete
+  let sets = 0;
   const LOAD_TIMEOUT_MS = 20000; // a stuck lead stops blocking the next one after this
-  let addedAt = 0;
 
   // Smallest zoom at which the whole panel, swayed and pitched, stays inside
   // camera.cover [west, south, east, north]: the part of Europe the forecast always fills.
@@ -168,10 +170,12 @@
       showFrame();
     });
     map.on("sourcedata", (e) => {
-      const lead = Number((e.sourceId || "").replace("lead-", ""));
-      if (!layers.has(lead) || loaded.has(lead) || !map.isSourceLoaded(e.sourceId)) return;
-      loaded.add(lead);
+      const [, id, lead] = e.sourceId?.match(/^lead-(\d+)-(\d+)$/) ?? []; // none for the basemap's sources
+      const set = [shown, pending].find((s) => s?.id === Number(id));
+      if (!set || set.loaded.has(+lead) || !map.isSourceLoaded(e.sourceId)) return;
+      set.loaded.add(+lead);
       syncLayers();
+      showFrame();
     });
 
     map.touchZoomRotate.disableRotation();
@@ -224,57 +228,81 @@
     new maplibregl.Marker({ element: m, anchor: "left", offset: [-11, 0] }).setLngLat([st.lon, st.lat]).addTo(map);
   }
 
-  function clearLayers() {
-    for (const id of layers.values()) {
+  function dropSet(set) {
+    for (const id of set.layers.values()) {
       map.removeLayer(id);
       map.removeSource(id);
     }
-    layers.clear();
-    loaded.clear();
   }
+
+  // Every lead has been added, and the last one has loaded or timed out.
+  const complete = (set) =>
+    set.layers.size === S.cfg.leads.length &&
+    (set.loaded.has(S.cfg.leads.at(-1)) || Date.now() - set.addedAt >= LOAD_TIMEOUT_MS);
 
   // One raster source per lead time at opacity 0, so the loop never waits on tiles once loaded.
   // Sources are added one at a time in playback order: the tiles service renders about one
   // tile per second, so requesting all leads at once leaves every frame half drawn for minutes.
-  function syncLayers() {
+  // A run or variable the visitor picks replaces the frames on screen at once; a new run found
+  // by polling (`background`) loads behind them, so the loop keeps going until it is complete.
+  function syncLayers(background = false) {
     if (!mapReady) return;
     const run = selectedRun();
     if (!run) return;
     const key = `${run.init}|${S.variable}`;
-    if (key !== layerKey) {
-      clearLayers();
-      layerKey = key;
-      S.frame = 0;
+    if (key !== (pending || shown)?.key) {
+      if (pending) dropSet(pending);
+      const set = { id: sets++, key, run, variable: S.variable, layers: new Map(), loaded: new Set(), addedAt: 0 };
+      if (background && shown) {
+        pending = set;
+      } else {
+        if (shown) dropSet(shown);
+        shown = set;
+        pending = null;
+        S.frame = 0;
+        renderInits();
+      }
     }
-    const busy = [...layers.keys()].some((l) => !loaded.has(l));
-    if (busy && Date.now() - addedAt < LOAD_TIMEOUT_MS) return;
-    const lead = S.cfg.leads.find((l) => !layers.has(l));
-    if (lead != null) {
-      const id = `lead-${lead}`;
-      map.addSource(id, {
-        type: "raster",
-        tiles: [tileTemplate(run, S.variable, lead, TILE_SIZE)],
-        tileSize: TILE_SIZE,
-        bounds: S.cfg.data_bounds,
-        maxzoom: S.cfg.max_tile_level,
-      });
-      map.addLayer(
-        { id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-fade-duration": 0 } },
-        labelsLayer
-      );
-      layers.set(lead, id);
-      addedAt = Date.now();
+    for (const set of [shown, pending]) if (set) addNext(set);
+    if (pending && complete(pending)) {
+      dropSet(shown);
+      shown = pending;
+      pending = null;
+      renderInits();
+      showFrame();
     }
   }
 
+  function addNext(set) {
+    const busy = [...set.layers.keys()].some((l) => !set.loaded.has(l));
+    if (busy && Date.now() - set.addedAt < LOAD_TIMEOUT_MS) return;
+    const lead = S.cfg.leads.find((l) => !set.layers.has(l));
+    if (lead == null) return;
+    const id = `lead-${set.id}-${lead}`;
+    map.addSource(id, {
+      type: "raster",
+      tiles: [tileTemplate(set.run, set.variable, lead, TILE_SIZE)],
+      tileSize: TILE_SIZE,
+      bounds: S.cfg.data_bounds,
+      maxzoom: S.cfg.max_tile_level,
+    });
+    map.addLayer(
+      { id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-fade-duration": 0 } },
+      labelsLayer
+    );
+    set.layers.set(lead, id);
+    set.addedAt = Date.now();
+  }
+
   function showFrame() {
-    const run = selectedRun();
+    const run = shown?.run;
     const leads = run ? S.cfg.leads : [];
     if (S.frame >= leads.length) S.frame = 0;
     const lead = leads[S.frame];
-    for (const [l, id] of layers) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
+    for (const [l, id] of shown?.layers ?? []) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
     renderTicks(lead);
     renderValid(run, lead);
+    if (run && !complete(shown)) $("#validLabel").textContent += ` · loading ${shown.loaded.size}/${leads.length}`;
   }
 
   // One pending timer; restarting it makes play/pause and speed changes take effect at once.
@@ -282,15 +310,14 @@
   function scheduleAnim() {
     clearTimeout(animTimer);
     if (S.animPaused) return;
-    const run = selectedRun();
-    const last = run && S.frame === S.cfg.leads.length - 1;
+    const last = shown && S.frame === S.cfg.leads.length - 1;
     animTimer = setTimeout(animate, SPEEDS[S.speed] * 1000 + (last ? S.cfg.hold_ms : 0));
   }
 
+  // Holds the first frame until every lead has loaded (or timed out), then loops.
   function animate() {
-    const run = selectedRun();
-    const n = run ? S.cfg.leads.length : 0;
-    if (n) {
+    const n = shown ? S.cfg.leads.length : 0;
+    if (n && complete(shown)) {
       S.frame = (S.frame + 1) % n;
       showFrame();
     }
@@ -371,7 +398,8 @@
     $("#loopLabel span").textContent = sel
       ? `+${leads[0]}→+${leads.at(-1)}${S.animPaused ? " · paused" : ""}`
       : "";
-    $("#initTitle").textContent = sel ? `${hhmm(sel.init)} ${tzName(initDate(sel.init))}` : "--:--";
+    const on = shown?.run || sel; // a newer run loading in the background isn't on screen yet
+    $("#initTitle").textContent = on ? `${hhmm(on.init)} ${tzName(initDate(on.init))}` : "--:--";
   }
 
   function selectInit(k) {
@@ -750,7 +778,7 @@
       showNotice("Booth server unreachable");
     }
     renderInits();
-    syncLayers();
+    syncLayers(true);
     showFrame();
     renderCommits();
     renderQRs();
