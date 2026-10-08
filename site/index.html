@@ -109,6 +109,7 @@ const TZ = (() => {
 const HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const YMD = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
 const utc = (t) => new Date(Date.parse(t + "Z"));
+const initLabel = (t) => `${YMD.format(utc(t))} ${HM.format(utc(t))}`;
 // Zone abbreviation for `d` (CEST vs CET depends on the date). en-GB names the European
 // zones, en-US the American ones; anywhere else this is an offset like "GMT+3".
 function tzName(d) {
@@ -160,9 +161,10 @@ function tileUrl(r, lead) {
 // A run the visitor picks replaces the one on screen at once; a new init found by polling
 // loads behind it, so the animation keeps going until the new run is complete.
 function startRun(time, background = false) {
-  if (next) dropRun(next);
+  const keep = !background && next?.time === time && next.variable === variable; // keeps the frames it has
+  if (next && !keep) dropRun(next);
+  const r = keep ? next : { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
   next = null;
-  const r = { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
   if (background) next = r;
   else promote(r, 0);
   tick();
@@ -222,9 +224,14 @@ map.on("sourcedata", (e) => {
   tick();
 });
 
-const status = () => ($("status").textContent =
-  `${run.loaded.size}/${leads.length} frames loaded${complete(run) ? "" : ", playing once all are in"}` +
-  (next ? ` · newer run ${next.loaded.size}/${leads.length}` : ""));
+function status() {
+  $("status").textContent =
+    `${run.loaded.size}/${leads.length} frames loaded${complete(run) ? "" : ", playing once all are in"}` +
+    (next ? ` · newer run ${next.loaded.size}/${leads.length}` : "");
+  for (const o of $("init").options) {
+    o.textContent = initLabel(o.value) + (o.value === next?.time ? ` · loading ${next.loaded.size}/${leads.length}` : "");
+  }
+}
 
 function show(k) {
   if (map.getLayer(fid(run, frame))) map.setPaintProperty(fid(run, frame), "raster-opacity", 0);
@@ -268,7 +275,7 @@ async function useCoords(pending) {
     return false;
   }
   const prev = $("init").value;
-  $("init").innerHTML = times.slice().reverse().map((t) => `<option value="${t}">${YMD.format(utc(t))} ${HM.format(utc(t))}</option>`).join("");
+  $("init").innerHTML = times.slice().reverse().map((t) => `<option value="${t}">${initLabel(t)}</option>`).join("");
   if (times.includes(prev)) $("init").value = prev;
   $("slider").max = leads.length - 1;
   frame = Math.min(frame, leads.length - 1);

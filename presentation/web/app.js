@@ -176,6 +176,7 @@
       set.loaded.add(+lead);
       syncLayers();
       if (set === shown) showFrame();
+      else renderInits();
     });
 
     map.touchZoomRotate.disableRotation();
@@ -243,20 +244,22 @@
   // One raster source per lead time at opacity 0, so the loop never waits on tiles once loaded.
   // Sources are added one at a time in playback order: the tiles service renders about one
   // tile per second, so requesting all leads at once leaves every frame half drawn for minutes.
-  // A run or variable the visitor picks replaces the frames on screen at once; a new run found
-  // by polling (`background`) loads behind them, so the loop keeps going until it is complete.
-  function syncLayers(background = false) {
+  // A run or variable the visitor picks (`pick`) replaces the frames on screen at once; a new
+  // run found by polling loads behind them, so the loop keeps going until it is complete.
+  function syncLayers(pick = false) {
     if (!mapReady) return;
     const run = selectedRun();
     if (!run) return;
     const same = (set) => set?.run.init === run.init && set.variable === S.variable;
-    if (!same(pending || shown)) {
+    if (pick && same(pending)) {
+      promote(pending); // picking the run loading behind keeps the frames it already has
+    } else if (!same(pending || shown)) {
       if (pending) dropSet(pending);
       pending = null;
       if (!same(shown)) {
         const set = { id: sets++, run, variable: S.variable, layers: new Map(), loaded: new Set(), addedAt: 0 };
-        if (background && shown) pending = set;
-        else promote(set);
+        if (pick || !shown) promote(set);
+        else pending = set;
       }
     }
     addNext(shown);
@@ -270,8 +273,8 @@
 
   function promote(set) {
     if (shown) dropSet(shown);
-    // a run swapped in from the background keeps the loop's place if that lead loaded
-    if (set !== pending || !set.loaded.has(S.cfg.leads[S.frame])) S.frame = 0;
+    // a complete run swapped in keeps the loop's place if that lead loaded; otherwise hold on +0
+    if (!complete(set) || !set.loaded.has(S.cfg.leads[S.frame])) S.frame = 0;
     shown = set;
     pending = null;
     renderInits();
@@ -381,7 +384,7 @@
     if (!(name in S.cfg.variables) || name === S.variable) return;
     S.variable = name;
     renderVarToggle();
-    syncLayers();
+    syncLayers(true);
     showFrame();
   }
 
@@ -390,11 +393,12 @@
     box.replaceChildren();
     const runs = selectableRuns();
     const sel = selectedRun();
+    const on = shown?.run || sel; // a newer run loading in the background isn't on screen yet
     runs.forEach((run, k) => {
-      const text = `${k === 0 ? "Latest " : ""}${hhmm(run.init)}`;
-      const b = el("button", null, text);
+      const loading = pending?.run.init === run.init ? ` · ${pending.loaded.size}/${S.cfg.leads.length}` : "";
+      const b = el("button", null, `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${loading}`);
       b.type = "button";
-      b.setAttribute("aria-pressed", String(sel && run.init === sel.init));
+      b.setAttribute("aria-pressed", String(on && run.init === on.init));
       b.addEventListener("click", () => selectInit(k));
       box.append(b);
     });
@@ -402,7 +406,6 @@
     $("#loopLabel span").textContent = sel
       ? `+${leads[0]}→+${leads.at(-1)}${S.animPaused ? " · paused" : ""}`
       : "";
-    const on = shown?.run || sel; // a newer run loading in the background isn't on screen yet
     $("#initTitle").textContent = on ? `${hhmm(on.init)} ${tzName(initDate(on.init))}` : "--:--";
   }
 
@@ -411,7 +414,7 @@
     if (!runs[k]) return;
     S.selInit = runs[k] === latestShown() ? null : runs[k].init;
     renderInits();
-    syncLayers();
+    syncLayers(true);
     showFrame();
   }
 
@@ -782,7 +785,7 @@
       showNotice("Booth server unreachable");
     }
     renderInits();
-    syncLayers(true);
+    syncLayers();
     showFrame();
     renderCommits();
     renderQRs();
