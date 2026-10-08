@@ -259,7 +259,7 @@
         maxzoom: S.cfg.max_tile_level,
       });
       map.addLayer(
-        { id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-fade-duration": 0 } },
+        { id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 } },
         labelsLayer
       );
       layers.set(lead, id);
