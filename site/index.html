@@ -121,7 +121,7 @@ function tzName(d) {
 }
 $("tz").textContent = tzName(new Date());
 let leads = [], variable = "true_color", frame = 0, timer = null, firstLabel, runs = 0;
-// A run is one init and variable: { id, time, variable, added, addedAt, loaded }, where
+// A run is one init and variable: { id, time, ref, variable, added, addedAt, loaded }, where
 // `loaded` holds the indices of frames whose tiles have all arrived.
 let run = null; // on screen
 let next = null; // a newer init loading in the background; replaces `run` once complete
@@ -147,12 +147,26 @@ async function loadCoords() {
 }
 const coords = loadCoords(); // runs while the basemap style loads
 
+// Tile URLs pin main's newest snapshot. The pipeline appends one commit per init and never
+// rewrites one, so that snapshot holds every older init too, and snapshot tile URLs are cached
+// for a month where `main` ones are revalidated on every request. The id comes from the booth
+// presentation's /api/state (proxied in vercel.json); without it the site uses `main`.
+let head = { ref: REF, time: "" };
+async function loadHead() {
+  try {
+    const latest = (await (await fetch("/api/state", { cache: "no-store" })).json()).runs[0];
+    if (latest?.ref) head = { ref: latest.ref, time: latest.time };
+  } catch {} // e.g. a plain local static server
+}
+const refFor = (time) => (time <= head.time ? head.ref : REF); // an init newer than the snapshot uses main
+const headLoaded = loadHead();
+
 function tileUrl(r, lead) {
   const p = new URLSearchParams({
     variables: r.variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
     time: r.time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
-  return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+  return `${BASE}/${REPO}/${r.ref}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
 }
 
 // One raster layer per lead time, all kept loaded; playback only flips opacity.
@@ -163,7 +177,7 @@ function tileUrl(r, lead) {
 function startRun(time, background = false) {
   const keep = !background && next?.time === time && next.variable === variable; // keeps the frames it has
   if (next && !keep) dropRun(next);
-  const r = keep ? next : { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
+  const r = keep ? next : { id: runs++, time, ref: refFor(time), variable, added: 0, addedAt: 0, loaded: new Set() };
   next = background ? r : null;
   if (!background) promote(r, 0);
   tick();
@@ -299,6 +313,7 @@ map.on("load", async () => {
   map.setProjection({ type: "globe" });
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
   if (!(await useCoords(coords))) return;
+  await headLoaded;
   $("init").onchange = () => startRun($("init").value);
   const pills = document.querySelectorAll(".pill");
   for (const b of pills) b.onclick = () => {
@@ -322,6 +337,7 @@ async function pollInits() {
   const sameLeads = c.leads.join() === leads.join(); // runs count their frames against `leads`
   if (latest === newest && sameLeads) return;
   await useCoords(c);
+  await loadHead();
   startRun(latest, sameLeads);
 }
 </script>

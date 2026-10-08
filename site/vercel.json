@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
+  "rewrites": [
+    {
+      "source": "/api/state",
+      "destination": "https://nvidia-gtc-berlin-2026-stormscope-e.vercel.app/api/state"
+    }
+  ]
 }
