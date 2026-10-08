@@ -172,7 +172,7 @@
     map.on("sourcedata", (e) => {
       const [, id, lead] = e.sourceId?.match(/^lead-(\d+)-(\d+)$/) ?? []; // none for the basemap's sources
       const set = [shown, pending].find((s) => s?.id === Number(id));
-      if (!set || set.loaded.has(+lead) || !map.isSourceLoaded(e.sourceId)) return;
+      if (!e.tile || !set || set.loaded.has(+lead) || !map.isSourceLoaded(e.sourceId)) return;
       set.loaded.add(+lead);
       syncLayers();
       if (set === shown) showFrame();
@@ -270,7 +270,8 @@
 
   function promote(set) {
     if (shown) dropSet(shown);
-    if (set !== pending) S.frame = 0; // a run swapped in from the background keeps the loop's place
+    // a run swapped in from the background keeps the loop's place if that lead loaded
+    if (set !== pending || !set.loaded.has(S.cfg.leads[S.frame])) S.frame = 0;
     shown = set;
     pending = null;
     renderInits();
@@ -316,11 +317,12 @@
     animTimer = setTimeout(animate, SPEEDS[S.speed] * 1000 + (last ? S.cfg.hold_ms : 0));
   }
 
-  // Holds the first frame until every lead has loaded (or timed out), then loops.
+  // Holds the first frame until every lead has loaded (or timed out), then loops over the
+  // leads that loaded (a lead that timed out is skipped).
   function animate() {
-    const n = shown ? S.cfg.leads.length : 0;
-    if (n && complete(shown)) {
-      S.frame = (S.frame + 1) % n;
+    if (shown && complete(shown)) {
+      const ready = S.cfg.leads.flatMap((l, k) => (shown.loaded.has(l) ? [k] : []));
+      if (ready.length) S.frame = ready.find((k) => k > S.frame) ?? ready[0];
       showFrame();
     }
     scheduleAnim();

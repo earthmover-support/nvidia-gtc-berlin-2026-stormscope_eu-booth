@@ -195,7 +195,7 @@ function tick() {
   addNext(run);
   if (next && complete(run)) {
     addNext(next);
-    if (complete(next)) promote(next, frame);
+    if (complete(next)) promote(next, next.loaded.has(frame) ? frame : 0); // keep the loop's place if that frame loaded
   }
   status();
 }
@@ -299,9 +299,10 @@ async function pollInits() {
   let c;
   try { c = await loadCoords(); } catch { return; }
   const latest = c.times.at(-1);
-  if (latest === newest) return;
+  const sameLeads = c.leads.join() === leads.join(); // runs count their frames against `leads`
+  if (latest === newest && sameLeads) return;
   await useCoords(c);
-  startRun(latest, true);
+  startRun(latest, sameLeads);
 }
 </script>
 </body>
