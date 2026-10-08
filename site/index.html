@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>StormScope-EU nowcast</title>
+<title>StormScope-EU GTC Berlin mobile</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.js"></script>
 <style>
@@ -66,8 +66,7 @@
       </a>
     </div>
   </div>
-  <div><div class="label">Arraylake branch</div><select id="ref"></select></div>
-  <div><div class="label">Init (UTC)</div><select id="init"></select></div>
+  <div><div class="label">Init (<span id="tz">UTC</span>)</div><select id="init"></select></div>
   <div>
     <div class="label">Variable</div>
     <div class="row" id="vars">
@@ -86,21 +85,50 @@
 // Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
 const BASE = "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin";
 const REPO = "stormscope-eu_gtc_berlin_2026";
-// Branches offered in the dropdown; the tiles service has no public endpoint that lists them.
-// Every listed branch stores the RGB composites as uint8 bytes, hence one colour scale.
-const BRANCHES = ["main"];
+const REF = "main";
+// The RGB composites are stored as uint8 bytes, hence one colour scale.
 const COLORSCALERANGE = "0,255";
 const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
 const FRAME_MS = 800;
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
+const POLL_MS = 60000; // how often to look for a new init
 
 // Keep tiles across variable switches and reloads; see sw.js.
 // Service workers need https or localhost; opened as a file:// page, tiles aren't cached.
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.warn("No tile cache:", e.message));
 
 const $ = (id) => document.getElementById(id);
-let leads = [], variable = "true_color", frame = 0, added = 0, addedAt = 0, timer = null, firstLabel;
-const loaded = new Set(); // indices of frames whose tiles have all arrived
+
+// Times show in the viewer's own zone, or Berlin's when the browser reports none. Inits are
+// stored in UTC and the selector's option values stay UTC, since they go into tile URLs.
+const TZ = (() => {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    new Intl.DateTimeFormat("en", { timeZone: zone }); // throws on a zone it doesn't know
+    return zone || "Europe/Berlin";
+  } catch {
+    return "Europe/Berlin";
+  }
+})();
+const HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const YMD = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+const utc = (t) => new Date(Date.parse(t + "Z"));
+const initLabel = (t) => `${YMD.format(utc(t))} ${HM.format(utc(t))}`;
+// Zone abbreviation for `d` (CEST vs CET depends on the date). en-GB names the European
+// zones, en-US the American ones; anywhere else this is an offset like "GMT+3".
+function tzName(d) {
+  const name = (locale) =>
+    new Intl.DateTimeFormat(locale, { timeZone: TZ, timeZoneName: "short" })
+      .formatToParts(d).find((p) => p.type === "timeZoneName").value;
+  const gb = name("en-GB");
+  return /^(GMT|UTC)[+-]/.test(gb) ? name("en-US") : gb;
+}
+$("tz").textContent = tzName(new Date());
+let leads = [], variable = "true_color", frame = 0, timer = null, firstLabel, runs = 0;
+// A run is one init and variable: { id, time, variable, added, addedAt, loaded }, where
+// `loaded` holds the indices of frames whose tiles have all arrived.
+let run = null; // on screen
+let next = null; // a newer init loading in the background; replaces `run` once complete
 
 const map = new maplibregl.Map({
   container: "map",
@@ -112,8 +140,8 @@ map.addControl(new maplibregl.NavigationControl());
 
 // /info fails on this repo; /tree (xarray's HTML repr) carries the coordinate arrays. Past 200
 // values xarray abbreviates an array to its first and last three, so the "..." entry is dropped.
-async function loadCoords(ref) {
-  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${ref}/tree`)).text();
+async function loadCoords() {
+  const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${REF}/tree`, { cache: "no-store" })).text();
   const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
   const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, "")).filter((v) => v !== "...");
   return {
@@ -121,67 +149,120 @@ async function loadCoords(ref) {
     leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
   };
 }
-const coords = loadCoords(BRANCHES[0]); // runs while the basemap style loads
+const coords = loadCoords(); // runs while the basemap style loads
 
-function tileUrl(time, lead) {
+function tileUrl(r, lead) {
   const p = new URLSearchParams({
-    variables: variable, style: "polygons/rgb", colorscalerange: COLORSCALERANGE,
-    time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
+    variables: r.variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
+    time: r.time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
-  return `${BASE}/${REPO}/${$("ref").value}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+  return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
 }
 
 // One raster layer per lead time, all kept loaded; playback only flips opacity.
 // Frames are added one at a time, each once the previous one has loaded (or timed out):
 // the service renders slowly, and asking for every lead at once leaves all frames half drawn.
-function loadRun() {
-  for (let i = 0; i < added; i++) {
-    map.removeLayer(`frame-${i}`);
-    map.removeSource(`frame-${i}`);
-  }
-  added = 0;
-  loaded.clear();
-  addNext();
-  show(frame); // the valid-time label depends on the init
+// A run the visitor picks replaces the one on screen at once; a new init found by polling
+// loads behind it, so the animation keeps going until the new run is complete.
+function startRun(time, background = false) {
+  const keep = !background && next?.time === time && next.variable === variable; // keeps the frames it has
+  if (next && !keep) dropRun(next);
+  const r = keep ? next : { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
+  next = background ? r : null;
+  if (!background) promote(r, 0);
+  tick();
 }
 
-function addNext() {
-  const i = added;
-  if (i >= leads.length || (i > 0 && !loaded.has(i - 1) && Date.now() - addedAt < LOAD_TIMEOUT_MS)) return;
-  const id = `frame-${i}`;
-  map.addSource(id, { type: "raster", tiles: [tileUrl($("init").value, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
+const fid = (r, i) => `frame-${r.id}-${i}`;
+
+function promote(r, k) {
+  if (run) dropRun(run);
+  run = r;
+  next = null;
+  $("init").value = r.time;
+  show(k);
+}
+
+function dropRun(r) {
+  for (let i = 0; i < r.added; i++) {
+    map.removeLayer(fid(r, i));
+    map.removeSource(fid(r, i));
+  }
+}
+
+// Every frame has been added, and the last one has loaded or timed out.
+const complete = (r) =>
+  r.added === leads.length && (r.loaded.has(leads.length - 1) || Date.now() - r.addedAt >= LOAD_TIMEOUT_MS);
+
+// The background run only loads once the one on screen is complete, so the two never
+// compete for the tiles service.
+function tick() {
+  addNext(run);
+  if (next && complete(run)) {
+    addNext(next);
+    if (complete(next)) promote(next, next.loaded.has(frame) ? frame : 0); // keep the loop's place if that frame loaded
+  }
+  status();
+}
+
+function addNext(r) {
+  const i = r.added;
+  if (i >= leads.length || (i > 0 && !r.loaded.has(i - 1) && Date.now() - r.addedAt < LOAD_TIMEOUT_MS)) return;
+  const id = fid(r, i);
+  map.addSource(id, { type: "raster", tiles: [tileUrl(r, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
   map.addLayer({
     id, type: "raster", source: id,
-    paint: { "raster-opacity": i === frame ? 0.9 : 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 },
+    paint: { "raster-opacity": r === run && i === frame ? 0.9 : 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 },
   }, firstLabel);
-  added++;
-  addedAt = Date.now();
-  setTimeout(addNext, LOAD_TIMEOUT_MS);
-  status();
+  r.added++;
+  r.addedAt = Date.now();
+  setTimeout(tick, LOAD_TIMEOUT_MS);
 }
 
 map.on("sourcedata", (e) => {
-  const i = Number(e.sourceId?.replace("frame-", "")); // NaN for the basemap's sources
-  if (!e.tile || !(i < added) || loaded.has(i) || !map.isSourceLoaded(e.sourceId)) return;
-  loaded.add(i);
-  status();
-  addNext();
+  const [, id, i] = e.sourceId?.match(/^frame-(\d+)-(\d+)$/) ?? []; // none for the basemap's sources
+  const r = [run, next].find((r) => r?.id === Number(id));
+  if (!e.tile || !r || r.loaded.has(+i) || !map.isSourceLoaded(e.sourceId)) return;
+  r.loaded.add(+i);
+  tick();
 });
 
-const status = () => ($("status").textContent = `${loaded.size}/${leads.length} frames loaded`);
+// With the globe turned away from Europe a frame has no tile in view, so it never gets a tile
+// event above; once the map is idle, every source it draws has loaded.
+map.on("idle", () => {
+  if (!run) return;
+  for (const r of [run, next]) for (let i = 0; r && i < r.added; i++) r.loaded.add(i);
+  tick();
+});
 
-function show(k) {
-  if (map.getLayer(`frame-${frame}`)) map.setPaintProperty(`frame-${frame}`, "raster-opacity", 0);
-  frame = k;
-  if (map.getLayer(`frame-${k}`)) map.setPaintProperty(`frame-${k}`, "raster-opacity", 0.9);
-  $("slider").value = k;
-  const valid = new Date(Date.parse($("init").value + "Z") + leads[k] * 60e3).toISOString().slice(11, 16);
-  $("lead").textContent = `${leads[k] === 0 ? "analysis" : "+" + leads[k] + " min"} · valid ${valid} UTC`;
+function status() {
+  $("status").textContent =
+    `${run.loaded.size}/${leads.length} frames loaded${complete(run) ? "" : ", playing once all are in"}` +
+    (next ? ` · newer run ${next.loaded.size}/${leads.length}` : "");
+  renderOptions();
 }
 
-// Playback steps through the frames that have finished loading.
+// The init selector's labels; the init loading in the background shows its progress.
+function renderOptions() {
+  for (const o of $("init").options) {
+    o.textContent = initLabel(o.value) + (o.value === next?.time ? ` · loading ${next.loaded.size}/${leads.length}` : "");
+  }
+}
+
+function show(k) {
+  if (map.getLayer(fid(run, frame))) map.setPaintProperty(fid(run, frame), "raster-opacity", 0);
+  frame = k;
+  if (map.getLayer(fid(run, k))) map.setPaintProperty(fid(run, k), "raster-opacity", 0.9);
+  $("slider").value = k;
+  const valid = new Date(utc(run.time).getTime() + leads[k] * 60e3);
+  $("lead").textContent = `${leads[k] === 0 ? "analysis" : "+" + leads[k] + " min"} · valid ${HM.format(valid)} ${tzName(valid)}`;
+}
+
+// Playback holds the first frame until the run is complete, then steps through the frames
+// that have finished loading (a frame that timed out is skipped).
 function step() {
-  const ready = [...loaded].sort((a, b) => a - b);
+  if (!complete(run)) return;
+  const ready = [...run.loaded].sort((a, b) => a - b);
   if (ready.length) show(ready.find((k) => k > frame) ?? ready[0]);
 }
 
@@ -200,7 +281,7 @@ function setPlaying(on) {
   $("play").textContent = on ? "❚❚" : "▶";
 }
 
-// Fills the init selector from a branch's coordinates, keeping the selected init if the branch has it.
+// Fills the init selector from the coordinates, keeping the selected init if it is still there.
 async function useCoords(pending) {
   let times;
   try {
@@ -210,7 +291,8 @@ async function useCoords(pending) {
     return false;
   }
   const prev = $("init").value;
-  $("init").innerHTML = times.slice().reverse().map((t) => `<option>${t}</option>`).join("");
+  $("init").innerHTML = times.slice().reverse().map((t) => `<option value="${t}"></option>`).join("");
+  renderOptions();
   if (times.includes(prev)) $("init").value = prev;
   $("slider").max = leads.length - 1;
   frame = Math.min(frame, leads.length - 1);
@@ -220,25 +302,32 @@ async function useCoords(pending) {
 map.on("load", async () => {
   map.setProjection({ type: "globe" });
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
-  $("ref").innerHTML = BRANCHES.map((b) => `<option>${b}</option>`).join("");
   if (!(await useCoords(coords))) return;
-  $("ref").onchange = async () => {
-    $("status").textContent = "Loading inits…";
-    if (await useCoords(loadCoords($("ref").value))) loadRun();
-  };
-  $("init").onchange = loadRun;
+  $("init").onchange = () => startRun($("init").value);
   const pills = document.querySelectorAll(".pill");
   for (const b of pills) b.onclick = () => {
     for (const p of pills) p.classList.toggle("active", p === b);
     variable = b.dataset.var;
-    loadRun();
+    startRun(next?.time ?? $("init").value); // picks up a newer init still loading in the background
   };
   $("slider").oninput = (e) => { setPlaying(false); show(+e.target.value); };
   $("play").onclick = () => setPlaying(!timer);
-  loadRun();
-  show(0);
+  startRun($("init").value);
   setPlaying(true);
+  setInterval(pollInits, POLL_MS);
 });
+
+// Loads the newest init once the pipeline has committed one; a failed check waits for the next.
+async function pollInits() {
+  const newest = $("init").options[0]?.value;
+  let c;
+  try { c = await loadCoords(); } catch { return; }
+  const latest = c.times.at(-1);
+  const sameLeads = c.leads.join() === leads.join(); // runs count their frames against `leads`
+  if (latest === newest && sameLeads) return;
+  await useCoords(c);
+  startRun(latest, sameLeads);
+}
 </script>
 </body>
 </html>

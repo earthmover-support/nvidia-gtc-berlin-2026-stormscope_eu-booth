@@ -1,9 +1,10 @@
 # Flux tiles service performance for the booth
 
 How fast the [Flux tiles service](https://docs.earthmover.io/compute/tiles) (`gtc-berlin`,
-service `tiles-4f49272b`) renders what the booth globe needs, what slows it down, and what
-the booth page does about it. Measured on 2026-10-01 against
-`gtc-berlin/stormscope-eu_gtc_berlin_2026`, runs `2026-09-30T09:00` and `09:10`.
+service [`tiles-4f49272b`](https://app.earthmover.io/gtc-berlin/services/tiles-4f49272b))
+renders what the booth globe needs, what slows it down, and what the booth page does about
+it. Measured on 2026-10-01 against `gtc-berlin/stormscope-eu_gtc_berlin_2026`, runs
+`2026-09-30T09:00` and `09:10`.
 Related: [WEB_TILES_SERVICE_REQUIREMENTS.md](WEB_TILES_SERVICE_REQUIREMENTS.md) (metadata), issues
 #5 (cache/replicas), #9 (pyramids), #10 (RGB band order), #11 (throughput).
 
@@ -13,7 +14,7 @@ Related: [WEB_TILES_SERVICE_REQUIREMENTS.md](WEB_TILES_SERVICE_REQUIREMENTS.md) 
    (`X-Multiscale-Level: root`) and costs about 1 CPU-second. A full booth run takes ~4 min
    on XS and ~2 min on S for one browser. The target (a run in ~10 s) is ~20× away.
 2. **Use snapshot-pinned tile URLs.** Branch URLs come back with `max-age=0`, snapshot URLs
-   with `max-age=2628000` (a month). The booth page uses snapshots (`tile_ref_mode: "snapshot"`).
+   with `max-age=2628000` (a month). The booth page uses snapshots.
 3. **Load leads in playback order.** The service is the bottleneck, so requesting all 12
    leads at once leaves every frame half drawn for minutes. In order, the first complete
    frame arrives in ~20 s.
@@ -70,8 +71,8 @@ Not measured: `min_replicas: 1`, more than 4 replicas, SKU M.
 
 The service itself has `cache_max_age: 0` and no CLI option to change it. With branch URLs,
 every tile the page asks for again (camera sway, reload) shows up as a `3xx` (304) in the
-service dashboard. That was most of the traffic in the dashboard's 10:30 bucket (731 of
-969 requests).
+[service dashboard](https://app.earthmover.io/gtc-berlin/services/tiles-4f49272b). That was
+most of the traffic in the dashboard's 10:30 bucket (731 of 969 requests).
 
 The booth page now pins each run to the newest snapshot holding it (`ref` in `/api/state`).
 Runs older than the commit history get the oldest snapshot in it. Measured in headless
@@ -92,8 +93,9 @@ animate. Measured with headless Chrome (1920×1080, cold browser cache, 180 s):
 | one source at a time, in playback order | 17–25 s | 7–12 of 12 |
 
 The page adds the next lead's source once the previous one has loaded, or after 20 s if a
-tile hangs. The loop still cycles through all leads. Frames that haven't loaded
-show partly drawn and fill in from +10 onward.
+tile hangs. The loop holds the first frame until every lead has loaded (or timed out), so it
+never shows a half-drawn frame. A new init loads behind the run on screen, which keeps
+looping until the new run is complete.
 
 ## Other observations
 
@@ -121,9 +123,9 @@ show partly drawn and fill in from +10 onward.
 ```bash
 # check the service shape and replicas
 uvx --from arraylake al compute status gtc-berlin tiles-4f49272b
-# resize for a test, then restore the booth settings
-uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku s
-uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku xs --min-replicas 0 --max-replicas 4
+# resize for a test, then restore the booth settings (S, 8 replicas; min 0 outside booth hours)
+uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku xs
+uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku s --min-replicas 8 --max-replicas 8
 ```
 
 Each SKU bills while it runs. The service is deliberately public and deliberately disabled

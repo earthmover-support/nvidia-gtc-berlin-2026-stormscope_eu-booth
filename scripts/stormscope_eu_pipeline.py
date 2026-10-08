@@ -43,8 +43,7 @@ Env vars required:
         only needed with --publish-target arraylake
 
 Install:
-    uv pip install "earth2studio[stormscope,data] @ git+https://github.com/NVIDIA/earth2studio.git" \
-        python-dotenv icechunk arraylake xarray zarr eumdac
+    uv sync  # add --extra gpu on a linux+CUDA host
 
 Usage:
     python scripts/stormscope_eu_pipeline.py --n-steps 3  # runs until interrupted
@@ -95,12 +94,12 @@ RGB_VALUES = np.array(["red", "green", "blue"])
 # docs/WEB_TILES_SERVICE_REQUIREMENTS.md).
 RGB_BAND_ATTRS = {"long_name": "colour band", "color_interpretation": " ".join(RGB_VALUES)}
 # Both composites are stored as bytes: 1..255 for data, 0 for missing (off the Earth's disk,
-# or a step not written yet). The tiles service ignores the Zarr v3 `fill_value`, so 0 is
-# also declared as CF `_FillValue` -- without it missing pixels render opaque black -- and
-# xarray decodes it back to NaN.
+# or a step not written yet), as the Zarr v3 `fill_value`. No CF `_FillValue` attribute: the
+# tiles service decodes it by upcasting the bytes to float32, which costs a 4x larger array
+# per tile (see extend_schema, which strips it from older repos).
 RGB_DTYPE = "uint8"
 RGB_FILL = 0
-RGB_ENCODING = {"valid_min": 0, "valid_max": 255, "_FillValue": RGB_FILL}
+RGB_ENCODING = {"valid_min": 0, "valid_max": 255}
 # FCI central wavelengths; `radiance_to_bt` takes their reciprocal, the wavenumber in cm-1.
 WAVELENGTH_CM = {
     "fci04vis": 0.444e-4,
@@ -217,7 +216,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="initial-condition time, ISO 8601 UTC (e.g. 2026-06-30T12:00). "
         "Default: the freshest slot the EUMETSAT Data Store can serve "
-        "this account (see MIN_LAG), falling back to --realtime-lag-hours "
+        "this account (see MIN_LAG), falling back to REALTIME_LAG "
         "behind now if the Data Store can't be searched.",
     )
     p.add_argument("--n-steps", type=int, default=12, help="forecast steps of 10 min (12 = 2 h)")
@@ -481,8 +480,7 @@ def true_color(arr: np.ndarray, variables: list[str]) -> np.ndarray:
     Takes the (..., variable, y, x) array of a rollout step and returns
     (..., y, x, rgb) uint8 as stored -- display-ready, so plotting and tiling
     need no per-channel scaling. Data is 1..255, so that a black pixel never reads
-    as missing; off-disk (NaN) pixels are `RGB_FILL`. Same recipe as `render_rgb`,
-    vectorised over every leading dim instead of a single (channel, y, x) frame.
+    as missing; off-disk (NaN) pixels are `RGB_FILL`.
     """
     idx = [list(variables).index(ch) for ch in RGB_CHANNELS]
     rgb = np.clip(arr[..., idx, :, :] / 24.0, 0, 1) * 255
@@ -523,8 +521,6 @@ def forecast_only(x_pred: torch.Tensor, coords_pred: OrderedDict):
     """
     lead = coords_pred["lead_time"]
     start = int(np.searchsorted(lead, np.timedelta64(0, "s")))
-    if start == 0:
-        return x_pred, coords_pred
     coords_out = coords_pred.copy()
     coords_out["lead_time"] = lead[start:]
     return x_pred[:, :, start:], coords_out
@@ -554,11 +550,6 @@ def step_composites(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: li
     )
 
 
-def lead_minutes(lead_time: np.ndarray) -> np.ndarray:
-    """`timedelta64` lead times as whole minutes, for commit messages and metadata."""
-    return (lead_time / np.timedelta64(1, "m")).astype(int)
-
-
 class ReopenableIceChunkBackend(IceChunkBackend):
     """`IceChunkBackend` that can reopen a repo holding a scalar array.
 
@@ -584,24 +575,14 @@ class ReopenableIceChunkBackend(IceChunkBackend):
 
 def build_backend(publish_target: str, output_dir: str, arraylake_repo: str):
     """Open the Icechunk store to publish into, keeping earlier runs. Returns (backend, location)."""
-    local_icechunk_path = os.path.join(output_dir, "stormscope_eu.icechunk")
     if publish_target == "arraylake":
         import arraylake
 
-        # get_icechunk_storage returns a plain icechunk.Storage -- exactly what
-        # IceChunkBackend's `storage` param accepts, so no Arraylake-specific
-        # subclass is needed (see module docstring).
         client = arraylake.Client(token=os.environ["ARRAYLAKE_API_TOKEN"])
-        storage = client.get_icechunk_storage(arraylake_repo)
-        backend = ReopenableIceChunkBackend(
-            storage=storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR]
-        )
-        location = arraylake_repo
+        storage, location = client.get_icechunk_storage(arraylake_repo), arraylake_repo
     else:
-        backend = ReopenableIceChunkBackend(
-            local_icechunk_path, chunks=CHUNKS, zarr_codecs=[COMPRESSOR]
-        )
-        location = local_icechunk_path
+        storage = location = os.path.join(output_dir, "stormscope_eu.icechunk")
+    backend = ReopenableIceChunkBackend(storage, chunks=CHUNKS, zarr_codecs=[COMPRESSOR])
     return backend, location
 
 
@@ -746,6 +727,7 @@ def extend_schema(backend: IceChunkBackend, time: np.ndarray, lead_time: np.ndar
                 f"{RGB_DTYPE}; convert the repo's composites to {RGB_DTYPE} 0-255 (fill 0) "
                 "or publish to an empty repo or branch"
             )
+        backend.root[name].attrs.pop("_FillValue", None)  # ponytail: drop once main is rewritten
     stored_lead = backend.root["lead_time"][:]
     if not np.array_equal(stored_lead, lead_time):
         raise ValueError(
@@ -846,7 +828,7 @@ class StormScopeEUPipeline:
         # without reading data. `rebase_with` lets the init land on top of a commit
         # made meanwhile by another writer; it still fails on a real conflict, such as
         # that commit also resizing `time`.
-        message = f"stormscope-eu {init} lead 0-{lead_minutes(lead_time)[-1]} min"
+        message = f"stormscope-eu {init} lead 0-{int(lead_time[-1] / np.timedelta64(1, 'm'))} min"
         snapshot = backend.commit(
             message,
             metadata={"time": init, "status": "ingested"},

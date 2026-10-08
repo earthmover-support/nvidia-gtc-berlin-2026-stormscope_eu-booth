@@ -21,35 +21,55 @@ see `MIN_LAG` in the script), so it can be run on a schedule as is. See
 **Ingest target:**
 [gtc-berlin/stormscope-eu_gtc_berlin_2026](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
 
+## Deployments
+
+The forecasts reach screens in three ways:
+
+| | Runs as | Live SQL | Audience | Link |
+|---|---|---|---|---|
+| **Booth presentation** ([`presentation/`](presentation/)) | `uv run presentation/server.py` on the booth machine, full screen on the TV | editable | GTC Berlin visitors | |
+| **Hosted presentation** ([`presentation/`](presentation/)) | Vercel project, root directory `presentation` | fixed: the Berlin / Paris / London queries only, cached per init | internal sharing, unlisted public URL | [nvidia-gtc-berlin-2026-stormscope-e.vercel.app](https://nvidia-gtc-berlin-2026-stormscope-e.vercel.app/) ([Vercel project](https://vercel.com/earthmover/nvidia-gtc-berlin-2026-stormscope-eu-booth)) |
+| **Mobile site** ([`site/`](site/)) | Vercel project, root directory `site`, static | none | phones, via the booth QR code | [nvidia-gtc-berlin-2026-stormscopeeu.vercel.app](https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/) ([Vercel project](https://vercel.com/earthmover/nvidia-gtc-berlin-2026-stormscope_eu-booth-site)) |
+
+Both presentation deployments serve the same `presentation/web/` page and the same logic in
+`presentation/booth.py`. The difference is the `sql_editable` flag in `/api/config`: `server.py`
+answers `true`, the Vercel functions in `presentation/api/` answer `false`. Each Vercel project
+skips commits that change nothing under its own root directory, so a presentation change
+does not redeploy the mobile site, and the other way round.
+
+Earthmover owns both Vercel projects and the read-only Arraylake token the hosted
+presentation uses. The hosted presentation needs the tiles and SQL services up for as long
+as it is shared.
+
 ## Viz
 
 [Browse the dataset on Arraylake](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
 — needs a login with `gtc-berlin` access.
 
-Tiles are served by the org's Flux service `tiles-4f49272b`, which is **private and
-normally left disabled** between events (billing is per node-hour, and a public endpoint
-left idle gets woken by crawlers). Bring it up with:
+Tiles are served by the org's Flux service `tiles-4f49272b`, which is **public on purpose
+and normally left disabled** between events (billing is per node-hour, and a public endpoint
+left idle gets woken by crawlers). Public, because the booth screen and phones fetch tiles
+straight from the browser, which can't attach an `Authorization` header; rendered tiles are
+reachable by anyone holding the URL, the underlying chunks stay private. Bring it up with:
 
 ```
-al compute enable gtc-berlin tiles --sku-code xs
+al compute enable gtc-berlin tiles --sku-code s --is-public
+al compute update gtc-berlin tiles-4f49272b --min-replicas 8 --max-replicas 8
 ```
 
-It reaches `available` in about a minute and cold-starts the first tile in ~2.7 s
-thereafter, so `min_replicas: 0` is fine — no need to pin a replica for the booth.
-Tear it down again with `al compute disable gtc-berlin tiles-4f49272b`. The deployment id
+It reaches `available` in about a minute. While the booth is showing it, run it on S
+(2× the tile throughput of XS) with 8 replicas pinned, as agreed with Earthmover, so
+nothing waits on a cold start or a scale-up. After booth hours set `--min-replicas 0`, and
+tear it down after the event with `al compute disable gtc-berlin tiles-4f49272b`. The deployment id
 and hostname are deterministic, so they survive the cycle.
 
-Because the service is private, a browser cannot fetch tiles directly — it can't attach an
-`Authorization` header. Mint a ticketed URL (valid 1 hour) through the Arraylake MCP
-server's `get_tile_url`, or drive the service from Python where you can set the header.
-
-Render parameters that matter for `true_color`:
+Render parameters that matter for `true_color` and `airmass`:
 
 | Parameter | Value | Why |
 | --- | --- | --- |
-| `style` | `polygons/rgb` | Real 3-band composite, rendered 2-3x faster than `raster/rgb`; pass `variables=true_color` with no `rgb` selector. The only styles the service has are `raster` and `polygons`. |
-| `colorscalerange` | `0,0.15` | The band is 0–1 linear reflectance with no gamma. The default `0,1` renders almost black. |
-| `lead_time` | `PT10M` | Four frames: 0, 10, 20, 30 minutes. 0 is the observed analysis, the rest forecast. ISO 8601 and `"10 minutes"` both work. |
+| `style` | `raster/rgb` | Real 3-band composite; pass `variables=true_color` with no `rgb` selector. The only styles the service has are `raster` and `polygons`. |
+| `colorscalerange` | `0,255` | Both composites are stored as uint8 0–255 (see [Pipeline script](#pipeline-script)). |
+| `lead_time` | `PT10M` | 13 frames: 0, 10, …, 120 minutes. 0 is the observed satellite frame, the rest forecast. ISO 8601 and `"10 minutes"` both work. |
 | `ensemble` | `0` | Single member; required because every variable is 5-D. |
 
 Dark regions on the eastern edge are the night side of the terminator — the VIS channels
@@ -144,8 +164,8 @@ uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arr
 It stores only two RGB composites, not the 16 raw channels. Both are
 `(ensemble, time, lead_time, y, x, rgb)` uint8 in 0–255: each composite is computed in
 0–1, then stored as `round(x * 255)` clipped to 1–255. Missing pixels (off the Earth's disk,
-or a step not written yet) are 0, declared as CF `_FillValue` so the tiles service renders
-them transparent; `valid_min`/`valid_max` are 0/255. Tile requests use
+or a step not written yet) are 0, the Zarr `fill_value`; there is no CF `_FillValue`, which
+makes the tiles service upcast to float32. `valid_min`/`valid_max` are 0/255. Tile requests use
 `colorscalerange=0,255`. The pipeline refuses to append to a repo whose composites are still
 float.
 

@@ -12,9 +12,9 @@ through the Earthmover Flux tiles service.
 ```
 .
 ├── scripts/        # GPU pipeline: FCI fetch -> StormScope-EU inference -> Icechunk/Arraylake ingest
-├── presentation/   # booth screen: local web app (MapLibre globe, explainer panels, live SQL) and its server
+├── presentation/   # booth screen: web app (MapLibre globe, explainer panels, live SQL), its local server, and Vercel functions for the hosted copy
 ├── site/           # static MapLibre globe hosted on Vercel: init/variable selector, lead-time playback
-├── docs/           # notes on the Flux tiles service
+├── docs/           # notes on the Flux tiles service and end-to-end latency
 ├── pyproject.toml  # uv project; `gpu` extra adds NATTEN for linux+CUDA
 └── README.md       # overview, viz/tiles setup, how to run the pipeline
 ```

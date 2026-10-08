@@ -7,3 +7,5 @@ secrets/
 __pycache__
 
 node_modules
+presentation/web/vendor
+.vercel

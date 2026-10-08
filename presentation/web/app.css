@@ -34,6 +34,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
   grid-template-rows: 56px minmax(0, 1fr) 108px;
   gap: 20px;
 }
+/* smaller than the booth TV (a laptop opening the hosted page): the 1920 x 1080 layout,
+   zoomed down to fit; app.js sets --fit */
+.app.fit { width: 1920px; height: 1080px; zoom: var(--fit); margin: 0 auto; }
 
 /* ---------------- header ---------------- */
 .top { display: flex; align-items: center; gap: 20px; min-width: 0; }
@@ -43,6 +46,10 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .logos .em-logo { height: 26px; }
 .x { color: #6B7280; font-size: 18px; }
 .headline { flex: 1; min-width: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.links { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.links a { display: block; width: 22px; height: 22px; color: var(--muted); opacity: .85; }
+.links a:hover { color: var(--lime); opacity: 1; }
+.links svg, .links img { width: 100%; height: 100%; display: block; }
 .live { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 999px; background: #1B1F10; color: var(--lime); font: 600 14px var(--mono); flex-shrink: 0; }
 .live .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lime); animation: pulse 2s ease-in-out infinite; }
 .live.stale { background: #2A1A10; color: #FFB86B; }
@@ -81,6 +88,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 
 .ticks { display: flex; gap: 6px; }
 .ticks div { flex: 1 1 0; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font: 13px var(--mono); color: var(--muted); border: 1px solid #23272E; }
+.ticks div.obs { flex-grow: 2.5; } /* "+0 · satellite" needs more room than "+10" */
 .ticks div.now { background: var(--text); color: var(--ground); border-color: var(--text); font-weight: 600; }
 
 .notice { position: absolute; z-index: 3; top: 120px; left: 22px; right: 22px; padding: 10px 14px; border-radius: 8px; background: #2A1A10; color: #FFD2A6; font: 13px var(--mono); }
@@ -202,7 +210,15 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .strip .last { width: 230px; display: flex; flex-direction: column; gap: 2px; }
 .strip .last .mono { font-size: 17px; }
 .cells { display: flex; gap: 6px; }
-.cells div { flex: 1; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 5px; font: 12px var(--mono); background: #1A1D23; color: #6B7280; }
+/* flex-grow is each phase's estimated seconds (set in app.js); a basis of 0 keeps widths proportional */
+.cells div { position: relative; overflow: hidden; flex: 1 1 0; min-width: 0; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 5px; font: 12px var(--mono); background: #1A1D23; color: #6B7280; white-space: nowrap; }
+.cells div i { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(183, 228, 0, .28); transition: width 1s linear; }
+.cells div span { position: relative; }
+.cells div.past { box-shadow: inset 0 0 0 1px var(--lime); color: var(--lime); }
+.cells div.active { box-shadow: inset 0 0 0 1px var(--lime); color: #E6EAF0; }
+.cells div.commit.active { animation: hold 1.4s ease-in-out infinite; }
+@keyframes hold { 50% { box-shadow: inset 0 0 0 1px var(--lime), 0 0 10px rgba(183, 228, 0, .6); } }
 .cells div.done { background: var(--lime); color: var(--lime-ink); font-weight: 600; }
+.cells div.done i { width: 0; transition: none; }
 .cells div.flash { animation: flash 1.2s ease-out; }
 @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(183, 228, 0, .9); } 100% { box-shadow: 0 0 0 14px rgba(183, 228, 0, 0); } }

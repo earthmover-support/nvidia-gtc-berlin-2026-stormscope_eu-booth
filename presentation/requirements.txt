@@ -1,0 +1,7 @@
+# Python dependencies of the hosted page's Vercel functions (api/).
+# The booth server declares the same ones inline in server.py, for `uv run`.
+arraylake>=0.14
+icechunk>=1.0
+zarr>=3
+numpy
+psycopg[binary]>=3.2
