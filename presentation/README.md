@@ -113,7 +113,8 @@ install, build and output directory come from `vercel.json`. Environment variabl
 
 The tiles and SQL services must stay up while the link is shared. Functions may run 60 s
 (`maxDuration`, allowed on Hobby and Pro), enough for a cold SQL service. `vercel.json`
-skips deploys of commits that change nothing under `presentation/`.
+skips deploys of commits that change nothing under `presentation/`. Only `main` deploys to
+production; pushes to other branches make preview deployments.
 
 Check a build locally without deploying anything. With a made-up local project link,
 `vercel build` works offline. It writes a `pyproject.toml` and `uv.lock` generated from
