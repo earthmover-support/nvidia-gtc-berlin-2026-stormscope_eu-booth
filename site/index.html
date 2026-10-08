@@ -164,9 +164,8 @@ function startRun(time, background = false) {
   const keep = !background && next?.time === time && next.variable === variable; // keeps the frames it has
   if (next && !keep) dropRun(next);
   const r = keep ? next : { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
-  next = null;
-  if (background) next = r;
-  else promote(r, 0);
+  next = background ? r : null;
+  if (!background) promote(r, 0);
   tick();
 }
 
@@ -228,6 +227,11 @@ function status() {
   $("status").textContent =
     `${run.loaded.size}/${leads.length} frames loaded${complete(run) ? "" : ", playing once all are in"}` +
     (next ? ` · newer run ${next.loaded.size}/${leads.length}` : "");
+  renderOptions();
+}
+
+// The init selector's labels; the init loading in the background shows its progress.
+function renderOptions() {
   for (const o of $("init").options) {
     o.textContent = initLabel(o.value) + (o.value === next?.time ? ` · loading ${next.loaded.size}/${leads.length}` : "");
   }
@@ -275,7 +279,8 @@ async function useCoords(pending) {
     return false;
   }
   const prev = $("init").value;
-  $("init").innerHTML = times.slice().reverse().map((t) => `<option value="${t}">${initLabel(t)}</option>`).join("");
+  $("init").innerHTML = times.slice().reverse().map((t) => `<option value="${t}"></option>`).join("");
+  renderOptions();
   if (times.includes(prev)) $("init").value = prev;
   $("slider").max = leads.length - 1;
   frame = Math.min(frame, leads.length - 1);

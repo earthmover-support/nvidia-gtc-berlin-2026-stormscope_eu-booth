@@ -251,17 +251,15 @@
     const run = selectedRun();
     if (!run) return;
     const same = (set) => set?.run.init === run.init && set.variable === S.variable;
-    if (pick && same(pending)) {
-      promote(pending); // picking the run loading behind keeps the frames it already has
-    } else if (!same(pending || shown)) {
+    if (!same(pending)) {
       if (pending) dropSet(pending);
       pending = null;
-      if (!same(shown)) {
-        const set = { id: sets++, run, variable: S.variable, layers: new Map(), loaded: new Set(), addedAt: 0 };
-        if (pick || !shown) promote(set);
-        else pending = set;
-      }
     }
+    if (!pending && !same(shown)) {
+      pending = { id: sets++, run, variable: S.variable, layers: new Map(), loaded: new Set(), addedAt: 0 };
+    }
+    // a pick goes on screen at once, keeping any frames the set loaded behind
+    if (pending && (pick || !shown)) promote(pending);
     addNext(shown);
     // the background set only loads once the one on screen is complete, so the two never
     // compete for the tiles service
@@ -392,8 +390,7 @@
     const box = $("#inits");
     box.replaceChildren();
     const runs = selectableRuns();
-    const sel = selectedRun();
-    const on = shown?.run || sel; // a newer run loading in the background isn't on screen yet
+    const on = shown?.run || selectedRun(); // a newer run loading in the background isn't on screen yet
     runs.forEach((run, k) => {
       const loading = pending?.run.init === run.init ? ` · ${pending.loaded.size}/${S.cfg.leads.length}` : "";
       const b = el("button", null, `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${loading}`);
@@ -403,7 +400,7 @@
       box.append(b);
     });
     const leads = S.cfg.leads;
-    $("#loopLabel span").textContent = sel
+    $("#loopLabel span").textContent = on
       ? `+${leads[0]}→+${leads.at(-1)}${S.animPaused ? " · paused" : ""}`
       : "";
     $("#initTitle").textContent = on ? `${hhmm(on.init)} ${tzName(initDate(on.init))}` : "--:--";
