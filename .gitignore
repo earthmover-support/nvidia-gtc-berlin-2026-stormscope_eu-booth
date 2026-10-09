@@ -9,3 +9,4 @@ __pycache__
 node_modules
 presentation/web/vendor
 .vercel
+*.mp4
