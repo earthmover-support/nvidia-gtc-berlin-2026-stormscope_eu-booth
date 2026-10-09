@@ -41,9 +41,9 @@
       "London":    [51.5072, -0.1276]
     },
     "query": [
-      "SELECT lead_time, AVG(true_color) AS brightness  -- 0-255: high means cloudy, low means sunny or dark",
+      "SELECT lead_time, AVG(true_color) AS brightness  -- high means cloudy, low means sunny or dark",
       "FROM \"stormscope-eu_gtc_berlin_2026\".\"root\"",
-      "WHERE time = TIMESTAMP '{init}'",
+      "WHERE time = TIMESTAMP '{init}'  -- UTC",
       "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",
       "  AND lon BETWEEN {lon} - {box} AND {lon} + {box}",
       "GROUP BY lead_time ORDER BY lead_time;"
