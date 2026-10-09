@@ -5,3 +5,4 @@ icechunk>=1.0
 zarr>=3
 numpy
 psycopg[binary]>=3.2
+certifi

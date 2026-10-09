@@ -7,6 +7,7 @@
 #     "zarr>=3",
 #     "numpy",
 #     "psycopg[binary]>=3.2",
+#     "certifi",
 #     "python-dotenv",
 # ]
 # ///
