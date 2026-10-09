@@ -8,14 +8,14 @@
 #   brew install ffmpeg      # once; also allow Screen Recording for your terminal app
 #   presentation/record_video.sh [out.mp4]
 #
-# Knobs (env): DURATION_S=1200 SCREEN=4 WINDOW_X=1512 WARMUP_S=60 PORT=8765 CRF=22
-#   SCREEN    avfoundation index, see: ffmpeg -f avfoundation -list_devices true -i ""
+# Knobs (env): DURATION_S=1200 SCREEN="Capture screen 1" WINDOW_X=1512 WARMUP_S=60 PORT=8765 CRF=22
+#   SCREEN    avfoundation device name or index, see: ffmpeg -f avfoundation -list_devices true -i ""
 #   WINDOW_X  left edge of that monitor in points (Chrome opens fullscreen there)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="${1:-$HERE/booth-offline-$(date +%Y%m%d-%H%M).mp4}"
-DURATION_S="${DURATION_S:-1200}" SCREEN="${SCREEN:-4}" WINDOW_X="${WINDOW_X:-1512}"
+DURATION_S="${DURATION_S:-1200}" SCREEN="${SCREEN:-Capture screen 1}" WINDOW_X="${WINDOW_X:-1512}"
 WARMUP_S="${WARMUP_S:-60}" PORT="${PORT:-8765}" CRF="${CRF:-22}"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 TMP="$(mktemp -d)"
@@ -54,7 +54,7 @@ sleep "$WARMUP_S"
 echo "recording ${DURATION_S}s from screen $SCREEN..."
 ffmpeg -hide_banner -loglevel warning -stats \
   -f avfoundation -pixel_format uyvy422 -capture_cursor 0 -framerate 30 -i "$SCREEN:none" \
-  -t "$DURATION_S" -c:v libx264 -preset ultrafast -crf 12 -pix_fmt yuv420p "$RAW"
+  -t "$DURATION_S" -fps_mode cfr -r 30 -c:v libx264 -preset ultrafast -crf 12 -pix_fmt yuv420p "$RAW"
 
 kill "$CHROME_PID" "$SERVER_PID" 2>/dev/null || true
 

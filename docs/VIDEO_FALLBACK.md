@@ -16,7 +16,7 @@ at the repo root, and `presentation/node_modules` (`cd presentation && npm ci`).
 2. Give your terminal app the Screen Recording permission: System Settings > Privacy & Security >
    Screen & System Audio Recording. Restart the terminal. Without the permission, ffmpeg gets no frames,
    and the script stops after 15 s with a message.
-3. Find the external monitor's capture index and left edge:
+3. Find the external monitor's capture device and left edge:
 
    ```sh
    ffmpeg -f avfoundation -list_devices true -i "" 2>&1 | grep "Capture screen"
@@ -25,8 +25,8 @@ at the repo root, and `presentation/node_modules` (`cd presentation && npm ci`).
      o.push(f.origin.x+","+f.origin.y+" "+f.size.width+"x"+f.size.height)}; o.join("\n")'
    ```
 
-   On the original Mac, `Capture screen 1` is index `4` and the monitor starts at x = `1512`.
-   These are the defaults.
+   The defaults are `SCREEN="Capture screen 1"` and `WINDOW_X=1512` (the original Mac). Pass the
+   device by name, because its index shifts whenever cameras are plugged in or removed.
 4. Check that the pipeline is committing runs and the live page looks right
    (`uv run presentation/server.py`, then open http://127.0.0.1:8000).
 5. Turn on Do Not Disturb, close anything that could pop up on the external monitor, then:
@@ -39,7 +39,7 @@ at the repo root, and `presentation/node_modules` (`cd presentation && npm ci`).
    encoding. The cursor isn't captured.
 6. Watch the result once from start to end, then copy it to the booth laptop *and* a USB stick.
 
-Knobs, all set through env variables: `DURATION_S=1200`, `SCREEN=4`, `WINDOW_X=1512`, `WARMUP_S=60`,
+Knobs, all set through env variables: `DURATION_S=1200`, `SCREEN="Capture screen 1"`, `WINDOW_X=1512`, `WARMUP_S=60`,
 `PORT=8765`, `CRF=22`. For a quick trial, use `DURATION_S=30 WARMUP_S=20`.
 
 ## What the script does
@@ -50,8 +50,11 @@ Knobs, all set through env variables: `DURATION_S=1200`, `SCREEN=4`, `WINDOW_X=1
    bubbles, extensions or sign-in prompts end up in the shot.
 4. Waits `WARMUP_S` so the first tiles are on screen, then grabs `DURATION_S` at 30 fps.
    This pass encodes fast and at near-lossless quality (`ultrafast`, CRF 12), so no frames are dropped.
+   It also forces a constant 30 fps (`-fps_mode cfr -r 30`), because avfoundation timestamps frames
+   at 1 MHz. ffmpeg prints `Configuration of video device failed` and `not enough frames to estimate rate`;
+   both are harmless.
 5. Re-encodes with H.264 `slow`, CRF 22, a 10 s GOP, `yuv420p` and `+faststart`. Most of the screen is
-   static UI, so this lands at a few hundred MB for 20 min. Lower `CRF` gives better quality and a bigger file.
+   static UI. A 30 s test came out at 7.5 MB, so 20 min lands around 300 MB. Lower `CRF` gives better quality and a bigger file.
 
 ## Playback at the booth
 
