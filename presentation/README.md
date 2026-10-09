@@ -86,12 +86,12 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 7. **Offline backup**: with tiles and SQL up, save a fallback in case the venue has no
    internet:
    ```bash
-   uv run presentation/server.py --fetch-offline   # ~3 h at 1 tile/s; rerun resumes
+   uv run presentation/server.py --fetch-offline   # ~25 min with 8 replicas; rerun resumes
    uv run presentation/server.py --offline         # no network needed
    ```
    The fetch saves the 3 newest runs (both variables, ~170 tiles per frame up to z5), the
    Carto basemap for the same zooms, the Geist fonts and each run's city SQL results into
-   `presentation/offline/` (gitignored, ~150 MB). `--offline` replays the saved runs on the
+   `presentation/offline/` (gitignored, ~1.2 GB). `--offline` replays the saved runs on the
    demo cadence, one landing every 10 min; the header reads REPLAY and each commit names
    the run it replays. Zoom stops at 6 (one level past the saved tiles), and only the city
    SQL queries answer. The QR codes still point online: phones use mobile data.
