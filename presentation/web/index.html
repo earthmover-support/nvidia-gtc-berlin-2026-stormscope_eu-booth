@@ -140,10 +140,11 @@
 
       <article class="panel nv" data-panel="dataflow">
         <div class="kicker">05 · DATA FLOW</div>
-        <h2>From satellite to screen in ~20 minutes</h2>
+        <h2>From satellite to screen in ~70 minutes (~20 with licence)</h2>
         <ol class="hops">
           <li class="eu"><div><b>Meteosat-12</b><span>Scans Europe from orbit</span></div><em>10 min</em></li>
           <li class="eu"><div><b>EUMETSAT Data Store</b><span>Processes and publishes the scan</span></div><em>+5 min</em></li>
+          <li class="eu wait"><div><b>Data embargo</b><span>Free data is released 1 hour after the scan</span></div><em>+48 min</em></li>
           <li><div><b>Download</b><span>Earth2Studio fetches the latest frames</span></div><em>~2 min</em></li>
           <li class="split"><div><b>Inference on NVIDIA H200 GPU saving to Arraylake</b><span>Predicts 2 hours ahead</span></div><em>&lt;4 min</em></li>
           <li class="em"><div><b>Earthmover Compute</b><span>Renders map tiles straight from the data</span></div><em>~6 s</em></li>
