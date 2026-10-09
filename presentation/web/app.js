@@ -5,6 +5,7 @@
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
  *   /api/sql     -> latest Zax-SQL result (polled every 10 s, 1 s while a query runs)
  *                   POST {query} runs what is in the panel 06 editor; only Run sends it
+ *                   (the server also runs the Berlin query once for each new init)
  *                   Hosted page (`sql_editable: false`): the editor is read-only and Run
  *                   sends GET ?place=&init=, answered once the query is done (CDN-cached)
  * Tiles are fetched by MapLibre straight from the public Earthmover Compute tiles service,
