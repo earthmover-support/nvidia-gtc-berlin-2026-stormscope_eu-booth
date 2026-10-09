@@ -70,7 +70,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    `config.json` (`sql.host`) or `.env` (`ARRAYLAKE_SQL_HOST=...`, wins). The service
    scales to zero: the first query after a sleep takes ~50 s, later ones ~20 s (each
    lead reads a full 1120 × 2432 frame; 8–16 s measured warm on 2026-10-07). Fire one query before visitors arrive.
-   Panel 06 is a live editor: click a city chip (`sql.places`) or type any single
+   Panel 07 is a live editor: click a city chip (`sql.places`) or type any single
    `SELECT`/`WITH` statement and press Run or ⌘/Ctrl+Enter; Esc leaves the box.
    Chips and Reset only fill the editor; the server runs a query (with the token; the
    browser never sees it) when Run is pressed, and once by itself for each new init: it
@@ -82,7 +82,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 5. **Run length**: the strip and scrubber show the observed +0 frame plus 12 steps,
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
-6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 6).
+6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 7).
 
 ## Hosted on Vercel
 
