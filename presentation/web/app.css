@@ -160,6 +160,19 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .steps li.split i::before { content: ""; position: absolute; inset: -2px; padding: 2px; border-radius: 50%; background: linear-gradient(90deg, var(--nv-green) 50%, var(--em-lav) 50%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 .steps b { display: block; font-size: 17px; color: #fff; } .steps span { font-size: 14px; color: #BDBDBD; }
 
+/* data flow: left bar colour = who runs that hop */
+.hops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hops li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--nv-card); border-left: 4px solid var(--nv-green); border-radius: 8px; position: relative; }
+.hops li.eu { border-left-color: #8A8F98; }
+.hops li.em { background: var(--em-card); border-left-color: var(--em-lav); }
+.hops div { flex: 1; min-width: 0; }
+.hops b { display: block; font-size: 16px; color: #fff; } .hops span { font-size: 14px; color: #BDBDBD; }
+.hops em { font: normal 600 15px var(--mono); color: var(--nv-green); white-space: nowrap; }
+.hops li.eu em { color: #CFCFCF; } .hops li.em em { color: var(--em-lav); }
+.legend { display: flex; gap: 16px; font: 12px var(--mono); color: #9A9A9A; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; vertical-align: -1px; }
+.legend .eu::before { background: #8A8F98; } .legend .nv::before { background: var(--nv-green); } .legend .em::before { background: var(--em-lav); }
+
 .commits { display: flex; flex-direction: column; gap: 8px; }
 .commit { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; background: #27263A; }
 .commit.fresh { background: #2E2C40; outline: 1px solid var(--em-lav); }

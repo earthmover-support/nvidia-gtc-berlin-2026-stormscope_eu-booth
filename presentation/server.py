@@ -190,7 +190,7 @@ def newest_init() -> str | None:
 
 
 def poll_sql(stop: threading.Event, demo: bool) -> None:
-    """Run the default (Berlin) query once per new init, and otherwise only on Run (panel 06).
+    """Run the default (Berlin) query once per new init, and otherwise only on Run (panel 07).
 
     Each new init resets the editor to the default query, so the booth screen returns to
     Berlin. Results are cached per (init, query text): pressing Run again before the next

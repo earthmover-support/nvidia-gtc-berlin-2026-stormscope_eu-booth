@@ -138,8 +138,22 @@
         </ol>
       </article>
 
+      <article class="panel nv" data-panel="dataflow">
+        <div class="kicker">05 · DATA FLOW</div>
+        <h2>From satellite to your screen</h2>
+        <ol class="hops">
+          <li class="eu"><div><b>Meteosat-12</b><span>Scans Europe from orbit</span></div><em>10 min</em></li>
+          <li class="eu"><div><b>EUMETSAT Data Store</b><span>Processes and publishes the scan</span></div><em>+5 min</em></li>
+          <li><div><b>StormScope-EU on an NVIDIA GPU</b><span>Fetches 6 frames, predicts 2 hours ahead</span></div><em>~6 min</em></li>
+          <li class="em"><div><b>Arraylake</b><span>One Icechunk commit publishes the run</span></div><em>+0 s</em></li>
+          <li class="em"><div><b>Earthmover Compute</b><span>Renders map tiles straight from the data</span></div><em>~6 s</em></li>
+          <li class="em"><div><b>Your browser</b><span>Loads all 13 frames and plays the loop</span></div><em>&lt;1 min</em></li>
+        </ol>
+        <div class="legend"><span class="eu">EUMETSAT</span><span class="nv">NVIDIA</span><span class="em">Earthmover</span></div>
+      </article>
+
       <article class="panel em" data-panel="arraylake">
-        <div class="kicker">05 · THE DATA LAKE</div>
+        <div class="kicker">06 · THE DATA LAKE</div>
         <h2>Every forecast run is a commit</h2>
         <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Readers never see a half-written forecast.</p>
         <div class="commits" id="commitList"></div>
@@ -151,7 +165,7 @@
       </article>
 
       <article class="panel em" data-panel="access">
-        <div class="kicker">06 · YOUR TURN</div>
+        <div class="kicker">07 · YOUR TURN</div>
         <h2>Take the forecast with you</h2>
         <div class="two qr">
           <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw tiles</b><span>Latest run, 10-min forecast, served via Earthmover Compute</span></div>
