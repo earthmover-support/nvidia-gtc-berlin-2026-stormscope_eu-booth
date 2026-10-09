@@ -106,6 +106,63 @@ looping until the new run is complete.
   leave the view before they arrive: about 1–20 per 3-minute load. That's minor next to the
   render cost.
 
+## Region: us-east-1 vs eu-west-1 (2026-10-09)
+
+The site's region selector (`?region=`) switches between two copies of the data:
+
+| region | tiles service | repo | storage |
+|---|---|---|---|
+| us-east-1 | [tiles-4f49272b](https://app.earthmover.io/gtc-berlin/services/tiles-4f49272b?period=last15Minutes) | [stormscope-eu_gtc_berlin_2026](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026) | Earthmover-managed Cloudflare R2 |
+| eu-west-1 | [tiles-eu-8af53d67](https://app.earthmover.io/gtc-berlin/services/tiles-eu-8af53d67?period=last15Minutes) | [stormscope-eu_gtc_berlin_2026_EU_region](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region) | S3 eu-west-1 (`nv-gtc-berlin-scratch`) |
+
+The EU repo holds copies of the inits 08:30, 08:40 and 08:50 UTC, byte-identical to the us-east-1 ones.
+Both services were on SKU S, autoscaling 0–8, restarted (SKU xs → s) right before.
+Measured from Berlin with local `site/` in Chrome, 1512 × 783 px, at the page's default view.
+Each run switched to an init/variable pair that pod had not served yet, with the service worker cache cleared and `cache: "no-store"` on every tile.
+A warm-up run (the latest init, true colour, `no-store`) went first on each page load.
+"Ready" means the page's `complete(run)` became true: all 13 frames loaded, so the animation starts.
+Round trip from the test laptop to `/_meta/health`: us-east-1 ~106 ms, eu-west-1 ~33 ms.
+
+First series:
+
+| # | region | init (UTC), variable | ready | first frame | per frame after first | tiles | tile p50 / p90 / max |
+|---|---|---|---|---|---|---|---|
+| 1 | eu-west-1 | 08:30 airmass | 38.9 s | 6.4 s | 2.7 s | 221 | 1.25 / 5.07 / 9.43 s |
+| 2 | us-east-1 | 08:30 airmass | 46.2 s | 7.0 s | 3.3 s | 221 | 1.93 / 3.28 / 6.70 s |
+| 3 | us-east-1 | 08:40 airmass | 38.8 s | 2.9 s | 3.0 s | 221 | 1.65 / 2.64 / 3.34 s |
+| 4 | eu-west-1 | 08:40 airmass | 19.0 s | 1.3 s | 1.5 s | 208 | 0.83 / 1.34 / 1.77 s |
+| 5 | eu-west-1 | 08:30 true colour | 19.4 s | 1.6 s | 1.5 s | 208 | 0.90 / 1.39 / 2.28 s |
+| 6 | us-east-1 | 08:30 true colour | 43.8 s | 5.3 s | 3.2 s | 220 | 1.82 / 3.17 / 5.20 s |
+
+Second series, same day, in reverse order: both services restarted (us-east-1 SKU bounce;
+eu-west-1 had scaled to zero), local server restarted, and the warm-up also sent with `no-store`:
+
+| # | region | init (UTC), variable | ready | first frame | per frame after first | tiles | tile p50 / p90 / max |
+|---|---|---|---|---|---|---|---|
+| 1 | us-east-1 | 08:30 true colour | 45.7 s | 2.6 s | 3.6 s | 260 | 1.75 / 3.12 / 4.27 s |
+| 2 | eu-west-1 | 08:30 true colour | 40.9 s | 2.4 s | 3.2 s | 221 | 1.26 / 2.17 / 15.08 s |
+| 3 | eu-west-1 | 08:40 airmass | 24.6 s | 4.2 s | 1.7 s | 221 | 1.00 / 1.75 / 4.12 s |
+| 4 | us-east-1 | 08:40 airmass | 47.0 s | 7.2 s | 3.3 s | 221 | 1.97 / 3.38 / 7.00 s |
+| 5 | us-east-1 | 08:30 airmass | 43.5 s | 3.0 s | 3.4 s | 221 | 1.80 / 3.07 / 4.24 s |
+| 6 | eu-west-1 | 08:30 airmass | 23.8 s | 1.7 s | 1.8 s | 221 | 1.03 / 1.67 / 2.93 s |
+
+- us-east-1 is steady: 39–47 s to ready in all six runs, 3.0–3.6 s per frame.
+- eu-west-1 is ~2× faster per frame (1.5–1.8 s) and per tile (p50 0.8–1.3 s vs 1.65–1.97 s).
+  Without a stall it is ready in 19–25 s.
+- But 2 of the 6 EU runs had one 9–15 s tile that held up a frame (first series run 1,
+  second series run 2), which pushed them to 39–41 s, as slow as us-east-1. No US run had
+  a tile over 7 s. The cause is a guess: a new pod taking requests while still cold when
+  the autoscaler scales out. Pinning `min_replicas` would test it.
+- The ~70 ms extra round trip explains only ~3 s of that (221 tiles over Chrome's 6 HTTP/1.1
+  connections ≈ 37 round trips). The rest is the service reading its data: the EU pod sits
+  next to its S3 bucket, while the us-east-1 pod reads from R2. This setup can't separate
+  storage from compute region.
+- First-series run 1 also had its warm-up sent without `no-store`, so the pod may not have
+  been fully warm. Second-series run 2 had a proper warm-up and stalled anyway, so the
+  stall looks like the main cause.
+- One run per row. Tile counts vary from 208 to 260 per run at the same viewport, in both
+  regions; not investigated.
+
 ## Options, by expected impact
 
 1. **Pyramids (#9):** a z3/z4 tile from a 2× or 4× coarser level reads 4–16× less data.
