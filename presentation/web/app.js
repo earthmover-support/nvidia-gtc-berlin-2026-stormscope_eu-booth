@@ -7,7 +7,7 @@
  *                   POST {query} runs what is in the panel 06 editor; only Run sends it
  *                   Hosted page (`sql_editable: false`): the editor is read-only and Run
  *                   sends GET ?place=&init=, answered once the query is done (CDN-cached)
- * Tiles are fetched by MapLibre straight from the public Flux tiles service,
+ * Tiles are fetched by MapLibre straight from the public Earthmover Compute tiles service,
  * one raster layer per (init time, lead time) selected with the `time` and
  * `lead_time` query parameters on the branch (or pinned to a snapshot id).
  */
@@ -101,7 +101,7 @@
 
   // ------------------------------------------------------------------ globe
   const BASEMAP = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-  const FORECAST_ATTR = "EUMETSAT MTG-I1 FCI · StormScope-EU · Arraylake Flux";
+  const FORECAST_ATTR = "EUMETSAT MTG-I1 FCI · StormScope-EU · Earthmover Compute";
   const TILE_SIZE = 512;
 
   let map = null;

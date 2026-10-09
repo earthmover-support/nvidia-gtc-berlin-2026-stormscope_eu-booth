@@ -14,7 +14,7 @@ presentation/
   vercel.json      hosted: build, output directory, function timeout
   config.json      everything tunable: tile service, variables, timings, station, SQL
   package.json     MapLibre GL + qrcode-generator, vendored so the booth runs without CDNs
-                   (the dark CARTO basemap and the Flux tiles still need the network)
+                   (the dark CARTO basemap and the Earthmover Compute tiles still need the network)
   web/             index.html, app.css, app.js
 ```
 
