@@ -5,9 +5,10 @@
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
  *   /api/sql     -> latest Zax-SQL result (polled every 10 s, 1 s while a query runs)
  *                   POST {query} runs what is in the panel 06 editor; only Run sends it
+ *                   (the server also runs the Berlin query once for each new init)
  *                   Hosted page (`sql_editable: false`): the editor is read-only and Run
  *                   sends GET ?place=&init=, answered once the query is done (CDN-cached)
- * Tiles are fetched by MapLibre straight from the public Flux tiles service,
+ * Tiles are fetched by MapLibre straight from the public Earthmover Compute tiles service,
  * one raster layer per (init time, lead time) selected with the `time` and
  * `lead_time` query parameters on the branch (or pinned to a snapshot id).
  */
@@ -101,7 +102,7 @@
 
   // ------------------------------------------------------------------ globe
   const BASEMAP = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-  const FORECAST_ATTR = "EUMETSAT MTG-I1 FCI · StormScope-EU · Arraylake Flux";
+  const FORECAST_ATTR = "EUMETSAT MTG-I1 FCI · StormScope-EU · Earthmover Compute";
   const TILE_SIZE = 512;
 
   let map = null;
@@ -504,7 +505,7 @@
         d.firstChild.style.width = "";
       }
       $("#ingestLabel").textContent =
-        `Run ${hhmm(latest.init)} · complete in Arraylake · ${c.lead_steps} steps in one commit`;
+        `Run ${hhmm(latest.init)} · complete in Arraylake`;
       return;
     }
 
@@ -576,30 +577,34 @@
   }
 
   // ------------------------------------------------------------------ QR codes
+  // Level H leaves room for the logo; the viewer QR borrows the tile QR's version so both
+  // codes have the same grid.
   const qrCache = {};
-  function setQR(id, text) {
+  function setQR(id, text, type = 0) {
     const box = document.getElementById(id);
-    if (!text) { if (qrCache[id] !== "") { box.textContent = "[QR]"; qrCache[id] = ""; } return; }
-    if (qrCache[id] === text) return;
-    qrCache[id] = text;
-    const qr = qrcode(0, "M");
+    if (!text) { if (qrCache[id]?.key !== "") { box.textContent = "[QR]"; qrCache[id] = { key: "", type: 0 }; } return 0; }
+    const key = `${type} ${text}`;
+    if (qrCache[id]?.key === key) return qrCache[id].type;
+    const qr = qrcode(type, "H");
     qr.addData(text);
     qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) +
+      '<img src="img/earthmover-mark.svg" alt="">';
+    qrCache[id] = { key, type: (qr.getModuleCount() - 17) / 4 };
+    return qrCache[id].type;
   }
 
   function renderQRs() {
     const c = S.cfg;
     const latest = latestShown();
+    let type = 0;
     if (latest) {
-      const lead = c.leads.at(-1);
       const q = c.qr_tile;
-      const url = tileTemplate(latest, "true_color", lead, q.size)
+      const url = tileTemplate(latest, "true_color", c.leads[1], q.size) // leads[0] is the observed frame
         .replace("{z}", q.z).replace("{y}", q.y).replace("{x}", q.x);
-      setQR("qrTiles", url);
+      type = setQR("qrTiles", url);
     }
-    setQR("qrViewer", c.viewer_url);
-    $("#viewerUrl").textContent = c.viewer_url || "[VIEWER URL]";
+    setQR("qrViewer", c.viewer_url, type);
   }
 
   // ------------------------------------------------------------------ SQL

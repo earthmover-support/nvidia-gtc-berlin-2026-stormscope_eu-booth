@@ -75,7 +75,7 @@ class Shared:
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.state: dict = {"status": "starting", "commits": [], "runs": []}
-        self.sql: dict = {"status": "idle"}  # nothing runs until someone presses Run
+        self.sql: dict = {"status": "idle"}  # until the first run lands or someone presses Run
         self.sql_template: str = default_sql()
         self.sql_wake = threading.Event()  # set to run the query now
 
@@ -183,21 +183,22 @@ def sql_text() -> str:
     return fill_init(template, runs[0]["time"] if runs else "1970-01-01T00:00:00")
 
 
-def head_id() -> str | None:
-    """Snapshot id of the newest commit, so cached SQL results expire with each run."""
-    commits = SHARED.get("state").get("commits") or []
-    return commits[0]["id"] if commits else None
+def newest_init() -> str | None:
+    """Init time of the newest run; runs are committed whole, so it is always complete."""
+    runs = SHARED.get("state").get("runs") or []
+    return runs[0]["time"] if runs else None
 
 
 def poll_sql(stop: threading.Event, demo: bool) -> None:
-    """Run the query only when the page asks for it (Run on panel 06), never on a timer.
+    """Run the default (Berlin) query once per new init, and otherwise only on Run (panel 06).
 
-    Results are cached per (head commit, query text): pressing Run again before the next
+    Each new init resets the editor to the default query, so the booth screen returns to
+    Berlin. Results are cached per (init, query text): pressing Run again before the next
     run lands shows the stored result, marked `cached`, without querying the service.
     """
     wake = SHARED.sql_wake
-    cache: dict[str, dict] = {}  # query text -> result, for commit `cache_head`
-    cache_head = None
+    cache: dict[str, dict] = {}  # query text -> result, for init `cache_init`
+    cache_init = None
     while not stop.is_set():
         if not demo and not sql_host():
             SHARED.set_sql(
@@ -206,12 +207,14 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
             )
             stop.wait(30)
             continue
+        init = newest_init()
+        if init and init != cache_init:
+            cache, cache_init = {}, init
+            SHARED.set_sql_template(default_sql())  # sets wake
         if not wake.wait(1):
             continue
         wake.clear()
         query = sql_text()
-        if head_id() != cache_head:
-            cache, cache_head = {}, head_id()
         if query in cache:
             SHARED.set_sql(**cache[query], cached=True)
             continue

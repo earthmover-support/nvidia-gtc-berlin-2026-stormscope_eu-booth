@@ -86,7 +86,8 @@
         <div class="chips">
           <span>Severe-storm warnings</span><span>Solar power ramps</span><span>Aviation</span><span>Outdoor events</span>
         </div>
-        <p class="small">What's new: a generative AI model that paints the next satellite image, every 10 minutes, on a single GPU.</p>
+        <div class="label">WHAT'S NEW</div>
+        <p class="small">A generative AI model that paints the next satellite image, every 10 minutes, on a single GPU.</p>
       </article>
 
       <article class="panel nv" data-panel="mtg">
@@ -132,8 +133,8 @@
         <ol class="steps">
           <li><i>1</i><div><b>Fetch</b><span>Latest 6 FCI frames from the EUMETSAT Data Store</span></div></li>
           <li><i>2</i><div><b>Predict</b><span>StormScope-EU rolls forward 12 × 10 min on the GPU</span></div></li>
-          <li class="split"><i>3</i><div><b>Write</b><span>Steps upload to Icechunk on Arraylake while the GPU runs; one commit publishes the run</span></div></li>
-          <li class="violet"><i>4</i><div><b>Serve</b><span>Arraylake compute renders map tiles</span></div></li>
+          <li class="split"><i>3</i><div><b>Write</b><span>Upload forecasts to Arraylake while GPU runs</span></div></li>
+          <li class="violet"><i>4</i><div><b>Serve</b><span>Map tiles served via Earthmover Compute</span></div></li>
         </ol>
       </article>
 
@@ -153,8 +154,8 @@
         <div class="kicker">06 · YOUR TURN</div>
         <h2>Take the forecast with you</h2>
         <div class="two qr">
-          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw tiles on your phone</b><span>Straight from Arraylake Flux. No server in between.</span></div>
-          <div class="qrcard"><div class="qrbox" id="qrViewer"></div><b>Animated viewer on your phone</b><span id="viewerUrl">[VIEWER URL]</span></div>
+          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw tiles</b><span>Latest run, 10-min forecast, served via Earthmover Compute</span></div>
+          <div class="qrcard"><div class="qrbox" id="qrViewer"></div><b>Animated viewer</b><span>Every run, every lead time</span></div>
         </div>
         <div class="sql">
           <div class="sql-head"><b>Live SQL</b><span id="sqlStatus">…</span></div>
