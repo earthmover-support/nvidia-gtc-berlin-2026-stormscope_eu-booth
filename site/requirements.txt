@@ -1,0 +1,2 @@
+# Python dependencies of the Vercel function api/refs.py.
+arraylake>=0.14

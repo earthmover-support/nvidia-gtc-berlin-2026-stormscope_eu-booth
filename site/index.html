@@ -85,7 +85,7 @@
 // Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
 const BASE = "https://tiles-edf5beae0d2afdc4.eu-west-1.compute.arraylake.app/v1/services/tiles-eu/gtc-berlin";
 const REPO = "stormscope-eu_gtc_berlin_2026_EU_region";
-const REF = "main";
+const REF = "main"; // inits list from here; tiles pin to the snapshot of their init, see loadRefs
 // The RGB composites are stored as uint8 bytes, hence one colour scale.
 const COLORSCALERANGE = "0,255";
 const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
@@ -125,7 +125,7 @@ function tzName(d) {
 }
 $("tz").textContent = tzName(new Date());
 let leads = [], variable = "true_color", frame = 0, timer = null, firstLabel, runs = 0;
-// A run is one init and variable: { id, time, variable, added, addedAt, loaded }, where
+// A run is one init and variable: { id, time, ref, variable, added, addedAt, loaded }, where
 // `loaded` holds the indices of frames whose tiles have all arrived.
 let run = null; // on screen
 let next = null; // a newer init loading in the background; replaces `run` once complete
@@ -151,12 +151,22 @@ async function loadCoords() {
 }
 const coords = loadCoords(); // runs while the basemap style loads
 
+// Init -> snapshot id that committed it, from api/refs.py. Pinned tile URLs spare the service
+// a branch lookup per tile and come back cacheable for a month. Without it (a file:// page,
+// the function down or slow) tiles fall back to the branch.
+let refs = {};
+const loadRefs = () =>
+  fetch("api/refs", { signal: AbortSignal.timeout(5000) })
+    .then((r) => (r.ok ? r.json() : {}))
+    .then((m) => (refs = m), () => refs);
+const refsLoaded = loadRefs();
+
 function tileUrl(r, lead) {
   const p = new URLSearchParams({
     variables: r.variable, style: "raster/rgb", colorscalerange: COLORSCALERANGE,
     time: r.time, lead_time: `${lead} minutes`, ensemble: "0", width: "512", height: "512", f: "png",
   });
-  return `${BASE}/${REPO}/${REF}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
+  return `${BASE}/${REPO}/${r.ref}/tiles/WebMercatorQuad/{z}/{y}/{x}?${p}`;
 }
 
 // One raster layer per lead time, all kept loaded; playback only flips opacity.
@@ -167,7 +177,7 @@ function tileUrl(r, lead) {
 function startRun(time, background = false) {
   const keep = !background && next?.time === time && next.variable === variable; // keeps the frames it has
   if (next && !keep) dropRun(next);
-  const r = keep ? next : { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
+  const r = keep ? next : { id: runs++, time, ref: refs[time.slice(0, 16)] ?? REF, variable, added: 0, addedAt: 0, loaded: new Set() };
   next = background ? r : null;
   if (!background) promote(r, 0);
   tick();
@@ -303,6 +313,7 @@ map.on("load", async () => {
   map.setProjection({ type: "globe" });
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
   if (!(await useCoords(coords))) return;
+  await refsLoaded;
   $("init").onchange = () => startRun($("init").value);
   const pills = document.querySelectorAll(".pill");
   for (const b of pills) b.onclick = () => {
@@ -325,7 +336,7 @@ async function pollInits() {
   const latest = c.times.at(-1);
   const sameLeads = c.leads.join() === leads.join(); // runs count their frames against `leads`
   if (latest === newest && sameLeads) return;
-  await useCoords(c);
+  await Promise.all([useCoords(c), loadRefs()]);
   startRun(latest, sameLeads);
 }
 </script>
