@@ -7,7 +7,7 @@ NVIDIA GTC Berlin 2026.
 
 - https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/
 - https://hackmd.io/@ukEyv-C_TnK1RVN9gH211w/BkSIAjzOGl
-- https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026
+- https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region
 
 [`scripts/stormscope_eu_pipeline.py`](scripts/stormscope_eu_pipeline.py) runs
 [`StormScopeMeteosatEU`](https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/)
@@ -19,7 +19,7 @@ see `MIN_LAG` in the script), so it can be run on a schedule as is. See
 [Pipeline script](#pipeline-script).
 
 **Ingest target:**
-[gtc-berlin/stormscope-eu_gtc_berlin_2026](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
+[gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region)
 
 ## Deployments
 
@@ -43,7 +43,7 @@ as it is shared.
 
 ## Viz
 
-[Browse the dataset on Arraylake](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026)
+[Browse the dataset on Arraylake](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region)
 — needs a login with `gtc-berlin` access.
 
 Tiles are served by the org's Flux service `tiles-4f49272b`, which is **public on purpose
@@ -142,14 +142,14 @@ It searches for the freshest downloadable slot (`MIN_LAG`) and makes one commit 
 steps upload in the background while the next one is computed.
 It publishes through plain `earth2studio.io.IceChunkBackend` with
 `arraylake.Client.get_icechunk_storage`, so it needs no backend subclass, and writes to the
-root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026` (the default for `--arraylake-repo`). Each run
+root group of `gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region` (the default for `--arraylake-repo`). Each run
 extends the schema by its init time and appends along `time` in that same commit, keeping earlier inits; every
 run must therefore use the same `--n-steps` (lead-time layout).
 
 ```bash
 uv run python scripts/stormscope_eu_pipeline.py --n-steps 3                    # local Icechunk in outputs/
 uv run python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12
-uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
+uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region
 ```
 
 | Flag | Default | Notes |
@@ -158,7 +158,7 @@ uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arr
 | `--n-steps` | `12` | 10-min steps |
 | `--output-dir` | `outputs` | local Icechunk store |
 | `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` |
-| `--arraylake-repo` | `$ARRAYLAKE_REPO` or `gtc-berlin/stormscope-eu_gtc_berlin_2026` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
+| `--arraylake-repo` | `$ARRAYLAKE_REPO` or `gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region` | required with `arraylake`, which also needs `ARRAYLAKE_API_TOKEN` |
 | `--device` | `auto` | `auto` \| `cuda` \| `cpu` |
 
 It stores only two RGB composites, not the 16 raw channels. Both are

@@ -1,9 +1,9 @@
 {
   "org": "gtc-berlin",
-  "repo": "gtc-berlin/stormscope-eu_gtc_berlin_2026",
+  "repo": "gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region",
   "branch": "main",
 
-  "tile_base": "https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu_gtc_berlin_2026",
+  "tile_base": "https://tiles-edf5beae0d2afdc4.eu-west-1.compute.arraylake.app/v1/services/tiles-eu/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region",
   "data_bounds": [-63.76155, 29.80654, 72.30417, 75.78313],
   "max_tile_level": 7,
 
@@ -42,7 +42,7 @@
     },
     "query": [
       "SELECT lead_time, AVG(true_color) AS brightness  -- high means cloudy, low means sunny or dark",
-      "FROM \"stormscope-eu_gtc_berlin_2026\".\"root\"",
+      "FROM \"stormscope-eu_gtc_berlin_2026_EU_region\".\"root\"",
       "WHERE time = TIMESTAMP '{init}'  -- UTC",
       "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",
       "  AND lon BETWEEN {lon} - {box} AND {lon} + {box}",
