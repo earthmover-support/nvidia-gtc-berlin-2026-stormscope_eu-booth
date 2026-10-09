@@ -165,6 +165,8 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .hops li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--nv-card); border-left: 4px solid var(--nv-green); border-radius: 8px; position: relative; }
 .hops li.eu { border-left-color: #8A8F98; }
 .hops li.em { background: var(--em-card); border-left-color: var(--em-lav); }
+/* GPU writes into Arraylake: bar half green, half violet */
+.hops li.split { border-left-color: transparent; background: linear-gradient(var(--nv-green) 50%, var(--em-lav) 50%) 0 0 / 4px 100% no-repeat border-box, var(--nv-card); }
 .hops div { flex: 1; min-width: 0; }
 .hops b { display: block; font-size: 16px; color: #fff; } .hops span { font-size: 14px; color: #BDBDBD; }
 .hops em { font: normal 600 15px var(--mono); color: var(--nv-green); white-space: nowrap; }
