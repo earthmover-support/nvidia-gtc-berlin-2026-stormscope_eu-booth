@@ -108,7 +108,9 @@ looping until the new run is complete.
 
 ## Region: us-east-1 vs eu-west-1 (2026-10-09)
 
-The site's region selector (`?region=`) switches between two copies of the data:
+The booth now runs on eu-west-1: the pipeline writes to the EU repo and the site and
+presentation default to `tiles-eu` (#62). The site's region selector (`?region=`) still
+switches to us-east-1, which keeps the inits written before the switch:
 
 | region | tiles service | repo | storage |
 |---|---|---|---|
