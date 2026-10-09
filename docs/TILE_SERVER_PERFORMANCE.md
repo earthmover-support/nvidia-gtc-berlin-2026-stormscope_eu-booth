@@ -106,6 +106,44 @@ looping until the new run is complete.
   leave the view before they arrive: about 1–20 per 3-minute load. That's minor next to the
   render cost.
 
+## Region: us-east-1 vs eu-west-1 (2026-10-09)
+
+The site's region selector (`?region=`) switches between two copies of the data:
+
+| region | tiles service | repo | storage |
+|---|---|---|---|
+| us-east-1 | [tiles-4f49272b](https://app.earthmover.io/gtc-berlin/services/tiles-4f49272b?period=last15Minutes) | [stormscope-eu_gtc_berlin_2026](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026) | Earthmover-managed Cloudflare R2 |
+| eu-west-1 | [tiles-eu-8af53d67](https://app.earthmover.io/gtc-berlin/services/tiles-eu-8af53d67?period=last15Minutes) | [stormscope-eu_gtc_berlin_2026_EU_region](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region) | S3 eu-west-1 (`nv-gtc-berlin-scratch`) |
+
+The EU repo holds copies of the inits 08:30, 08:40 and 08:50 UTC, byte-identical to the us-east-1 ones.
+Both services were on SKU S, autoscaling 0–8, restarted (SKU xs → s) right before.
+Measured from Berlin with local `site/` in Chrome, 1512 × 783 px, at the page's default view.
+Each run switched to an init/variable pair that pod had not served yet, with the service worker cache cleared and `cache: "no-store"` on every tile.
+A warm-up run (the latest init, true colour, `no-store`) went first on each page load.
+"Ready" means the page's `complete(run)` became true: all 13 frames loaded, so the animation starts.
+Round trip from the test laptop to `/_meta/health`: us-east-1 ~106 ms, eu-west-1 ~33 ms.
+
+| # | region | init (UTC), variable | ready | first frame | per frame after first | tiles | tile p50 / p90 / max |
+|---|---|---|---|---|---|---|---|
+| 1 | eu-west-1 | 08:30 airmass | 38.9 s | 6.4 s | 2.7 s | 221 | 1.25 / 5.07 / 9.43 s |
+| 2 | us-east-1 | 08:30 airmass | 46.2 s | 7.0 s | 3.3 s | 221 | 1.93 / 3.28 / 6.70 s |
+| 3 | us-east-1 | 08:40 airmass | 38.8 s | 2.9 s | 3.0 s | 221 | 1.65 / 2.64 / 3.34 s |
+| 4 | eu-west-1 | 08:40 airmass | 19.0 s | 1.3 s | 1.5 s | 208 | 0.83 / 1.34 / 1.77 s |
+| 5 | eu-west-1 | 08:30 true colour | 19.4 s | 1.6 s | 1.5 s | 208 | 0.90 / 1.39 / 2.28 s |
+| 6 | us-east-1 | 08:30 true colour | 43.8 s | 5.3 s | 3.2 s | 220 | 1.82 / 3.17 / 5.20 s |
+
+- Warm, eu-west-1 gets the animation going in ~19 s; us-east-1 needs 39–46 s, so EU is about 2× faster.
+  Every tile is faster, not only the first one: p50 0.85 s vs 1.8 s.
+- The ~70 ms extra round trip explains only ~3 s of that (221 tiles over Chrome's 6 HTTP/1.1
+  connections ≈ 37 round trips). The rest is the service reading its data: the EU pod sits
+  next to its S3 bucket, while the us-east-1 pod reads from R2. This setup can't separate
+  storage from compute region.
+- Run 1 is slower than runs 4–5. It was the first run after the restart, and its warm-up
+  went out without `no-store`, so the browser's HTTP cache may have answered part of it and
+  left the pod not fully warm. One 9.4 s tile stalled frame 8.
+- One run per row, so expect noise. The EU page drew 208 tiles against 220–221 for us-east-1
+  at the same viewport; not investigated.
+
 ## Options, by expected impact
 
 1. **Pyramids (#9):** a z3/z4 tile from a 2× or 4× coarser level reads 4–16× less data.
