@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
     environment:
       STORMSCOPE_PUBLISH_TARGET: ${STORMSCOPE_PUBLISH_TARGET:-arraylake}
-      ARRAYLAKE_REPO: ${ARRAYLAKE_REPO:-gtc-berlin/stormscope-eu_gtc_berlin_2026}
+      ARRAYLAKE_REPO: ${ARRAYLAKE_REPO:-gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region}
     secrets:
       - eumetsat_consumer_key
       - eumetsat_consumer_secret
