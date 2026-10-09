@@ -18,7 +18,7 @@ Related: [TILE_SERVER_PERFORMANCE.md](TILE_SERVER_PERFORMANCE.md) (tiles in deta
 | 6 | Visible to tiles service | Flux reads Icechunk directly, so a commit is renderable as soon as it lands. With one commit per init, all 13 leads land at once. | 0 s | - none needed |
 | 7 | Discovered by client | Booth page: `server.py` polls Arraylake every 5 s, the browser polls `/api/state` every 4 s (worst case shown). Phone viewer (`site/`): re-reads the init list from `/tree` every 60 s. | 9 s (phone: 60 s) | - booth page with live polling [#2] 🟣<br>- phone viewer [#18] 🟣<br>- `extend schema` shown as a complete run until lead 0 lands (issue #13): gone with one commit per init, an init only appears once complete ([#32] 🟣)<br>- phone viewer: check for new inits every 60 s instead of only on page load ([#33] 🟣; [#28] asked for 10 s) |
 | 8 | First frame rendered | The tiles service renders the ~20 z4 tiles of one lead in one browser. Waking a sleeping service (0 replicas) adds ~23 s: 29 s for the first frame (us-east-1). | 2 s (us-east-1: 6 s, was 7–9 s) | - spatial chunks + zstd [#7] 🟣<br>- `polygons/rgb` style, 2–3× faster per tile [#24] 🟣, [#25] 🟣; back to `raster/rgb` once the service rendered it as fast [#33] 🟣<br>- 2× overviews: rejected, visibly coarser image ([#23] 🔴)<br>- tiles service and data in eu-west-1, the service next to its S3 bucket and ~70 ms closer to Berlin: ~2× faster per tile ([#61] 🟢, [#62] 🟢) |
-| 9 | Full run rendered | All 13 leads loaded in one browser, one lead at a time in playback order. ~1.5–1.8 s per lead after the first in eu-west-1 (us-east-1: ~3.6 s). In 2 of 6 eu-west-1 runs a single 9–15 s tile held up a frame, so the run took 39–41 s. | 24 s (us-east-1: 49 s, was 92 s) | - load leads in playback order [#2] 🟣, [#18] 🟣<br>- snapshot-pinned tile URLs, so reloads come from the browser cache [#2] 🟣<br>- 2× overviews: 39 s, but rejected, visibly coarser image ([#23] 🔴)<br>- uint8 RGB (trial, 74 s, [#22] 🔴; in the pipeline [#27] 🟣: 92 → 49 s)<br>- HTTP/2 on the service (asked, ~2× per frame expected) [arraylake#7938](https://github.com/earth-mover/arraylake/pull/7938)<br>- eu-west-1 tiles service and data ([#61] 🟢, [#62] 🟢): 49 → 24 s |
+| 9 | Full run rendered | All 13 leads loaded in one browser, one lead at a time in playback order. ~1.5–1.8 s per lead after the first in eu-west-1 (us-east-1: ~3.6 s). In 2 of 6 eu-west-1 runs a single 9–15 s tile held up a frame, so the run took 39–41 s. | 24 s (us-east-1: 49 s, was 92 s) | - load leads in playback order [#2] 🟣, [#18] 🟣<br>- snapshot-pinned tile URLs, so reloads come from the browser cache [#2] 🟣<br>- phone viewer: tile URLs pinned to each init's snapshot id instead of `main` (`site/api/refs.py`): no measurable gain, ready 22.5 vs 22.1 s, first frame the same<br>- 2× overviews: 39 s, but rejected, visibly coarser image ([#23] 🔴)<br>- uint8 RGB (trial, 74 s, [#22] 🔴; in the pipeline [#27] 🟣: 92 → 49 s)<br>- HTTP/2 on the service (asked, ~2× per frame expected) [arraylake#7938](https://github.com/earth-mover/arraylake/pull/7938)<br>- eu-west-1 tiles service and data ([#61] 🟢, [#62] 🟢): 49 → 24 s |
 
 PRs: 🟣 merged, 🟢 open, 🔴 closed without merging.
 
@@ -53,6 +53,14 @@ PRs: 🟣 merged, 🟢 open, 🔴 closed without merging.
   six runs over inits 08:30/08:40 with `no-store` and a warm-up; medians of first frame
   (2.0 s, range 1.3–6.4 s) and ready (24 s, range 19–41 s). Details in
   [TILE_SERVER_PERFORMANCE.md](TILE_SERVER_PERFORMANCE.md#region-us-east-1-vs-eu-west-1-2026-10-09).
+  Snapshot vs `main` on `site/`: 2026-10-09, Chrome from Berlin, eu-west-1 SKU S, local
+  `site/` with `api/refs.py`, `no-store` and the tile cache cleared before each run, one
+  warm-up. 11 runs alternating `main` / snapshot over inits 08:30/08:40/08:50 and both
+  variables, each combination once per ref. Ready: `main` 24.0, 23.0, 21.4, 22.0, 21.0, 20.9 s
+  (mean 22.1); snapshot 24.3, 22.6, 21.3, 22.9, 21.4 s (mean 22.5). First frame 1.5–3.2 s for
+  both. Times drop as the pod warms up, regardless of ref. A curl probe of single warm tiles
+  gave ~0.52 s for both. The branch lookup does not show up next to render time and
+  Chrome's 6-connection limit.
 
 [#1]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/1
 [#2]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/2
