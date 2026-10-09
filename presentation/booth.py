@@ -151,6 +151,7 @@ def _jsonable(v):
 
 def run_sql_once(query: str) -> dict:
     """Run `query` on the Zax-SQL service; returns the fields of an /api/sql answer."""
+    import certifi
     import psycopg
 
     notices: list[str] = []
@@ -158,7 +159,8 @@ def run_sql_once(query: str) -> dict:
     with psycopg.connect(
         host=sql_host(),
         port=5432,
-        sslmode="require",
+        sslmode="verify-full",
+        sslrootcert=certifi.where(),  # the psycopg wheel cannot find macOS system roots
         user="arraylake",
         dbname=CONFIG["org"],
         password=os.environ["ARRAYLAKE_API_TOKEN"],
