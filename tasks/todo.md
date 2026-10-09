@@ -25,17 +25,25 @@ Goal: the booth page keeps running with no internet. Fetch while online, serve f
 
 ## Tasks
 
-- [ ] `--fetch-offline`: read commits/runs, take newest 3 runs, save state.json
-- [ ] Fetch forecast tiles for z0-5 inside data_bounds (thread pool, skip existing files = resumable)
-- [ ] Fetch Carto style + tilejson, rewrite URLs, fetch vector tiles z0-5 for the cover box, sprites, glyph ranges the style uses
-- [ ] Run default SQL per run x place, save results
-- [ ] Vendor Geist fonts (npm `geist` under /vendor/, drop Google Fonts link)
-- [ ] `--offline`: serve /offline/ from disk; /api/config rewrites tile_base + basemap URL, caps max_zoom
-- [ ] Offline state poller: time-shift the 3 runs into a 10-min cycle (reuse demo_commits shape)
-- [ ] Offline SQL: answer from sql/<init>/<place>.json, else status "offline"
-- [ ] app.js: take basemap URL from config (one line); local tile URL must match tileTemplate's path shape
-- [ ] Verify: fetch, then turn Wi-Fi off, run --offline, check the page in Chrome (no failed requests)
-- [ ] README section
+- [x] `--fetch-offline`: newest 3 runs -> runs.json
+- [x] Forecast tiles z0-5 inside data_bounds (8 threads, existing files skipped = resumable)
+- [x] Carto style with local URLs: vector tiles (world z0-3, data_bounds z4-5), sprites, glyphs
+- [x] Default SQL per run x place
+- [x] Geist fonts: Google CSS + woff2 saved; --offline rewrites the link in index.html
+- [x] `--offline`: serve /offline/; /api/config swaps tile_base + basemap, caps max_zoom at 6
+- [x] Replay poller on the demo cadence (reuses demo_commits); header reads REPLAY
+- [x] Offline SQL: saved result for city queries, error for anything else
+- [x] app.js: basemap from config, REPLAY / saved labels
+- [x] Verify in Chrome (see review)
+- [x] README section
+
+## Review (2026-10-09)
+
+- Real `--fetch-offline` NOT run yet: tiles service is disabled between events. Basemap + fonts
+  were fetched for real (299/299 files, 31 MB); runs, frame tiles and SQL were stand-ins.
+- `--offline` checked in Chrome: basemap with labels, frames, REPLAY badge, init rotation, SQL
+  panel. All 66 page requests went to localhost and returned 200.
+- `test_offline.py`: tile ranges, URL -> file mapping, replay rotation (3 passed).
 
 QR codes stay online URLs: visitors' phones use mobile data, not the booth network.
 
