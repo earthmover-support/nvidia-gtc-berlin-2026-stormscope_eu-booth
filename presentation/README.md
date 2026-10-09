@@ -72,9 +72,10 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    lead reads a full 1120 × 2432 frame; 8–16 s measured warm on 2026-10-07). Fire one query before visitors arrive.
    Panel 06 is a live editor: click a city chip (`sql.places`) or type any single
    `SELECT`/`WITH` statement and press Run or ⌘/Ctrl+Enter; Esc leaves the box.
-   Nothing runs on its own: chips and Reset only fill the editor, and the server runs
-   a query (with the token; the browser never sees it) only when Run is pressed. `{init}` is replaced by the newest complete
-   init; `{lat}`/`{lon}`/`{box}` in `sql.query` are filled per city. `lat`/`lon` are
+   Chips and Reset only fill the editor; the server runs a query (with the token; the
+   browser never sees it) when Run is pressed, and once by itself for each new init: it
+   resets the editor to the first city (Berlin) and keeps that result in memory until the
+   next init. `{init}` is replaced by the newest complete init; `{lat}`/`{lon}`/`{box}` in `sql.query` are filled per city. `lat`/`lon` are
    2-D pixel coordinates, so filter on a `BETWEEN` box, never on equality.
 4. **Variables**: `true_color` and `airmass` are both uint8 0-255 RGB composites
    (`raster/rgb`, `colorscalerange` `0,255`). Add more under `variables` in `config.json`.
