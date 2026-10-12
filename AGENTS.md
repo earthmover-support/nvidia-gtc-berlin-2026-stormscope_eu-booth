@@ -4,7 +4,7 @@
 
 Booth demo for NVIDIA GTC Berlin 2026: run StormScope-EU nowcasting on MTG-I1 FCI
 satellite data, stream each forecast step into Icechunk on Arraylake
-(`gtc-berlin/stormscope-eu_gtc_berlin_2026`), and show the latest run on a booth screen
+(`gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region`), and show the latest run on a booth screen
 through the Earthmover Flux tiles service.
 
 ## File tree
