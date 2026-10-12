@@ -835,7 +835,7 @@
       empty();
       return;
     }
-    if (running) { status.textContent = "running… (a cold start takes ~30 s)"; return; } // keep the old bars, dimmed
+    if (running) { status.textContent = "running…"; return; } // keep the old bars, dimmed
     renderSqlPlaces(); // restores the foot text after an error
     // first numeric column after the x column, so hand-written queries still plot
     const yi = (r.rows && r.rows[0] ? r.rows[0].findIndex((v, i) => i > 0 && typeof v === "number") : -1);
