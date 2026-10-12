@@ -53,7 +53,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    `al compute update gtc-berlin tiles-4f49272b --min-replicas 8 --max-replicas 8`
    (see [Viz](../README.md#viz)). The service is public, so browsers and phones fetch
    tiles without a token. Set `--min-replicas 0` again after booth hours.
-2. **Inits**: the page reads `gtc-berlin/stormscope-eu_gtc_berlin_2026` (root group). The
+2. **Inits**: the page reads `gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region` (root group). The
    pipeline appends every run's init to `time` and never drops one; the page offers the
    newest 12 (`max_runs`). The server re-reads the `time` coordinate whenever `main` moves,
    and each tile picks its frame with `time=` + `lead_time=` on the newest snapshot holding
@@ -63,7 +63,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    `stormscope-eu 2026-09-15T11:00 lead 0-120 min`.
    Quick check that the tile server is up:
    ```bash
-   B=https://tiles-9db3ca32bddbb94b.compute.arraylake.app/v1/services/tiles/gtc-berlin/stormscope-eu_gtc_berlin_2026
+   B=https://tiles-edf5beae0d2afdc4.eu-west-1.compute.arraylake.app/v1/services/tiles-eu/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region
    curl -o t.png -w '%{http_code}\n' "$B/main/tiles/WebMercatorQuad/3/2/4?variables=true_color&style=raster/rgb&colorscalerange=0,255&time=<INIT>&lead_time=10%20minutes&ensemble=0&f=png"
    ```
 3. **SQL**: `al compute enable gtc-berlin sql --sku-code xs`; its hostname goes in
@@ -121,7 +121,7 @@ install, build and output directory come from `vercel.json`. Environment variabl
 
 | Variable | Value |
 | --- | --- |
-| `ARRAYLAKE_API_TOKEN` | read-only token with access to `gtc-berlin/stormscope-eu_gtc_berlin_2026`; also the SQL password |
+| `ARRAYLAKE_API_TOKEN` | read-only token with access to `gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region`; also the SQL password |
 | `ARRAYLAKE_SQL_HOST` | optional, overrides `sql.host` in `config.json` |
 
 The tiles and SQL services must stay up while the link is shared. Functions may run 60 s
@@ -141,3 +141,5 @@ mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"fr
 ```
 
 Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
+
+Redeployed 2026-10-09.

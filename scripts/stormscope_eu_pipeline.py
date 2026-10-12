@@ -9,7 +9,7 @@ It finds the freshest downloadable initial condition with
 10-minute rollout step is handed to the backend's background writers as it is
 produced, so uploads overlap inference, and the commit at the end of the
 rollout publishes the whole init at once. It writes to the root group of
-`gtc-berlin/stormscope-eu_gtc_berlin_2026` (see ARRAYLAKE_REPO below). Runs
+`gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region` (see ARRAYLAKE_REPO below). Runs
 accumulate: each one appends its init to `time` in that same commit, so
 readers never see a partly written init.
 
@@ -48,7 +48,7 @@ Install:
 Usage:
     python scripts/stormscope_eu_pipeline.py --n-steps 3  # runs until interrupted
     python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00 --n-steps 12  # one run
-    python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026
+    python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arraylake-repo gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region
     python scripts/stormscope_eu_pipeline.py --help
 """
 
@@ -179,7 +179,7 @@ ZARR_CONVENTIONS = [
 GEOREF = {"coordinates": "lat lon valid_time", "grid_mapping": GRID_MAPPING}
 PUBLISH_TARGETS = ["local", "arraylake"]
 # Default --publish-target arraylake destination; the cube goes in its root group.
-ARRAYLAKE_REPO = "gtc-berlin/stormscope-eu_gtc_berlin_2026"
+ARRAYLAKE_REPO = "gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region"
 
 # EUMETSAT Data Store freshness search (see resolve_start_time).
 SCAN_STEP = timedelta(seconds=MeteosatFCI.SCAN_FREQUENCY)  # FCI repeat cycle: 10 min
