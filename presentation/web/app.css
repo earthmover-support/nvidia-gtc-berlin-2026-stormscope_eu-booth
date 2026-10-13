@@ -101,7 +101,10 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .playback { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .play { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; padding: 0; border-radius: 0; border: 1px solid #2A2F37; background: transparent; color: var(--text); cursor: pointer; }
 .play[aria-pressed="true"] { background: var(--lime); border-color: var(--lime); color: var(--lime-ink); }
-.loop { margin-left: auto; white-space: nowrap; display: flex; align-items: center; gap: 8px; font: 13px var(--mono); color: #C9CFD6; }
+.loop { margin-left: auto; height: 34px; width: 160px; justify-content: center; padding: 0 10px; white-space: nowrap; display: flex; align-items: center; gap: 8px; font: 13px var(--mono); color: #C9CFD6; background: transparent; border: 1px solid #2A2F37; cursor: pointer; }
+.loop[aria-pressed="false"] { color: var(--muted); border: 1px dashed #4B5260; }
+.loop[aria-pressed="false"] svg { opacity: .6; }
+.play[aria-pressed="true"] { animation: pulse 2s ease-in-out infinite; }
 
 .scrub { display: flex; flex-direction: column; gap: 6px; }
 .scrub input[type=range] { width: 100%; margin: 0; height: 22px; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }

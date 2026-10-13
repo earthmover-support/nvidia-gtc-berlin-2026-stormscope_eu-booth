@@ -33,6 +33,7 @@
     variable: "true_color",
     frame: 0,
     animPaused: false,
+    loop: true, // false: play to the last lead, then pause
     speed: "slow",
     panel: 0,
     rotatePaused: false,
@@ -335,9 +336,16 @@
   // Holds the first frame until every lead has loaded (or timed out), then loops over the
   // leads that loaded (a lead that timed out is skipped).
   function animate() {
-    if (shown && complete(shown)) {
-      const ready = S.cfg.leads.flatMap((l, k) => (shown.loaded.has(l) ? [k] : []));
-      if (ready.length) S.frame = ready.find((k) => k > S.frame) ?? ready[0];
+    if (shown && complete(shown) && !scrubbing) {
+      const ready = readyFrames(shown);
+      const next = ready.find((k) => k > S.frame);
+      if (next == null && !S.loop && ready.length) { // play once: stop on the last lead
+        S.animPaused = true;
+        renderPlayback();
+        renderInits();
+        return;
+      }
+      if (ready.length) S.frame = next ?? ready[0];
       showFrame();
     }
     scheduleAnim();
@@ -364,8 +372,19 @@
     }
   }
 
+  function toggleLoop() {
+    S.loop = !S.loop;
+    $("#loopLabel").setAttribute("aria-pressed", String(S.loop));
+    renderInits();
+  }
+
   function togglePlay() {
     S.animPaused = !S.animPaused;
+    // resuming a finished single run starts it over
+    if (!S.animPaused && !S.loop && shown) {
+      const ready = readyFrames(shown);
+      if (ready.length && ready.find((k) => k > S.frame) == null) { S.frame = ready[0]; showFrame(); }
+    }
     renderPlayback();
     renderInits();
     scheduleAnim();
@@ -424,7 +443,7 @@
     });
     const leads = S.cfg.leads;
     $("#loopLabel span").textContent = on
-      ? `+${leads[0]}→+${leads.at(-1)}${S.animPaused ? " · paused" : ""}`
+      ? `+${leads[0]}→+${leads.at(-1)} · ${S.loop ? "loop" : "once"}`
       : "";
     $("#initTitle").textContent = on ? `${ymdhm(initDate(on.init))} ${tzName(initDate(on.init))}` : "--:--";
   }
@@ -995,6 +1014,7 @@
       else if (k === "arrowleft" || k === "pageup") { S.manualUntil = Date.now() + 60000; showPanel(S.panel - 1); }
       else if (k === " ") { S.rotatePaused = !S.rotatePaused; showPanel(S.panel); e.preventDefault(); }
       else if (k === "p") togglePlay();
+      else if (k === "o") toggleLoop();
       else if (k === "s") { const names = Object.keys(SPEEDS); setSpeed(names[(names.indexOf(S.speed) + 1) % names.length]); }
       else if (k === "t") setVariable("true_color");
       else if (k === "a") setVariable("airmass");
@@ -1027,6 +1047,7 @@
     renderVarCards();
     renderPlayback();
     $("#playBtn").addEventListener("click", togglePlay);
+    $("#loopLabel").addEventListener("click", toggleLoop);
     const scrub = $("#scrub");
     scrub.addEventListener("input", (e) => scrubTo(Number(e.target.value)));
     scrub.addEventListener("pointerdown", () => { scrubbing = true; });
