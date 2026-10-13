@@ -36,3 +36,19 @@ validate live service availability, forecast skill, pipeline runtime, or measure
 upload/inference durations. The scientific diagrams remain explicitly schematic.
 Physical exhibition-distance readability and QR scanning on the final booth screen
 still require a venue/device check.
+
+
+## Approved copy update
+
+The user's edited seven-panel copy now supplies the headings, paragraphs, and captions.
+Typos in the introduction were corrected and its unfinished initial-condition sentence
+was completed as “A forecast starts from an initial condition derived from recent observations.”
+The introductory horizon comparison was replaced by the requested observe → predict →
+publish → explore workflow. The persistent UTC metadata retains the separate time references.
+
+The panel column is widened to 680 px; body text stays at 18 px and numbered titles stay
+at 24 px bold. Diagrams stay capped at 544 px. Repeated widget descriptions are removed,
+and the publication/delivery diagrams are compacted without reducing their label font sizes.
+All four publication-history rows remain visible. The initialization selector scrolls when
+needed so the narrower globe's playback controls remain visible with a full run history.
+All seven panels and the playback row fit the three previously tested viewport sizes.

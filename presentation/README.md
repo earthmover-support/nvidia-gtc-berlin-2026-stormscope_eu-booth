@@ -174,8 +174,12 @@ The model feedback, recurring-cycle, upload, delivery, and architecture diagrams
 schematics, not live measurements. Viewer and raw-tile QR codes use independent grid
 sizes and a four-module quiet zone to improve scanning of the shorter viewer URL.
 
-The opening panel distinguishes the general 0–6 h nowcasting window from this
-demo's 0–2 h satellite prediction horizon, following the [WMO definition](https://space.oscar.wmo.int/applicationareas). Headings and status labels use readable Title Case; scientific acronyms and product names retain their established casing.
+The opening panel introduces observation-based nowcasting and the end-to-end demo.
+The approved seven-panel wording is implemented with minor typo corrections and an
+initial-condition sentence completed from its unfinished draft. Headings retain readable
+Title Case and 24 px bold numbered titles; scientific acronyms keep established casing.
+The panel column is 680 px at the 1080p booth size; diagrams remain capped at 544 px
+so their labels do not shrink to accommodate the longer copy.
 
 
 Panel navigation includes Pause/Resume and seven directly selectable chapter markers.

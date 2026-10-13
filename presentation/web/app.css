@@ -293,7 +293,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(183, 228, 0, .9); } 100% { box-shadow: 0 0 0 14px rgba(183, 228, 0, 0); } }
 
 /* Exhibition narrative: readable copy, connected diagrams, and explicit live-data provenance. */
-.main { grid-template-columns: minmax(0, 1fr) 600px; }
+.main { grid-template-columns: minmax(0, 1fr) 680px; }
 .panel { gap: 14px; }
 .panel h2 { font-size: 32px; line-height: 1.1; }
 .panel p { font-size: 18px; line-height: 1.4; }
@@ -326,7 +326,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .stats b { font-size: 24px; }
 .stats span { font-size: 14px; }
-.science-diagram { width: 100%; height: auto; flex-shrink: 0; display: block; color: #A5D85B; font-family: var(--sans); background: #0F120E; border: 1px solid #2E3C20; }
+.science-diagram { width: 100%; max-width: 544px; align-self: center; height: auto; flex-shrink: 0; display: block; color: #A5D85B; font-family: var(--sans); background: #0F120E; border: 1px solid #2E3C20; }
 .em .science-diagram { color: #D2ADF8; background: #191823; border-color: #665279; }
 .diagram-edge { fill: none; stroke: currentColor; stroke-width: 2; }
 .feedback-path { stroke-dasharray: 5 3; }
@@ -379,3 +379,17 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .cycle-status .cycle-context { font-size: 12px; color: #C9CFD6; }
 .cycle-context span { font-size: inherit; color: inherit; }
 .publication-status { font-size: 14px; color: #D2ADF8; }
+
+.intro-workflow { display: flex; align-items: center; gap: 10px; padding: 16px; border: 1px solid #2E3C20; background: #111; }
+.intro-workflow span { flex: 1; padding: 12px 8px; border-top: 2px solid #A5D85B; background: #172510; font-size: 18px; font-weight: 700; text-align: center; }
+.intro-workflow i { font-style: normal; font-size: 20px; color: #A5D85B; }
+.partner-credit { color: #D9D6E8; font-size: 15px; text-align: center; }
+
+[data-panel="arraylake"], [data-panel="access"] { gap: 12px; }
+[data-panel="arraylake"] .commit { padding-top: 6px; padding-bottom: 6px; }
+[data-panel="arraylake"] .commits { gap: 4px; }
+[data-panel="compute"] { gap: 8px; }
+[data-panel="compute"] .sql { gap: 5px; }
+/* Keep playback controls visible when the narrower globe contains a full run history. */
+.inits { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
+.inits button { flex-shrink: 0; }

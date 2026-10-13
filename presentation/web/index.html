@@ -92,30 +92,28 @@
     <section class="panels" id="panels">
 
       <article class="panel nv" data-panel="definition">
-        <div class="kicker">01 · What Is Nowcasting?</div>
-        <h2>What Is Nowcasting?</h2>
-        <p><b>Nowcasting</b> resolves local atmospheric conditions from the present to six hours ahead, using rapidly updated observations to constrain the initial state.</p>
-        <p>Lagrangian advection, statistical learning, and numerical-model blending predict evolving structures. Convective initiation, growth, and decay challenge simple extrapolation.</p>
-        <div class="nowcast-scope" role="img" aria-label="Nowcasting spans the present to six hours ahead. This demo predicts satellite imagery through two hours from its observation-based initialization.">
-          <div class="label">General Nowcasting Window · Relative to the Present</div>
-          <div class="scope-axis"><span>Present</span><span>+2 h</span><span>+4 h</span><span>+6 h</span></div>
-          <div class="scope-window"><b>StormScope-EU · Separate Time Reference</b><span>0–2 h from the observation-based initialization</span></div>
-          <div class="scope-note">16 predicted FCI channels · 10-minute intervals</div>
+        <div class="kicker" role="heading" aria-level="2">01 · What Is Nowcasting?</div>
+        <p>Nowcasting predicts short-term atmospheric evolution, from minutes to a few hours, using recent observations and rapidly updated models.</p>
+        <p>This demo shows an end-to-end AI nowcasting workflow that transforms Meteosat satellite observations into two-hour forecasts of multispectral satellite imagery using NVIDIA StormScope-EU.</p>
+        <p>In this demo, we use the NVIDIA StormScope-EU model to generate the predictions, Earth2Studio connects the scientific workflow, and Earthmover enables low-latency forecast publication and interactive data access.</p>
+        <p class="small">A forecast starts from an initial condition derived from recent observations.</p>
+        <div class="intro-workflow" role="img" aria-label="Observe, predict, publish, explore">
+          <span>Observe</span><i>→</i><span>Predict</span><i>→</i><span>Publish</span><i>→</i><span>Explore</span>
         </div>
-        <p class="small"><b>This demo:</b> satellite imagery through +2 h from initialization. Observation age reduces the horizon remaining beyond the present.</p>
-        <a class="science-source" href="https://space.oscar.wmo.int/applicationareas" target="_blank" rel="noopener">Definition: WMO · Nowcasting / Very Short-Range Forecasting</a>
+        <div class="diagram-note">10-minute forecast steps · 2-hour horizon · GPU-accelerated AI</div>
       </article>
 
       <article class="panel nv" data-panel="mtg">
         <div class="kicker">02 · Earth Observations</div>
-        <h2>Observe the Atmosphere Every 10 Minutes</h2>
-        <p>At geostationary altitude, <b>EUMETSAT’s Meteosat-12</b> measures reflected solar and emitted thermal radiation in 16 FCI channels.</p>
-        <p>The latest six scans initialize the forecast. Select a composite below to change the map; each reveals different atmospheric structure.</p>
+        <h2>Observing the Atmosphere from Space</h2>
+        <p>Approximately 36,000 km above Earth, EUMETSAT’s Meteosat-12 observes Europe and surrounding regions.</p>
+        <p>Its Flexible Combined Imager (FCI) measures reflected solar and emitted thermal radiation across 16 spectral channels. Six consecutive observations provide the initial condition for StormScope-EU.</p>
         <div class="label">Two Views of the Atmosphere</div>
         <div class="two">
           <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span>A natural-looking daylight composite of clouds and Earth's surface.</span></button>
           <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>Air Mass</b><span>An infrared composite highlighting water vapor and large-scale atmospheric structure.</span></button>
         </div>
+        <p class="small">Select a composite to change the map.</p>
         <div class="label" id="compositeCaption">Observed +0 Frame · Matches Selected Initialization</div>
         <div class="stats">
           <div><b>16</b><span>spectral channels</span></div>
@@ -125,10 +123,10 @@
       </article>
 
       <article class="panel nv" data-panel="nowcasting">
-        <div class="kicker">03 · Generative AI Nowcasting</div>
-        <h2>Predict the Next Satellite Observation</h2>
-        <p><b>StormScope-EU</b> conditions generative diffusion on six consecutive observations across 16 FCI channels. It predicts one multispectral frame at a time.</p>
-        <p>Each prediction enters the sliding context window. Twelve autoregressive steps extend the forecast two hours from initialization.</p>
+        <div class="kicker">03 · NVIDIA StormScope-EU</div>
+        <h2>Predicting the Next Satellite Observation</h2>
+        <p>StormScope-EU learns spatiotemporal relationships across 16 satellite channels. Conditioned on six consecutive observations, it generates the next multispectral frame through iterative diffusion sampling.</p>
+        <p>Each prediction replaces the oldest frame in the sliding context window. Repeating this process produces twelve successive 10-minute predictions, extending the forecast to +120 minutes.</p>
         <svg class="science-diagram" viewBox="0 0 544 366" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
           <title id="autoregressive-model-title">Autoregressive Model</title><desc id="autoregressive-model-desc">Six observed frames enter diffusion inference. The +10 minute prediction replaces the oldest frame in the six-frame context. A directed feedback loop returns the updated context to inference, producing twelve frames through +120 minutes.</desc>
           <defs><marker id="autoregressive-model-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -194,14 +192,14 @@
           <rect class="diagram-predicted" x="420" y="334" width="66" height="28"/>
           <text class="diagram-small" x="453" y="354" text-anchor="middle">+120</text>
         </svg>
-        <div class="diagram-note">16 FCI channels per frame · Schematic, not inference telemetry</div>
+        <div class="diagram-note">Predicted frames progressively enter the context during autoregressive rollout.</div>
       </article>
 
       <article class="panel nv" data-panel="e2s">
         <div class="kicker">04 · NVIDIA Earth2Studio</div>
-        <h2>New Observations Restart the Forecast Cycle</h2>
-        <p><b>NVIDIA Earth2Studio</b> connects observation retrieval, model initialization, GPU inference, and forecast output.</p>
-        <p>A newer complete six-frame observation window triggers the next cycle. Each initialization produces twelve 10-minute predictions; outputs stream to Arraylake during inference.</p>
+        <h2>New Observations. New Forecast Cycles.</h2>
+        <p>Earth2Studio provides reusable components for retrieving observations, preparing model inputs, executing StormScope-EU on NVIDIA GPUs, and writing forecast outputs.</p>
+        <p>When a newer complete observation window becomes available, the workflow initializes another forecast. Each cycle incorporates updated observations and streams predictions to Arraylake during inference.</p>
         <div class="label">The Forecast Cycle</div>
         <svg class="science-diagram" viewBox="0 0 544 316" role="img" aria-labelledby="forecast-cycle-title forecast-cycle-desc">
           <title id="forecast-cycle-title">Forecast Cycle</title><desc id="forecast-cycle-desc">Clockwise directed cycle: ingest observations, initialize the model, infer twelve predictions, and stream outputs to Arraylake. Earth2Studio orchestrates the workflow; a new observation window starts another cycle.</desc>
@@ -214,7 +212,7 @@
           <text class="diagram-strong" x="419" y="54" text-anchor="middle">02 · Initialize</text>
           <text class="diagram-label" x="419" y="80" text-anchor="middle">Set reference time</text>
           <rect class="diagram-node" x="314" y="190" width="210" height="76"/>
-          <text class="diagram-strong" x="419" y="218" text-anchor="middle">03 · Infer</text>
+          <text class="diagram-strong" x="419" y="218" text-anchor="middle">03 · Predict</text>
           <text class="diagram-label" x="419" y="244" text-anchor="middle">12 autoregressive steps</text>
           <rect class="diagram-node" x="20" y="190" width="210" height="76"/>
           <text class="diagram-strong" x="125" y="218" text-anchor="middle">04 · Output</text>
@@ -227,79 +225,80 @@
           <text class="diagram-label" x="272" y="161" text-anchor="middle">Coordinates the cycle</text>
           <text class="diagram-label" x="272" y="297" text-anchor="middle">Repeat When a New Observation Window Is Available</text>
         </svg>
+        <div class="diagram-note">New observation windows enable new initializations; scan cadence and publication cadence are distinct.</div>
 
       </article>
 
       <article class="panel em" data-panel="arraylake">
         <div class="kicker">05 · Earthmover Arraylake + Icechunk</div>
         <h2>Upload While Computing. Publish Atomically.</h2>
-        <p><b>Arraylake</b> uploads each prediction while the GPU computes the next. After all writes finish, one atomic <b>Icechunk</b> commit exposes the complete run.</p>
-
-        <svg class="science-diagram" viewBox="0 0 544 262" role="img" aria-labelledby="overlapped-publication-title overlapped-publication-desc">
+        <p>Forecast outputs move to Arraylake while the GPU computes subsequent predictions, overlapping data transfer with inference.</p>
+        <p>After every write finishes, one atomic Icechunk commit publishes the complete forecast as a consistent, versioned snapshot. Earlier snapshots remain available for reproducible analysis.</p>
+        <div class="diagram-note">Overlapped Uploads · Atomic Publication · Versioned History</div>
+        <svg class="science-diagram" viewBox="0 0 544 194" role="img" aria-labelledby="overlapped-publication-title overlapped-publication-desc">
           <title id="overlapped-publication-title">Overlapped Publication</title><desc id="overlapped-publication-desc">Successive GPU prediction steps overlap delayed uploads. A completion barrier waits for every upload, then one atomic Icechunk commit exposes the complete forecast snapshot to readers. Widths illustrate overlap and are not measured durations.</desc>
           <defs><marker id="overlapped-publication-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <text class="diagram-label" x="272" y="18" text-anchor="middle">Compute and Upload Overlap · Schematic</text>
-          <path class="diagram-edge " d="M94 40H476" marker-end="url(#overlapped-publication-arrow)"/>
-          <text class="diagram-label" x="270" y="34" text-anchor="middle">Execution time →</text>
-          <text class="diagram-strong" x="15" y="83" text-anchor="start">GPU</text>
-          <text class="diagram-strong" x="15" y="142" text-anchor="start">Upload</text>
-          <rect class="diagram-gpu" x="94" y="58" width="70" height="40"/>
-          <text class="diagram-dark" x="129" y="83" text-anchor="middle">+10</text>
-          <rect class="diagram-upload" x="166" y="108" width="70" height="40"/>
-          <text class="diagram-dark" x="201" y="133" text-anchor="middle">+10</text>
-          <rect class="diagram-gpu" x="172" y="58" width="70" height="40"/>
-          <text class="diagram-dark" x="207" y="83" text-anchor="middle">+20</text>
-          <rect class="diagram-upload" x="244" y="108" width="70" height="40"/>
-          <text class="diagram-dark" x="279" y="133" text-anchor="middle">+20</text>
-          <rect class="diagram-gpu" x="250" y="58" width="70" height="40"/>
-          <text class="diagram-dark" x="285" y="83" text-anchor="middle">…</text>
-          <rect class="diagram-upload" x="322" y="108" width="70" height="40"/>
-          <text class="diagram-dark" x="357" y="133" text-anchor="middle">…</text>
-          <rect class="diagram-gpu" x="328" y="58" width="70" height="40"/>
-          <text class="diagram-dark" x="363" y="83" text-anchor="middle">+120</text>
-          <rect class="diagram-upload" x="400" y="108" width="70" height="40"/>
-          <text class="diagram-dark" x="435" y="133" text-anchor="middle">+120</text>
-          <path class="completion-barrier" d="M476 55V155"/>
-          <text class="diagram-label" x="502" y="91" text-anchor="middle">All</text>
-          <text class="diagram-label" x="502" y="110" text-anchor="middle">writes</text>
-          <text class="diagram-label" x="502" y="129" text-anchor="middle">finish</text>
-          <path class="diagram-edge " d="M476 155V169H272V185" marker-end="url(#overlapped-publication-arrow)"/>
-          <rect class="diagram-predicted" x="94" y="188" width="386" height="42"/>
-          <text class="diagram-strong" x="287" y="215" text-anchor="middle">One Atomic Icechunk Commit</text>
-          <text class="diagram-label" x="272" y="249" text-anchor="middle">Complete Snapshot → Readers Can Access the Run</text>
+          <text class="diagram-label" x="272" y="18" text-anchor="middle">Execution Time · Schematic</text>
+          <path class="diagram-edge " d="M94 27H476" marker-end="url(#overlapped-publication-arrow)"/>
+          <text class="diagram-strong" x="15" y="58" text-anchor="start">GPU</text>
+          <text class="diagram-strong" x="15" y="106" text-anchor="start">Upload</text>
+          <rect class="diagram-gpu" x="94" y="36" width="70" height="30"/>
+          <text class="diagram-dark" x="129" y="58" text-anchor="middle">+10</text>
+          <rect class="diagram-upload" x="166" y="84" width="70" height="30"/>
+          <text class="diagram-dark" x="201" y="106" text-anchor="middle">+10</text>
+          <rect class="diagram-gpu" x="172" y="36" width="70" height="30"/>
+          <text class="diagram-dark" x="207" y="58" text-anchor="middle">+20</text>
+          <rect class="diagram-upload" x="244" y="84" width="70" height="30"/>
+          <text class="diagram-dark" x="279" y="106" text-anchor="middle">+20</text>
+          <rect class="diagram-gpu" x="250" y="36" width="70" height="30"/>
+          <text class="diagram-dark" x="285" y="58" text-anchor="middle">…</text>
+          <rect class="diagram-upload" x="322" y="84" width="70" height="30"/>
+          <text class="diagram-dark" x="357" y="106" text-anchor="middle">…</text>
+          <rect class="diagram-gpu" x="328" y="36" width="70" height="30"/>
+          <text class="diagram-dark" x="363" y="58" text-anchor="middle">+120</text>
+          <rect class="diagram-upload" x="400" y="84" width="70" height="30"/>
+          <text class="diagram-dark" x="435" y="106" text-anchor="middle">+120</text>
+          <path class="completion-barrier" d="M476 30V126"/>
+          <text class="diagram-label" x="502" y="57" text-anchor="middle">All</text>
+          <text class="diagram-label" x="502" y="76" text-anchor="middle">writes</text>
+          <text class="diagram-label" x="502" y="95" text-anchor="middle">finish</text>
+          <path class="diagram-edge " d="M476 126V140H272V150" marker-end="url(#overlapped-publication-arrow)"/>
+          <rect class="diagram-predicted" x="94" y="152" width="386" height="34"/>
+          <text class="diagram-strong" x="287" y="175" text-anchor="middle">One Atomic Icechunk Commit</text>
         </svg>
-        <div class="label">Published Forecast History · Live Arraylake Commits</div>
+        <div class="label">Live Forecast History</div>
         <div class="commits" id="commitList"></div>
       </article>
 
       <article class="panel em" data-panel="compute">
         <div class="kicker">06 · Earthmover Compute</div>
-        <h2>Serve Maps and Queries</h2>
-        <p><b>Earthmover Compute</b> serves map tiles and SQL from versioned Arraylake arrays. Request selected regions, composites, and forecast lead times.</p>
-        <svg class="science-diagram" viewBox="0 0 544 200" role="img" aria-labelledby="forecast-delivery-title forecast-delivery-desc">
-          <title id="forecast-delivery-title">Forecast Delivery</title><desc id="forecast-delivery-desc">A versioned forecast passes to Earthmover Compute and branches into map tiles, SQL queries, and application data access.</desc>
-          <defs><marker id="forecast-delivery-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <rect class="diagram-node" x="100" y="12" width="344" height="44"/>
-          <text class="diagram-strong" x="272" y="40" text-anchor="middle">Versioned Arraylake Forecast</text>
-          <path class="diagram-edge " d="M272 56V76" marker-end="url(#forecast-delivery-arrow)"/>
-          <rect class="diagram-predicted" x="140" y="78" width="264" height="40"/>
-          <text class="diagram-strong" x="272" y="104" text-anchor="middle">Earthmover Compute</text>
-          <path class="diagram-edge" d="M272 118V132H92M272 132H452"/>
-          <path class="diagram-edge " d="M92 132V142" marker-end="url(#forecast-delivery-arrow)"/>
-          <rect class="diagram-node" x="10" y="144" width="164" height="52"/>
-          <text class="diagram-strong" x="92" y="169" text-anchor="middle">Map Tiles</text>
-          <text class="diagram-label" x="92" y="191" text-anchor="middle">Interactive globe</text>
-          <path class="diagram-edge " d="M272 132V142" marker-end="url(#forecast-delivery-arrow)"/>
-          <rect class="diagram-node" x="190" y="144" width="164" height="52"/>
-          <text class="diagram-strong" x="272" y="169" text-anchor="middle">SQL Queries</text>
-          <text class="diagram-label" x="272" y="191" text-anchor="middle">Regions + lead times</text>
-          <path class="diagram-edge " d="M452 132V142" marker-end="url(#forecast-delivery-arrow)"/>
-          <rect class="diagram-node" x="370" y="144" width="164" height="52"/>
-          <text class="diagram-strong" x="452" y="169" text-anchor="middle">Data Access</text>
-          <text class="diagram-label" x="452" y="191" text-anchor="middle">Applications</text>
+        <h2>From Scientific Arrays to Interactive Maps</h2>
+        <p>Earthmover Compute generates geospatial tiles and supports SQL queries directly against Arraylake datasets. Applications request selected regions, composites, and forecast lead times without downloading the entire forecast.</p>
+        <svg class="science-diagram" viewBox="0 0 544 174" role="img" aria-labelledby="forecast-delivery-title forecast-delivery-desc">
+          <title id="forecast-delivery-title">Forecast Delivery</title>
+          <desc id="forecast-delivery-desc">A versioned Arraylake forecast passes through Earthmover Compute to visualization, SQL analysis, and cloud-native data access.</desc>
+          <defs><marker id="forecast-delivery-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+          <rect class="diagram-predicted" x="10" y="8" width="524" height="36"/>
+          <text class="diagram-strong" x="272" y="35" text-anchor="middle">Arraylake Forecast → Earthmover Compute</text>
+          <path class="diagram-edge" d="M272 44V56H92M272 56H452"/>
+          <path class="diagram-edge" d="M92 56V74M272 56V74M452 56V74" marker-end="url(#forecast-delivery-arrow)"/>
+          <rect class="diagram-node" x="10" y="78" width="164" height="86"/>
+          <text class="diagram-strong" x="92" y="102" text-anchor="middle">Visualize</text>
+          <text class="diagram-label" x="92" y="126" text-anchor="middle">Render forecast map</text>
+          <text class="diagram-label" x="92" y="146" text-anchor="middle">tiles on demand.</text>
+          <rect class="diagram-node" x="190" y="78" width="164" height="86"/>
+          <text class="diagram-strong" x="272" y="102" text-anchor="middle">Query</text>
+          <text class="diagram-label" x="272" y="121" text-anchor="middle">Analyze regions and</text>
+          <text class="diagram-label" x="272" y="139" text-anchor="middle">forecast lead times</text>
+          <text class="diagram-label" x="272" y="157" text-anchor="middle">through SQL.</text>
+          <rect class="diagram-node" x="370" y="78" width="164" height="86"/>
+          <text class="diagram-strong" x="452" y="100" text-anchor="middle">Integrate</text>
+          <text class="diagram-label" x="452" y="121" text-anchor="middle">Access scientific data</text>
+          <text class="diagram-label" x="452" y="139" text-anchor="middle">through cloud-native</text>
+          <text class="diagram-label" x="452" y="157" text-anchor="middle">services.</text>
         </svg>
+        <div class="diagram-note">The live SQL example shows mean composite intensity across forecast lead times.</div>
         <div class="sql">
           <div class="sql-head"><b>Live data exploration · SQL</b><span id="sqlStatus">…</span></div>
           <div class="sql-run">
@@ -313,11 +312,11 @@
       </article>
 
       <article class="panel em" data-panel="access">
-        <div class="kicker">07 · The Complete Workflow</div>
-        <h2>Explore the Forecast on Your Phone</h2>
-        <p><b>EUMETSAT</b> observes. <b>StormScope-EU</b> predicts. <b>Earth2Studio</b> orchestrates. <b>Arraylake + Icechunk</b> publish; <b>Compute</b> serves the results.</p>
-
-        <svg class="science-diagram" viewBox="0 0 544 182" role="img" aria-labelledby="space-to-screen-title space-to-screen-desc">
+        <div class="kicker">07 · Explore StormScope-EU</div>
+        <h2>Take the Forecast With You</h2>
+        <p>Scan the viewer to explore Europe, compare True Color and Air Mass composites, and animate AI-generated satellite imagery through two hours from initialization.</p>
+        <p>The same versioned forecast supports the interactive map, scientific queries, and downstream applications.</p>
+        <svg class="science-diagram" viewBox="0 0 544 146" role="img" aria-labelledby="space-to-screen-title space-to-screen-desc">
           <title id="space-to-screen-title">Space To Screen</title><desc id="space-to-screen-desc">EUMETSAT observations enter StormScope-EU prediction and Arraylake/Icechunk publication, then Earthmover Compute serves them to the browser. Earth2Studio connects observations, model execution, and output.</desc>
           <defs><marker id="space-to-screen-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
@@ -340,14 +339,14 @@
           <rect class="diagram-observed" x="8" y="80" width="156" height="58"/>
           <text class="diagram-strong" x="86" y="105" text-anchor="middle">Explore</text>
           <text class="diagram-label" x="86" y="126" text-anchor="middle">Your browser</text>
-          <text class="diagram-label" x="272" y="164" text-anchor="middle">Earth2Studio Connects Observations, Model, and Output</text>
         </svg>
-        <div class="label">Scan to Explore StormScope-EU</div>
+        <div class="label">Open the Viewer · Explore the Data</div>
         <div class="two qr">
-          <a class="qrcard" id="viewerLink" href="https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/" target="_blank" rel="noopener"><div class="qrbox" id="qrViewer"></div><b>Open the Viewer</b><span>Compare composites and animate the forecast</span></a>
-          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Developer Tiles</b><span>Raw tile endpoint for applications</span></div>
+          <a class="qrcard" id="viewerLink" href="https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/" target="_blank" rel="noopener"><div class="qrbox" id="qrViewer"></div><b>Open the Viewer</b></a>
+          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Developer Tiles</b></div>
         </div>
 
+        <div class="partner-credit">EUMETSAT × NVIDIA × Earthmover</div>
 
       </article>
 
