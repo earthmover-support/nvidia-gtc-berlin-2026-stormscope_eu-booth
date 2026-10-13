@@ -21,8 +21,10 @@
   "history_depth": 120,
 
   "panel_seconds": 25,
-  "playback_speed": "normal",
-  "hold_ms": 2500,
+  "playback_speed": "slow",
+  "hold_ms": 4000,
+  "attract_reset_s": 180,
+  "timezone": "Europe/Berlin",
 
   "station": { "name": "STATION Berlin", "lat": 52.4999581, "lon": 13.3757385 },
   "camera": { "lon": 12.0, "lat": 49.0, "zoom": 3.2, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,

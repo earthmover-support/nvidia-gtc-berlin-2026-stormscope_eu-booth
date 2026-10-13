@@ -43,9 +43,15 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 | ← / → | previous / next panel (auto-rotation resumes after 60 s) |
 | Space | pause / resume panel rotation |
 | P | pause / resume the forecast loop |
-| S | cycle playback speed (slow / normal / fast) |
+| O | loop / play once (stops on +120) |
+| S | cycle playback speed (slow 1 s / medium 0.5 s / fast 0.25 s per frame) |
 | T / A | `true_color` / `airmass` |
 | 1–9, L | pick an initialisation (1 = L = latest) |
+| C | collapse / expand the ingest strip |
+
+Every toggle (loop, pause, speed, variable, init, rotation, strip) reverts to the defaults
+after `attract_reset_s` (config.json, 180 s) without any input, so a visitor's click never
+sticks for the day. `config.json` is read when `server.py` starts: restart it after editing.
 
 ## Before the event
 
@@ -71,9 +77,9 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    scales to zero: the first query after a sleep takes ~50 s, later ones ~20 s (each
    lead reads a full 1120 × 2432 frame; 8–16 s measured warm on 2026-10-07). Fire one query before visitors arrive.
    Panel 07 is a live editor: click a city chip (`sql.places`) or type any single
-   `SELECT`/`WITH` statement and press Run or ⌘/Ctrl+Enter; Esc leaves the box.
-   Chips and Reset only fill the editor; the server runs a query (with the token; the
-   browser never sees it) when Run is pressed, and once by itself for each new init: it
+   `SELECT`/`WITH` statement and press ⌘/Ctrl+Enter; Esc leaves the box.
+   A city chip fills the editor and runs at once; Reset only fills it. The server runs the
+   query (with the token; the browser never sees it), and once by itself for each new init: it
    resets the editor to the first city (Berlin) and keeps that result in memory until the
    next init. `{init}` is replaced by the newest complete init; `{lat}`/`{lon}`/`{box}` in `sql.query` are filled per city. `lat`/`lon` are
    2-D pixel coordinates, so filter on a `BETWEEN` box, never on equality.
@@ -83,7 +89,9 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
 6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 7).
-7. **Offline backup**: with tiles and SQL up, save a fallback in case the venue has no
+7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
+   whatever the booth machine or a hosted viewer's browser is set to.
+8. **Offline backup**: with tiles and SQL up, save a fallback in case the venue has no
    internet:
    ```bash
    uv run presentation/server.py --fetch-offline   # ~25 min with 8 replicas; rerun resumes
