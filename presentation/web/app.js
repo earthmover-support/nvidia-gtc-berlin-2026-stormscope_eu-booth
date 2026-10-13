@@ -513,7 +513,7 @@
   function renderClock() {
     const lead = shown ? S.cfg.leads[S.frame] : null;
     const valid = shown && lead != null ? new Date(initDate(shown.run.init).getTime() + lead * 60000) : null;
-    const tag = S.status === "demo" ? "DEMO" : "LIVE";
+    const tag = { demo: "DEMO", offline: "REPLAY" }[S.status] ?? "LIVE";
     $("#clock").textContent = valid
       ? `${tag} · ${HM.format(valid)} ${tzName(valid)} · ${lead ? `+${lead} min` : "satellite"}`
       : `${tag} · --:--`;
@@ -537,7 +537,7 @@
   function renderStrip() {
     const c = S.cfg;
     const now = new Date();
-    $("#clock").textContent = `${{ demo: "DEMO", offline: "REPLAY" }[S.status] ?? "LIVE"} ·${HMS.format(now)} ${tzName(now)}`;
+    renderClock();
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
