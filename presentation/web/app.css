@@ -308,7 +308,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .progress button i { position: absolute; top: 8px; left: 0; height: 4px; width: 0; background: var(--nv-green); }
 .panels.em-theme .progress button i { background: var(--em-lav); }
 .progress button:focus-visible, .panel-nav button:focus-visible { outline: 2px solid #EDEDED; outline-offset: 2px; }
-.cycle-status { position: absolute; top: 116px; left: 22px; right: 22px; z-index: 2; display: grid; grid-template-columns: 1.4fr 1.4fr 1.2fr 1fr; gap: 10px; padding: 12px 16px; background: rgba(5, 7, 10, .87); border-left: 2px solid var(--lime); pointer-events: none; }
+.cycle-status { position: absolute; top: 116px; left: 22px; right: 22px; z-index: 2; display: grid; grid-template-columns: repeat(4, minmax(0, 1.25fr)) minmax(0, .6fr) minmax(0, .8fr); gap: 10px; padding: 12px 16px; background: rgba(5, 7, 10, .87); border-left: 2px solid var(--lime); pointer-events: none; }
 .cycle-status div { display: flex; flex-direction: column; gap: 4px; }
 .cycle-status span { font-size: 11px; color: #B4BBC4; }
 .cycle-status b { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -344,7 +344,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .diagram-label { font-size: 15px; fill: #C9CFD6; }
 .diagram-dark { font-size: 17px; font-weight: 500; fill: #101018; }
 .completion-barrier { fill: none; stroke: #D2ADF8; stroke-width: 2; stroke-dasharray: 4 3; }
-.commit-heading, .commit { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 12px; }
+.commit-heading, .commit { display: grid; grid-template-columns: 1.75fr .85fr .9fr .8fr; gap: 12px; }
 .commit-heading { padding: 0 12px; font-size: 13px; color: #D9D6E8; }
 .commit { padding: 8px 12px; }
 .commit .init { font-size: 14px; font-variant-numeric: tabular-nums; }
@@ -357,7 +357,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="access"] .qr .qrcard { padding: 10px; }
 .qrcard b { font-size: 17px; }
 .qrcard span { font-size: 14px; }
-.notice { top: 225px; }
+.notice { top: 270px; }
 .nowcast-scope { padding: 16px; border: 1px solid #2E3C20; background: #111; display: flex; flex-direction: column; gap: 12px; }
 .scope-axis { display: flex; justify-content: space-between; border-bottom: 2px solid #919CA9; padding-bottom: 8px; font-size: 16px; color: #C9CFD6; }
 .scope-window { padding: 12px; border-left: 3px solid #A5D85B; background: #172510; display: flex; flex-direction: column; gap: 4px; }
@@ -374,3 +374,8 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="compute"] { gap: 12px; }
 [data-panel="access"] .qr { grid-template-columns: 1.15fr 1fr; }
 [data-panel="access"] #qrTiles { width: 160px; }
+
+.cycle-heading { grid-column: 1 / -1; font-size: 14px; }
+.cycle-status .cycle-context { font-size: 12px; color: #C9CFD6; }
+.cycle-context span { font-size: inherit; color: inherit; }
+.publication-status { font-size: 14px; color: #D2ADF8; }

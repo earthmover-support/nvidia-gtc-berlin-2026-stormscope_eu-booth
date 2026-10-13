@@ -50,11 +50,15 @@
         <div class="seg" id="varToggle" role="group" aria-label="Variable"></div>
       </div>
 
-      <div class="cycle-status" aria-label="Forecast cycle status">
-        <div><span>Observation / Init · UTC</span><b id="cycleInit">—</b></div>
+      <div class="cycle-status" aria-label="StormScope-EU forecast cycle status">
+        <strong class="cycle-heading">StormScope-EU · Forecast Cycle Status</strong>
+        <div><span>Latest Obs in Run · UTC</span><b id="cycleObservation">—</b></div>
+        <div><span>Init · UTC</span><b id="cycleInit">—</b></div>
+        <div><span>Valid · UTC</span><b id="cycleValid">—</b></div>
         <div><span>Published · UTC</span><b id="cyclePublished">—</b></div>
-        <div><span>Observation Age</span><b id="cycleAge">—</b></div>
-        <div><span>Horizon from Init</span><b id="cycleHorizon">+120 min</b></div>
+        <div><span>Forecast Lead</span><b id="cycleLead">—</b></div>
+        <div><span>Snapshot</span><b id="cycleSnapshot">—</b></div>
+        <p class="cycle-context">Observation age: <span id="cycleAge">—</span> · Horizon from init: <span id="cycleHorizon">+120 min</span></p>
         <p id="cycleState" role="status">Waiting for published forecast data</p>
       </div>
 

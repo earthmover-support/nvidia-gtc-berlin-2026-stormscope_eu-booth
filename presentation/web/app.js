@@ -438,9 +438,18 @@
     const run = shown?.run || selectedRun();
     const head = S.commits[0];
     const publication = run && S.commits.find((c) => c.id === run.ref && (c.message || "").includes(run.init));
-    $("#cycleInit").textContent = run ? `${ymdhm(initDate(run.init))}` : "—";
+    // The most recent input observation defines this pipeline's initialization time.
+    // This is the published run's observation, not telemetry of incoming EUMETSAT scans.
+    $("#cycleObservation").textContent = run ? ymdhm(initDate(run.init)) : "—";
+    $("#cycleInit").textContent = run ? ymdhm(initDate(run.init)) : "—";
+    const lead = shown ? S.cfg.leads[S.frame] : null;
+    $("#cycleValid").textContent = shown && lead != null
+      ? ymdhm(new Date(initDate(shown.run.init).getTime() + lead * 60000)) : "—";
+    $("#cycleLead").textContent = lead == null ? "—" : `+${lead} min`;
+    $("#cycleSnapshot").textContent = run?.ref ? run.ref.slice(0, 12) : "Unavailable";
+    $("#cycleSnapshot").title = run?.ref || "No snapshot metadata available";
     $("#cyclePublished").textContent = publication ? ymdhm(new Date(publication.written_at)) : "Unavailable";
-    $("#cycleAge").textContent = run ? `${ago(initDate(run.init).toISOString())} since observation` : "—";
+    $("#cycleAge").textContent = run ? ago(initDate(run.init).toISOString()) : "—";
     $("#cycleHorizon").textContent = `+${S.cfg.leads.at(-1)} min`;
     let message = run ? "Published snapshot · waiting for the next published cycle" : "Waiting for published forecast data";
     if (S.status === "demo") message = "DEMO · simulated publication history and SQL";
@@ -542,6 +551,7 @@
     $("#validEyebrow").textContent = (lead ? `Forecast · +${lead} min` : "Observed · Satellite") + suffix;
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
     renderCompositePreviews();
+    renderCycleStatus();
   }
 
   function showNotice(text) {
@@ -731,13 +741,14 @@
     const box = $("#commitList");
     box.replaceChildren();
     const columns = el("div", "commit-heading");
-    columns.append(el("span", null, "Init · UTC"), el("span", null, "Snapshot"), el("span", null, "Published Age"));
+    columns.append(el("span", null, "Init · UTC"), el("span", null, "Forecast"), el("span", null, "Snapshot"), el("span", null, "Published Age"));
     box.append(columns);
     if (!S.commits.length) box.append(el("div", "commit", "Waiting for publication history…"));
     S.commits.slice(0, 4).forEach((c, k) => {
       const row = el("div", "commit" + (k === 0 ? " fresh" : ""));
       row.append(
         el("span", "init", (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1].replace("T", " ") || "Other commit"),
+        el("span", "publication-status", "Published"),
         el("span", "id", c.id.slice(0, 8)),
         el("span", "ago", `${ago(c.written_at)} ago`)
       );

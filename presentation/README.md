@@ -184,3 +184,11 @@ that hold to 120 s. The visible progress marker follows the same timing as rotat
 Hidden panels are inert so their buttons, links, and editor stay out of keyboard navigation.
 The header labels the current wall clock; forecast valid time stays on the globe.
 Body copy uses 18 px text at the 1080p booth size, with 15–18 px diagram labels.
+
+
+The persistent forecast-cycle status includes separate UTC observation, initialization,
+valid, and publication times; displayed forecast lead; and snapshot ID. The observation
+is the newest input frame of the displayed published run, which defines its initialization.
+Incoming uncommitted satellite scans are not reported by the dashboard API. The valid
+and lead fields follow playback and scrubbing, while the snapshot follows run selection.
+Publication history explicitly labels each committed snapshot Published.
