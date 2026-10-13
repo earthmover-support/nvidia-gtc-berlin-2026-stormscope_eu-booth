@@ -611,7 +611,6 @@
   const panels = () => [...document.querySelectorAll(".panel")];
 
   function initPanels() {
-    $("#stepSeconds").textContent = S.cfg.run_phases_s.step; // same estimate the strip uses
     const prog = $("#progress");
     prog.replaceChildren(...panels().map(() => el("span")));
     showPanel(0);
@@ -772,9 +771,9 @@
     ]);
     $("#sqlFoot").textContent =
       S.sqlPlace === MY && S.myCoords
-        ? `How cloudy over ${MY} (${fmtCoords(S.myCoords.lat, S.myCoords.lon)}), next 2 h · PostgreSQL wire protocol`
+        ? `Mean composite intensity over ${MY} (${fmtCoords(S.myCoords.lat, S.myCoords.lon)}), next 2 h · PostgreSQL wire protocol`
         : S.sqlPlace
-          ? `How cloudy over ${S.sqlPlace}, next 2 h · PostgreSQL wire protocol`
+          ? `Mean composite intensity over ${S.sqlPlace}, next 2 h · PostgreSQL wire protocol`
           : "Your query · PostgreSQL wire protocol";
   }
 

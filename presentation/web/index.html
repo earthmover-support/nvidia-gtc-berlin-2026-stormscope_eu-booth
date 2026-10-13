@@ -75,117 +75,109 @@
     <section class="panels" id="panels">
 
       <article class="panel nv" data-panel="nowcasting">
-        <div class="kicker">01 · NOWCASTING</div>
-        <h2>The weather of the next two hours</h2>
-        <p>Classic weather models take hours to run and struggle to say where a storm cell will pop up this afternoon. Nowcasting starts from what satellites see right now and projects it forward, fast enough to act on.</p>
-        <div class="box">
-          <div class="label">HOW FAR AHEAD</div>
-          <div class="range">
-            <div class="r now"><b>0–2 h</b><span>nowcasting</span></div>
-            <div class="r mid"><b>hours–10 days</b><span>weather forecast</span></div>
-            <div class="r far"><b>weeks +</b><span>climate</span></div>
-          </div>
+        <div class="kicker">01 · GENERATIVE AI NOWCASTING</div>
+        <h2>What will the satellite see next?</h2>
+        <p>Every 10 minutes, Meteosat-12 captures a new multispectral view of Europe's evolving atmosphere. But can AI predict what the satellite will observe next?</p>
+        <p><b>NVIDIA StormScope-EU</b> is a generative diffusion model that learns the spatiotemporal evolution of satellite imagery across 16 spectral channels.</p>
+        <p>Starting from six consecutive observations, it generates the next multispectral frame. Each prediction advances a sliding input window, extending the forecast autoregressively through twelve 10-minute steps.</p>
+        <div class="box flow">
+          <div class="label">THE GENERATIVE FORECAST · 6 OBSERVED FRAMES</div>
+          <div class="frames"><span>−50</span><span>−40</span><span>−30</span><span>−20</span><span>−10</span><span>0</span></div>
+          <div class="arrow">↓</div>
+          <div class="engine"><b>StormScope-EU · generative diffusion</b><span>on NVIDIA GPU</span></div>
+          <div class="arrow">↓</div>
+          <div class="label">12 PREDICTED FRAMES · each one re-enters the context window</div>
+          <div class="frames out-frames"><span>+10</span><span>+20</span><span>+30</span><span>+40</span><span>+50</span><span>+60</span><span>+70</span><span>+80</span><span>+90</span><span>+100</span><span>+110</span><span>+120</span></div>
         </div>
-        <div class="label">WHO NEEDS IT</div>
-        <div class="chips">
-          <span>Severe-storm warnings</span><span>Solar power ramps</span><span>Aviation</span><span>Outdoor events</span>
-        </div>
-        <div class="label">WHAT'S NEW</div>
-        <p class="small">A generative AI model that paints the next satellite image, every 10 minutes, on a single GPU.</p>
+        <div class="eyebrow">16 FCI CHANNELS · AUTOREGRESSIVE ROLLOUT · 2-HOUR FORECAST HORIZON</div>
       </article>
 
       <article class="panel nv" data-panel="mtg">
-        <div class="kicker">02 · THE EYE IN ORBIT</div>
-        <h2>Meteosat-12 sees Europe every 10 minutes</h2>
-        <p>The first imager of EUMETSAT's Meteosat Third Generation. It sits 36,000 km above the Gulf of Guinea at 0° longitude and has been Europe's prime geostationary weather satellite since 2025.</p>
-        <div class="stats">
-          <div><b>16</b><span>spectral channels (FCI)</span></div>
-          <div><b>10 min</b><span>full-disk repeat cycle</span></div>
-          <div><b>1–2 km</b><span>pixels, visible and infrared</span></div>
-          <div><b>Dec 2022</b><span>launched on Ariane 5</span></div>
-        </div>
-        <div class="label">ON THE GLOBE</div>
+        <div class="kicker">02 · EARTH OBSERVATIONS</div>
+        <h2>Observing Europe's atmosphere from space</h2>
+        <p>The forecast begins approximately 36,000 km above Earth.</p>
+        <p>EUMETSAT's <b>Meteosat-12</b> observes Europe and surrounding regions using the Flexible Combined Imager (FCI). Its 16 spectral channels measure reflected solar and emitted thermal radiation, capturing evolving cloud systems, water vapor, and atmospheric structure.</p>
+        <p>New observations provide updated initial conditions for successive AI forecast cycles.</p>
+        <div class="label">TWO VIEWS OF THE ATMOSPHERE</div>
         <div class="two">
-          <div class="card" data-var="true_color"><b>True Color</b><span>What your eye would see: red, green and blue light combined</span></div>
-          <div class="card" data-var="airmass"><b>Air Mass</b><span>Infrared water-vapour and ozone channels: red dry sinking air, green warm tropical air, blue cold polar air, white thick high cloud</span></div>
+          <div class="card" data-var="true_color"><b>True Color</b><span>A natural-looking daylight composite of clouds and Earth's surface.</span></div>
+          <div class="card" data-var="airmass"><b>Air Mass</b><span>An infrared composite highlighting water vapor and large-scale atmospheric structure.</span></div>
         </div>
-      </article>
-
-      <article class="panel nv" data-panel="model">
-        <div class="kicker">03 · THE AI MODEL</div>
-        <h2>StormScope-EU predicts the next two hours of clouds</h2>
-        <p>A generative diffusion model from NVIDIA. It forecasts all 16 satellite channels directly in image space, learning how clouds move and grow instead of solving the physics.</p>
-        <div class="box flow">
-          <div class="label">INPUT · 6 OBSERVED FRAMES</div>
-          <div class="frames"><span>−50</span><span>−40</span><span>−30</span><span>−20</span><span>−10</span><span>0</span></div>
-          <div class="arrow">↓</div>
-          <div class="engine"><b>StormScope-EU on GPU</b><span>48 denoising steps · bf16</span></div>
-          <div class="arrow">↓</div>
-          <div class="out"><span class="pill">+10 min</span><span>The new frame is fed back in. 12 rollouts reach +120&nbsp;min.</span></div>
+        <div class="stats">
+          <div><b>16</b><span>spectral channels</span></div>
+          <div><b>10 min</b><span>scan cadence</span></div>
+          <div><b>36,000 km</b><span>geostationary orbit</span></div>
+          <div><b>6 frames</b><span>initial conditions per cycle</span></div>
         </div>
-        <ul class="facts">
-          <li>Conditioned on orography and land–sea mask</li>
-          <li>Ensemble-of-experts denoising across noise levels</li>
-          <li>NVIDIA H200 · ~<span id="stepSeconds">20</span> s per 10-minute step</li>
-        </ul>
       </article>
 
       <article class="panel nv" data-panel="e2s">
-        <div class="kicker">04 · THE PIPELINE</div>
-        <h2>Earth2Studio wires data, model and storage together</h2>
-        <p>NVIDIA's open-source Python package for AI weather and climate. You can swap data sources, models and outputs without rewriting the pipeline.</p>
+        <div class="kicker">03 · NVIDIA EARTH2STUDIO</div>
+        <h2>New observations. New forecast cycles.</h2>
+        <p>The atmosphere never stops evolving. Each new set of observations provides an opportunity to initialize an updated forecast.</p>
+        <p>Using <b>NVIDIA Earth2Studio</b>, the workflow retrieves the latest six available Meteosat frames, prepares the model inputs, and executes StormScope-EU on NVIDIA GPUs.</p>
+        <p>Each initialization produces twelve successive predictions, extending two hours beyond the forecast reference time. As new observations become available, another forecast cycle can begin.</p>
+        <div class="label">THE FORECAST CYCLE</div>
         <ol class="steps">
-          <li><i>1</i><div><b>Fetch</b><span>Latest 6 FCI frames from the EUMETSAT Data Store</span></div></li>
-          <li><i>2</i><div><b>Predict</b><span>StormScope-EU rolls forward 12 × 10 min on the GPU</span></div></li>
-          <li class="split"><i>3</i><div><b>Write</b><span>Upload forecasts to Arraylake while GPU runs</span></div></li>
-          <li class="violet"><i>4</i><div><b>Serve</b><span>Map tiles served via Earthmover Compute</span></div></li>
+          <li><i>1</i><div><b>Ingest</b><span>Retrieve six consecutive FCI observations</span></div></li>
+          <li><i>2</i><div><b>Initialize</b><span>Establish the latest forecast reference time</span></div></li>
+          <li><i>3</i><div><b>Infer</b><span>Generate twelve autoregressive forecast steps on the GPU</span></div></li>
+          <li class="split"><i>4</i><div><b>Output</b><span>Write predictions to Earthmover Arraylake</span></div></li>
+          <li><i>5</i><div><b>Repeat</b><span>Initialize the next cycle from updated observations</span></div></li>
         </ol>
-      </article>
-
-      <article class="panel nv" data-panel="dataflow">
-        <div class="kicker">05 · DATA FLOW</div>
-        <h2>From satellite to screen in ~70 minutes (~20 with licence)</h2>
-        <ol class="hops">
-          <li class="eu"><div><b>Meteosat-12</b><span>Scans Europe from orbit</span></div><em>10 min</em></li>
-          <li class="eu"><div><b>EUMETSAT Data Store</b><span>Processes and publishes the scan</span></div><em>+5 min</em></li>
-          <li class="eu wait"><div><b>Data embargo</b><span>Free data is released 1 hour after the scan</span></div><em>+48 min</em></li>
-          <li><div><b>Download</b><span>Earth2Studio fetches the latest frames</span></div><em>~2 min</em></li>
-          <li class="split"><div><b>Inference on NVIDIA H200 GPU saving to Arraylake</b><span>Predicts 2 hours ahead</span></div><em>&lt;4 min</em></li>
-          <li class="em"><div><b>Earthmover Compute</b><span>Renders map tiles straight from the data</span></div><em>~2 s</em></li>
-          <li class="em"><div><b>Your browser</b><span>Loads all 13 frames and plays the loop</span></div><em>~25 s</em></li>
-        </ol>
-        <div class="legend"><span class="eu">EUMETSAT</span><span class="nv">NVIDIA</span><span class="em">Earthmover</span></div>
+        <div class="eyebrow">OBSERVE → INITIALIZE → PREDICT → REPEAT</div>
       </article>
 
       <article class="panel em" data-panel="arraylake">
-        <div class="kicker">06 · THE DATA LAKE</div>
-        <h2>Every forecast run is a commit</h2>
-        <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Readers never see a half-written forecast.</p>
-        <div class="commits" id="commitList"></div>
-        <div class="two">
-          <div class="card"><b>Transactional</b><span>Icechunk: open-source, cloud-native Zarr storage</span></div>
-          <div class="card"><b>Time travel</b><span>Open any past forecast by its snapshot ID</span></div>
+        <div class="kicker">04 · EARTHMOVER ARRAYLAKE + ICECHUNK</div>
+        <h2>From GPU inference to versioned forecasts</h2>
+        <p>Generating the predictions is only part of the challenge. Large scientific datasets must also move efficiently from GPU compute to cloud storage.</p>
+        <p>Forecast outputs are transferred to <b>Earthmover Arraylake</b> as inference progresses, overlapping data transfer with subsequent prediction steps to reduce end-to-end publication latency.</p>
+        <p><b>Icechunk</b> provides transactional, versioned storage for the resulting multidimensional arrays. Once the forecast is complete, an atomic commit publishes the run as a consistent snapshot.</p>
+        <div class="three">
+          <div class="card"><b>Overlapped I/O</b><span>Transfer predictions while the GPU computes subsequent steps</span></div>
+          <div class="card"><b>Atomic commits</b><span>Publish complete, consistent forecast datasets</span></div>
+          <div class="card"><b>Version history</b><span>Access previous forecast cycles and snapshots</span></div>
         </div>
-        <div class="callout">Each commit fires a webhook into Slack.</div>
+        <div class="label">LIVE ARRAYLAKE ACTIVITY · latest commits · init times · snapshots</div>
+        <div class="commits" id="commitList"></div>
       </article>
 
-      <article class="panel em" data-panel="access">
-        <div class="kicker">07 · YOUR TURN</div>
-        <h2>Take the forecast with you</h2>
-        <div class="two qr">
-          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw tiles</b><span>Latest run, 10-min forecast, served via Earthmover Compute</span></div>
-          <div class="qrcard"><div class="qrbox" id="qrViewer"></div><b>Animated viewer</b><span>Every run, every lead time</span></div>
+      <article class="panel em" data-panel="compute">
+        <div class="kicker">05 · EARTHMOVER COMPUTE</div>
+        <h2>From scientific data to interactive forecasts</h2>
+        <p>A new forecast has been published. How do we make it accessible without transferring the entire scientific dataset to every user?</p>
+        <p><b>Earthmover Compute</b> serves forecasts directly from cloud-native Arraylake datasets, dynamically generating geospatial map tiles and supporting queries against the underlying scientific arrays. The same forecast can power interactive maps, scientific analysis, and downstream applications.</p>
+        <div class="three">
+          <div class="card"><b>Visualize</b><span>Render geospatial forecast tiles on demand</span></div>
+          <div class="card"><b>Query</b><span>Analyze locations and lead times through SQL</span></div>
+          <div class="card"><b>Integrate</b><span>Access scientific data through cloud-native services</span></div>
         </div>
         <div class="sql">
-          <div class="sql-head"><b>Live SQL</b><span id="sqlStatus">…</span></div>
+          <div class="sql-head"><b>Live data exploration · SQL</b><span id="sqlStatus">…</span></div>
           <div class="sql-run">
             <div class="sql-places" id="sqlPlaces"></div>
             <button type="button" id="sqlReset">Reset</button>
           </div>
-          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="7" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea>
+          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="6" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea>
           <div class="bars" id="sqlBars"></div>
-          <div class="sql-foot" id="sqlFoot">How cloudy over Berlin, next 2 h · PostgreSQL wire protocol</div>
+          <div class="sql-foot" id="sqlFoot">Mean composite intensity over Berlin, next 2 h · PostgreSQL wire protocol</div>
         </div>
+      </article>
+
+      <article class="panel em" data-panel="access">
+        <div class="kicker">06 · THE COMPLETE WORKFLOW</div>
+        <h2>From satellite observations to your screen</h2>
+        <p>Every forecast begins with observations from space.</p>
+        <p><b>EUMETSAT</b> provides the satellite imagery. <b>NVIDIA StormScope-EU</b> predicts its evolution. <b>Earth2Studio</b> connects the scientific workflow. <b>Earthmover Arraylake and Icechunk</b> publish consistent, versioned forecasts, while <b>Earthmover Compute</b> delivers them to interactive applications.</p>
+        <p>When the next observation window becomes available, the forecasting cycle can begin again.</p>
+        <div class="label">SCAN TO EXPLORE STORMSCOPE-EU</div>
+        <div class="two qr">
+          <div class="qrcard"><div class="qrbox" id="qrViewer"></div><b>Animated viewer</b><span>Navigate across Europe, compare satellite composites, and animate AI-generated forecasts through a two-hour prediction horizon</span></div>
+          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw forecast tiles</b><span>Latest run, served straight from Arraylake by Earthmover Compute</span></div>
+        </div>
+        <div class="eyebrow">CONTINUOUS OBSERVATIONS · RECURRING AI FORECASTS · CLOUD-NATIVE DATA DELIVERY</div>
+        <div class="legend"><span class="eu">EUMETSAT</span><span class="nv">NVIDIA</span><span class="em">Earthmover</span></div>
       </article>
 
       <footer class="panel-foot">
@@ -194,7 +186,7 @@
           <div class="keys">←→ · space · P play · O once · S speed · T/A · 1–9 · C strip</div>
           <div class="panel-nav">
             <button type="button" id="panelPrev" aria-label="Previous panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-            <span class="panel-count" id="panelCount">1 / 7</span>
+            <span class="panel-count" id="panelCount">1 / 6</span>
             <button type="button" id="panelNext" aria-label="Next panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
           </div>
         </div>

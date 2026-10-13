@@ -76,7 +76,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
    `config.json` (`sql.host`) or `.env` (`ARRAYLAKE_SQL_HOST=...`, wins). The service
    scales to zero: the first query after a sleep takes ~50 s, later ones ~20 s (each
    lead reads a full 1120 × 2432 frame; 8–16 s measured warm on 2026-10-07). Fire one query before visitors arrive.
-   Panel 07 is a live editor: click a city chip (`sql.places`) or type any single
+   Panel 05 is a live editor: click a city chip (`sql.places`) or type any single
    `SELECT`/`WITH` statement and press ⌘/Ctrl+Enter; Esc leaves the box.
    A city chip fills the editor and runs at once; Reset only fills it. The server runs the
    query (with the token; the browser never sees it), and once by itself for each new init: it
@@ -88,7 +88,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
 5. **Run length**: the strip and scrubber show the observed +0 frame plus 12 steps,
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
-6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 7).
+6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 6).
 7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
    whatever the booth machine or a hosted viewer's browser is set to.
 8. **Offline backup**: with tiles and SQL up, save a fallback in case the venue has no
