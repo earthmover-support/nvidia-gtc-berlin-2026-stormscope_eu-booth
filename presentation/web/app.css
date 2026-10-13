@@ -298,7 +298,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .panel h2 { font-size: 32px; line-height: 1.1; }
 .panel p { font-size: 18px; line-height: 1.4; }
 .panel p.small { font-size: 16px; }
-.kicker { font-size: 16px; letter-spacing: .04em; }
+.kicker { font-size: 20px; font-weight: 700; line-height: 1.2; letter-spacing: .02em; }
 .label, .diagram-note { font-size: 14px; color: #BDBDBD; }
 .panel-foot .keys { color: #A9B0B9; font-size: 12px; }
 .panel-nav #panelPause { width: auto; padding: 0 10px; font-family: inherit; font-size: 14px; }
