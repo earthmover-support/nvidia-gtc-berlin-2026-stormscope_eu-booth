@@ -4,7 +4,8 @@
  *   /api/config  -> static settings (config.json)
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
  *   /api/sql     -> latest Zax-SQL result (polled every 10 s, 1 s while a query runs)
- *                   POST {query} runs what is in the panel 07 editor; only Run sends it
+ *                   POST {query} runs what is in the panel 07 editor; chips and
+ *                   ⌘/Ctrl+Enter send it (there is no Run button)
  *                   (the server also runs the Berlin query once for each new init)
  *                   Hosted page (`sql_editable: false`): the editor is read-only and Run
  *                   sends GET ?place=&init=, answered once the query is done (CDN-cached)
@@ -37,8 +38,10 @@
     rotatePaused: false,
     manualUntil: 0,
     sql: null,
-    sqlPlace: null, // city chip that produced the query, null once hand-edited
+    sqlPlace: null, // city chip (or My location) that produced the query, null once hand-edited
     sqlDirty: false, // textarea edited but not run yet
+    myCoords: null, // {lat, lon} from geolocation once inside data_bounds
+    locating: false, // geolocation lookup in flight
     doneInit: null,
   };
 
@@ -614,28 +617,128 @@
   // server-filled query per city chip, {init} left in; the first one is the default
   const sqlFor = (name) => S.cfg.sql_places[name];
   const defaultSql = () => Object.values(S.cfg.sql_places)[0];
+  const MY = "My location";
+
+  // coords embedded in a built query, e.g. `lat BETWEEN 52.5000 - 0.05 AND ...`
+  const coordsOf = (query) => {
+    const mLat = /lat BETWEEN\s+(-?[\d.]+)\s*-\s*[\d.]+\s+AND\s+(-?[\d.]+)\s*\+\s*[\d.]+/i.exec(query || "");
+    const mLon = /lon BETWEEN\s+(-?[\d.]+)\s*-\s*[\d.]+\s+AND\s+(-?[\d.]+)\s*\+\s*[\d.]+/i.exec(query || "");
+    if (!mLat || !mLon) return null;
+    return { lat: parseFloat(mLat[1]), lon: parseFloat(mLon[1]) };
+  };
+
+  // same query shape as the server's place_queries, but for an arbitrary point
+  const sqlForCoords = (lat, lon) => {
+    const box = S.cfg.sql_box ?? 0.05;
+    const rLat = lat.toFixed(4), rLon = lon.toFixed(4);
+    return defaultSql()
+      .replace(/lat BETWEEN\s+[^\s]+\s*-\s*[^\s]+\s+AND\s+[^\s]+\s*\+\s*[^\s]+/i, `lat BETWEEN ${rLat} - ${box} AND ${rLat} + ${box}`)
+      .replace(/lon BETWEEN\s+[^\s]+\s*-\s*[^\s]+\s+AND\s+[^\s]+\s*\+\s*[^\s]+/i, `lon BETWEEN ${rLon} - ${box} AND ${rLon} + ${box}`);
+  };
+
+  const inBounds = (lat, lon) => {
+    const [w, s, e, n] = S.cfg.data_bounds; // west, south, east, north
+    return lon >= w && lon <= e && lat >= s && lat <= n;
+  };
+  const fmtCoords = (lat, lon) =>
+    `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? "N" : "S"}, ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
+  const boundsText = () => {
+    const [w, s, e, n] = S.cfg.data_bounds;
+    return `lon ${w}…${e}, lat ${s}…${n}`;
+  };
 
   // which city chip produced this server-side query (null = hand-written)
   const placeOf = (query) => {
     const q = (query || "").replace(/TIMESTAMP '[^']*'/, "TIMESTAMP '{init}'");
-    return Object.keys(S.cfg.sql_places).find((name) => sqlFor(name) === q) || null;
+    const city = Object.keys(S.cfg.sql_places).find((name) => sqlFor(name) === q);
+    if (city) return city;
+    if (S.myCoords) {
+      const c = coordsOf(q);
+      const want = sqlForCoords(S.myCoords.lat, S.myCoords.lon);
+      if (c && q === want) return MY;
+    }
+    return null;
   };
 
   function renderSqlPlaces() {
-    $("#sqlPlaces").replaceChildren(...Object.keys(S.cfg.sql_places).map((name) => {
-      const b = el("button", name === S.sqlPlace ? "on" : "", name);
-      b.type = "button";
-      b.addEventListener("click", () => {
-        S.sqlPlace = name;
-        S.sqlDirty = true; // filled in, not run: only Run sends a query
-        sqlBox().value = sqlFor(name);
+    const places = $("#sqlPlaces");
+    const running = S.sql && S.sql.status === "running";
+    places.replaceChildren(...[
+      ...Object.keys(S.cfg.sql_places).map((name) => {
+        const b = el("button", name === S.sqlPlace ? "on" : "", name);
+        b.type = "button";
+        b.disabled = !!running;
+        b.addEventListener("click", () => {
+          if (S.sql && S.sql.status === "running") return; // ignore clicks while a query runs
+          S.sqlPlace = name;
+          S.myCoords = null;
+          const query = sqlFor(name);
+          sqlBox().value = query;
+          renderSqlPlaces();
+          runSql(query); // no Run button: chips run immediately
+        });
+        return b;
+      }),
+      (() => {
+        const b = el("button", S.sqlPlace === MY ? "on" : "", S.locating ? "Locating…" : `📍 ${MY}`);
+        b.type = "button";
+        b.title = "Use browser geolocation";
+        b.disabled = !!S.locating || !!running;
+        b.setAttribute("aria-pressed", String(S.sqlPlace === MY));
+        b.addEventListener("click", () => useMyLocation());
+        return b;
+      })(),
+    ]);
+    $("#sqlFoot").textContent =
+      S.sqlPlace === MY && S.myCoords
+        ? `How cloudy over ${MY} (${fmtCoords(S.myCoords.lat, S.myCoords.lon)}), next 2 h · PostgreSQL wire protocol`
+        : S.sqlPlace
+          ? `How cloudy over ${S.sqlPlace}, next 2 h · PostgreSQL wire protocol`
+          : "Your query · PostgreSQL wire protocol";
+  }
+
+  function myLocationError(msg) {
+    S.locating = false;
+    S.sql = { status: "error", query: sqlBox().value, error: msg };
+    renderSqlPlaces(); // re-enable the button first; renderSql then overwrites the foot with the error
+    renderSql();
+  }
+
+  function useMyLocation() {
+    holdPanel();
+    if (S.sql && S.sql.status === "running") return; // ignore clicks while a query runs
+    if (!("geolocation" in navigator)) {
+      myLocationError("Geolocation is not available in this browser – try Berlin, Paris or London.");
+      return;
+    }
+    S.locating = true;
+    renderSqlPlaces();
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = +pos.coords.latitude.toFixed(4);
+        const lon = +pos.coords.longitude.toFixed(4);
+        S.locating = false;
+        if (!inBounds(lat, lon)) {
+          myLocationError(
+            `My location (${fmtCoords(lat, lon)}) is outside the StormScope-EU domain (${boundsText()}) – try Berlin, Paris or London.`
+          );
+          return;
+        }
+        S.myCoords = { lat, lon };
+        S.sqlPlace = MY;
+        const query = sqlForCoords(lat, lon);
+        sqlBox().value = query;
         renderSqlPlaces();
-      });
-      return b;
-    }));
-    $("#sqlFoot").textContent = S.sqlPlace
-      ? `How cloudy over ${S.sqlPlace}, next 2 h · PostgreSQL wire protocol`
-      : "Your query · PostgreSQL wire protocol";
+        runSql(query); // booth POSTs the query; hosted GETs lat/lon (see runPlaceSql)
+      },
+      (err) => {
+        const hint = " – try Berlin, Paris or London.";
+        if (err && err.code === 1) myLocationError(`Location permission denied – allow location access or pick a city.${hint}`);
+        else if (err && err.code === 3) myLocationError(`Location request timed out${hint}`);
+        else myLocationError(`Location unavailable${err && err.message ? `: ${err.message}` : hint}`);
+      },
+      { timeout: 10000, maximumAge: 60000 }
+    );
   }
 
   // the box shows the init the server filled in last; send it back as {init} so Run
@@ -646,6 +749,7 @@
   };
 
   async function runSql(query) {
+    if (S.sql && S.sql.status === "running") return; // ignore clicks while a query runs
     holdPanel();
     S.sqlDirty = false;
     if (!S.cfg.sql_editable) return runPlaceSql();
@@ -667,14 +771,22 @@
     pollSqlFast();
   }
 
-  // hosted page: the server runs only a city chip's query, for the newest init
+  // hosted page: the server runs only a city chip's query (or a coordinate inside
+  // data_bounds for My location), for the newest init
   async function runPlaceSql() {
     const run = latestShown();
-    if (!run || !S.sqlPlace) return;
+    if (!run) return;
+    const params =
+      S.sqlPlace === MY && S.myCoords
+        ? { lat: String(S.myCoords.lat), lon: String(S.myCoords.lon), init: run.time }
+        : S.sqlPlace
+          ? { place: S.sqlPlace, init: run.time }
+          : null;
+    if (!params) return;
     S.sql = { ...(S.sql || {}), status: "running", ran_at: null };
     renderSql();
     try {
-      const res = await fetch(`/api/sql?${new URLSearchParams({ place: S.sqlPlace, init: run.time })}`);
+      const res = await fetch(`/api/sql?${new URLSearchParams(params)}`);
       const cache = res.headers.get("x-vercel-cache");
       S.sql = { ...(await res.json()), cached: cache === "HIT" || cache === "STALE" };
     } catch (e) {
@@ -705,7 +817,6 @@
     status.classList.remove("err");
     status.title = "";
     $(".sql").classList.toggle("running", !!running);
-    $("#sqlRun").disabled = !!running;
     if (running) holdPanel();
     // never overwrite what someone is typing
     if (r && r.query && !S.sqlDirty && document.activeElement !== box) {
@@ -714,7 +825,7 @@
     }
     const empty = () => { bars.replaceChildren(); for (const _ of S.cfg.leads) bars.append(el("div", "empty")); };
     if (!r) { status.textContent = "connecting…"; empty(); return; }
-    if (r.status === "idle") { status.textContent = "press Run ▸"; empty(); return; }
+    if (r.status === "idle") { status.textContent = "pick a place"; empty(); return; }
     if (r.status === "disabled") { status.textContent = "SQL service off"; status.classList.add("err"); empty(); return; }
     if (r.status === "error") {
       status.textContent = "query failed";
@@ -724,7 +835,7 @@
       empty();
       return;
     }
-    if (running) { status.textContent = "running… (a cold start takes ~30 s)"; return; } // keep the old bars, dimmed
+    if (running) { status.textContent = "running…"; return; } // keep the old bars, dimmed
     renderSqlPlaces(); // restores the foot text after an error
     // first numeric column after the x column, so hand-written queries still plot
     const yi = (r.rows && r.rows[0] ? r.rows[0].findIndex((v, i) => i > 0 && typeof v === "number") : -1);
@@ -754,17 +865,18 @@
     box.addEventListener("input", () => {
       holdPanel();
       S.sqlDirty = true;
-      if (S.sqlPlace) { S.sqlPlace = null; renderSqlPlaces(); }
+      if (S.sqlPlace) { S.sqlPlace = null; S.myCoords = null; renderSqlPlaces(); }
     });
     box.addEventListener("keydown", (e) => {
       e.stopPropagation(); // typing must not trigger the booth shortcuts
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); runSql(box.value); }
       else if (e.key === "Escape") box.blur();
     });
-    $("#sqlRun").addEventListener("click", () => runSql(box.value));
     $("#sqlReset").addEventListener("click", () => {
+      if (S.sql && S.sql.status === "running") return; // ignore clicks while a query runs
       S.sqlPlace = placeOf(defaultSql());
-      S.sqlDirty = true;
+      S.myCoords = null;
+      S.sqlDirty = true; // filled in, not run
       box.value = defaultSql();
       renderSqlPlaces();
     });
