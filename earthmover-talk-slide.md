@@ -39,4 +39,4 @@
 
 ## Feature recommendation
 
-- "Create pyramids" button: one-click low-resolution pyramid levels — the only thing that shortens a single tile (#9)
+- "Create pyramids" button: one-click low-resolution pyramid levels
