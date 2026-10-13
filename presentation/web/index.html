@@ -121,7 +121,7 @@
           <div class="arrow">↓</div>
           <div class="engine"><b>StormScope-EU on GPU</b><span>48 denoising steps · bf16</span></div>
           <div class="arrow">↓</div>
-          <div class="out"><span class="pill">+10 min</span><span>The new frame is fed back in. 12 rollouts reach +120 min.</span></div>
+          <div class="out"><span class="pill">+10 min</span><span>The new frame is fed back in. 12 rollouts reach +120&nbsp;min.</span></div>
         </div>
         <ul class="facts">
           <li>Conditioned on orography and land–sea mask</li>
@@ -182,7 +182,7 @@
             <div class="sql-places" id="sqlPlaces"></div>
             <button type="button" id="sqlReset">Reset</button>
           </div>
-          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="8" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea>
+          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="7" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea>
           <div class="bars" id="sqlBars"></div>
           <div class="sql-foot" id="sqlFoot">How cloudy over Berlin, next 2 h · PostgreSQL wire protocol</div>
         </div>
@@ -190,7 +190,14 @@
 
       <footer class="panel-foot">
         <div class="progress" id="progress"></div>
-        <div class="keys">← → panels · space pause · P play · S speed · T/A variable · 1–9 init</div>
+        <div class="foot-row">
+          <div class="keys">←→ · space · P play · O once · S speed · T/A · 1–9 · C strip</div>
+          <div class="panel-nav">
+            <button type="button" id="panelPrev" aria-label="Previous panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <span class="panel-count" id="panelCount">1 / 7</span>
+            <button type="button" id="panelNext" aria-label="Next panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          </div>
+        </div>
       </footer>
     </section>
   </main>

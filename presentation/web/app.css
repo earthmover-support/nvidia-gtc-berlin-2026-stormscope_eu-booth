@@ -241,7 +241,14 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .progress span.on i { display: block; height: 100%; width: 0; background: var(--nv-green); }
 .panels.em-theme .progress span { background: #4A4760; }
 .panels.em-theme .progress span.on i { background: var(--em-lav); }
-.keys { font: 11px var(--mono); color: #6B7280; }
+.foot-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.keys { font: 11px var(--mono); color: #6B7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* prev / next buttons, lower right of the panel column */
+.panel-nav { display: flex; align-items: center; gap: 6px; pointer-events: auto; }
+.panel-nav button { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid #3A3A3A; background: rgba(0, 0, 0, .4); color: var(--text); cursor: pointer; }
+.panel-nav button:hover { border-color: var(--nv-green); color: var(--nv-green); }
+.panels.em-theme .panel-nav button:hover { border-color: var(--em-lav); color: var(--em-lav); }
+.panel-count { min-width: 44px; text-align: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* ---------------- strip ---------------- */
 .strip { position: relative; display: flex; align-items: center; gap: 24px; padding: 0 24px; background: #111317; border: 1px solid var(--line); border-radius: 0; }

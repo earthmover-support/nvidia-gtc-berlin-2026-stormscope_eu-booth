@@ -592,6 +592,10 @@
     const prog = $("#progress");
     prog.replaceChildren(...panels().map(() => el("span")));
     showPanel(0);
+    // buttons behave like the arrow keys: manual for 60 s, then the rotation resumes
+    const step = (d) => { S.manualUntil = Date.now() + 60000; showPanel(S.panel + d); };
+    $("#panelPrev").addEventListener("click", () => step(-1));
+    $("#panelNext").addEventListener("click", () => step(1));
     setInterval(() => {
       if (S.rotatePaused || Date.now() < S.manualUntil) return;
       showPanel(S.panel + 1);
@@ -603,6 +607,7 @@
     S.panel = (i + ps.length) % ps.length;
     ps.forEach((p, k) => p.classList.toggle("active", k === S.panel));
     $("#panels").classList.toggle("em-theme", ps[S.panel].classList.contains("em"));
+    $("#panelCount").textContent = `${S.panel + 1} / ${ps.length}`;
     [...$("#progress").children].forEach((s, k) => {
       s.className = k === S.panel ? "on" : "";
       s.replaceChildren();
