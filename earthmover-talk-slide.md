@@ -6,6 +6,9 @@
 
 - Dashboard: https://nvidia-gtc-berlin-2026-stormscope-e.vercel.app
 - Mobile: https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app
+- GitHub repo: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth
+- Arraylake repo: https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region
+- Tiles service: https://app.earthmover.io/gtc-berlin/services/tiles-eu-8af53d67?period=last15Minutes
 
 ## Delivery
 
