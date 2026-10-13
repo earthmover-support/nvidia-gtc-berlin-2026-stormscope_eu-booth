@@ -78,6 +78,11 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 #globe { position: absolute; inset: 0; background: #05070A; }
 .maplibregl-ctrl, .maplibregl-ctrl-attrib, .maplibregl-ctrl button { border-radius: 0 !important; }
 .maplibregl-ctrl-bottom-right { bottom: 150px; } /* above the init / slider / tick rows */
+/* attribution: no white box, just the text over the globe */
+.maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib.maplibregl-compact, .maplibregl-ctrl-attrib.maplibregl-compact-show { background: transparent !important; color: var(--muted); font-size: 11px; }
+.maplibregl-ctrl-attrib a { color: var(--muted); }
+.maplibregl-ctrl-attrib-button { background-color: transparent !important; filter: invert(1) opacity(.6); }
+.maplibregl-ctrl-attrib-button:focus, .maplibregl-ctrl-attrib-button:focus-visible { outline: none; box-shadow: none; }
 .station { display: flex; align-items: center; gap: 12px; pointer-events: none; }
 .station i { box-sizing: border-box; width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--lime); box-shadow: 0 0 0 1.5px #000, inset 0 0 0 1.5px #000; }
 .station span { padding: 5px 8px; border-radius: 0; background: rgba(10, 10, 12, .8); color: var(--text); font: 600 15px/1.25 var(--sans); white-space: pre; }
