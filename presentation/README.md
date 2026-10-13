@@ -89,6 +89,8 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
 6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 7).
+7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
+   whatever the booth machine or a hosted viewer's browser is set to.
 
 ## Hosted on Vercel
 

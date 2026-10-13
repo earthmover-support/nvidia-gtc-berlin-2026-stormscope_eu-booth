@@ -52,20 +52,24 @@
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
   const initDate = (init) => new Date(init + ":00Z"); // inits are stored in UTC
-  // Times show in the viewer's own zone, or Berlin's when the browser reports none.
-  const TZ = (() => {
-    try {
-      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      new Intl.DateTimeFormat("en", { timeZone: zone }); // throws on a zone it doesn't know
-      return zone || "Europe/Berlin";
-    } catch {
-      return "Europe/Berlin";
+  // Every time on screen is in one zone, config.json `timezone` (the booth's); the viewer's
+  // own zone is only a fallback for a missing or unknown value. Set in boot() once the
+  // config has loaded.
+  let TZ = "Europe/Berlin", HM, YMD;
+  function setTimezone(zone) {
+    for (const z of [zone, Intl.DateTimeFormat().resolvedOptions().timeZone, "Europe/Berlin"]) {
+      try {
+        if (!z) continue;
+        new Intl.DateTimeFormat("en", { timeZone: z }); // throws on a zone it doesn't know
+        TZ = z;
+        break;
+      } catch {}
     }
-  })();
-  const HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    YMD = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }); // YYYY-MM-DD
+  }
+  setTimezone();
   const hhmm = (init) => (init ? HM.format(initDate(init)) : "--:--");
-  // en-CA gives YYYY-MM-DD
-  const YMD = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
   const ymdhm = (d) => `${YMD.format(d)} ${HM.format(d)}`;
   // Zone abbreviation for `d` (CEST vs CET depends on the date). en-GB names the European
   // zones, en-US the American ones; anywhere else this is an offset like "GMT+3".
@@ -1065,6 +1069,7 @@
     fitStage();
     window.addEventListener("resize", fitStage);
     S.cfg = await (await fetch("/api/config")).json();
+    setTimezone(S.cfg.timezone);
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
     initSqlEditor();
     renderVarToggle();
