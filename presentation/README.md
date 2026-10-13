@@ -156,7 +156,7 @@ Redeployed 2026-10-09.
 ## Seven-panel scientific narrative
 
 The seven panels introduce the scientific definition of nowcasting, then explain
-generative autoregressive prediction, FCI observations,
+FCI observations, generative autoregressive prediction,
 recurring Earth2Studio cycles, overlapped uploads and atomic Icechunk publication,
 Compute tiles and SQL, and the complete workflow. Observation cards show real +0
 composite tiles over the configured Berlin tile and switch the globe layer when
@@ -176,3 +176,11 @@ sizes and a four-module quiet zone to improve scanning of the shorter viewer URL
 
 The opening panel distinguishes the general 0–6 h nowcasting window from this
 demo's 0–2 h satellite prediction horizon, following the [WMO definition](https://space.oscar.wmo.int/applicationareas). Headings and status labels use readable Title Case; scientific acronyms and product names retain their established casing.
+
+
+Panel navigation includes Pause/Resume and seven directly selectable chapter markers.
+Manual navigation holds a chapter for 60 s; focusing or using the SQL editor extends
+that hold to 120 s. The visible progress marker follows the same timing as rotation.
+Hidden panels are inert so their buttons, links, and editor stay out of keyboard navigation.
+The header labels the current wall clock; forecast valid time stays on the globe.
+Body copy uses 18 px text at the 1080p booth size, with 15–18 px diagram labels.

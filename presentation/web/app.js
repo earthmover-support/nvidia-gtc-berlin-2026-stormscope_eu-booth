@@ -405,7 +405,7 @@
   // display names for the variable keys in config.json
   const VAR_LABELS = { true_color: "True Color", airmass: "Air Mass" };
 
-  // panel 03's two cards highlight the variable on the globe
+  // Observation cards highlight the variable on the globe
   function renderVarCards() {
     for (const c of document.querySelectorAll(".card[data-var]")) {
       c.classList.toggle("on", c.dataset.var === S.variable);
@@ -551,14 +551,11 @@
   }
 
   // ------------------------------------------------------------------ strip
-  // header pill: the valid time of the frame on screen, not the wall clock
+  // Header pill: wall clock, separate from the map’s forecast valid time.
   function renderClock() {
-    const lead = shown ? S.cfg.leads[S.frame] : null;
-    const valid = shown && lead != null ? new Date(initDate(shown.run.init).getTime() + lead * 60000) : null;
-    const tag = { demo: "Demo", offline: "Replay" }[S.status] ?? "Live";
-    $("#clock").textContent = valid
-      ? `${tag} · ${HM.format(valid)} ${tzName(valid)} · ${lead ? `+${lead} min` : "satellite"}`
-      : `${tag} · --:--`;
+    const now = new Date();
+    const tag = { demo: "Demo", offline: "Replay", error: "Disconnected" }[S.status] ?? "Live Feed";
+    $("#clock").textContent = `${tag} · Now ${HM.format(now)} ${tzName(now)}`;
   }
 
   const mmss = (s) => `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}`;
@@ -599,6 +596,16 @@
     }
 
     const latest = S.runs[0];
+    if (S.status === "error") {
+      $("#countdownLabel").textContent = "Cycle Unavailable";
+      $("#countdown").textContent = "--:--";
+      $("#ingestLabel").textContent = "Disconnected · last known publication retained";
+      for (const d of cells.children) {
+        d.classList.remove("past", "active", "done", "flash");
+        d.firstChild.style.width = "";
+      }
+      return;
+    }
     if (!latest || !head) {
       $("#countdownLabel").textContent = "Next Run · Estimate";
       $("#countdown").textContent = "--:--";
@@ -653,51 +660,86 @@
   // ------------------------------------------------------------------ panels
   const panels = () => [...document.querySelectorAll(".panel")];
 
+  let panelTimer = null;
+  function schedulePanelRotation() {
+    clearTimeout(panelTimer);
+    if (S.rotatePaused) return;
+    const wait = Math.max(S.cfg.panel_seconds * 1000, S.manualUntil - Date.now());
+    panelTimer = setTimeout(() => showPanel(S.panel + 1), wait);
+  }
+
+  function togglePanelPause() {
+    S.rotatePaused = !S.rotatePaused;
+    if (!S.rotatePaused) S.manualUntil = 0;
+    showPanel(S.panel);
+  }
+
   function initPanels() {
     const prog = $("#progress");
-    prog.replaceChildren(...panels().map(() => el("span")));
-    showPanel(0);
-    // buttons behave like the arrow keys: manual for 60 s, then the rotation resumes
+    prog.replaceChildren(...panels().map((panel, index) => {
+      const button = el("button");
+      button.type = "button";
+      button.setAttribute("aria-label", `Go to ${panel.querySelector(".kicker").textContent}`);
+      button.title = panel.querySelector(".kicker").textContent;
+      button.addEventListener("click", () => {
+        S.manualUntil = Date.now() + 60000;
+        showPanel(index);
+      });
+      return button;
+    }));
+    $("#panelPause").addEventListener("click", togglePanelPause);
     const step = (d) => { S.manualUntil = Date.now() + 60000; showPanel(S.panel + d); };
     $("#panelPrev").addEventListener("click", () => step(-1));
     $("#panelNext").addEventListener("click", () => step(1));
-    setInterval(() => {
-      if (S.rotatePaused || Date.now() < S.manualUntil) return;
-      showPanel(S.panel + 1);
-    }, S.cfg.panel_seconds * 1000);
+    showPanel(0);
   }
 
   function showPanel(i) {
     const ps = panels();
     S.panel = (i + ps.length) % ps.length;
-    ps.forEach((p, k) => p.classList.toggle("active", k === S.panel));
+    ps.forEach((p, k) => {
+      const active = k === S.panel;
+      p.classList.toggle("active", active);
+      p.inert = !active;
+      p.setAttribute("aria-hidden", String(!active));
+    });
     $("#panels").classList.toggle("em-theme", ps[S.panel].classList.contains("em"));
     $("#panelCount").textContent = `${S.panel + 1} / ${ps.length}`;
+    $("#panelPause").textContent = S.rotatePaused ? "Resume" : "Pause";
+    $("#panelPause").setAttribute("aria-pressed", String(S.rotatePaused));
+    $("#panelPause").title = S.rotatePaused ? "Resume panel rotation" : "Pause panel rotation";
+    $("#panelPause").setAttribute("aria-label", S.rotatePaused ? "Resume panel rotation" : "Pause panel rotation");
     [...$("#progress").children].forEach((s, k) => {
       s.className = k === S.panel ? "on" : "";
+      if (k === S.panel) s.setAttribute("aria-current", "step");
+      else s.removeAttribute("aria-current");
       s.replaceChildren();
       if (k === S.panel) {
         const bar = el("i");
         s.append(bar);
-        const dur = S.rotatePaused ? 0 : S.cfg.panel_seconds;
+        const dur = S.rotatePaused ? 0 : Math.max(S.cfg.panel_seconds, (S.manualUntil - Date.now()) / 1000);
         requestAnimationFrame(() => {
           bar.style.transition = dur ? `width ${dur}s linear` : "none";
           bar.style.width = "100%";
         });
       }
     });
+    schedulePanelRotation();
   }
 
   function renderCommits() {
     const box = $("#commitList");
     box.replaceChildren();
+    const columns = el("div", "commit-heading");
+    columns.append(el("span", null, "Init · UTC"), el("span", null, "Snapshot"), el("span", null, "Published Age"));
+    box.append(columns);
     if (!S.commits.length) box.append(el("div", "commit", "Waiting for publication history…"));
     S.commits.slice(0, 4).forEach((c, k) => {
       const row = el("div", "commit" + (k === 0 ? " fresh" : ""));
       row.append(
+        el("span", "init", (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1].replace("T", " ") || "Other commit"),
         el("span", "id", c.id.slice(0, 8)),
-        el("span", "msg", (c.message || "").replace(/(\d{4}-\d{2}-\d{2})T/, "")),
-        el("span", "ago", ago(c.written_at))
+        el("span", "ago", `${ago(c.written_at)} ago`)
       );
       box.append(row);
     });
@@ -730,11 +772,15 @@
       setQR("qrTiles", url);
     }
     setQR("qrViewer", c.viewer_url);
+    $("#viewerLink").href = c.viewer_url;
   }
 
   // ------------------------------------------------------------------ SQL
   const sqlBox = () => $("#sqlQuery");
-  const holdPanel = () => { S.manualUntil = Math.max(S.manualUntil, Date.now() + 120000); };
+  const holdPanel = () => {
+    S.manualUntil = Math.max(S.manualUntil, Date.now() + 120000);
+    showPanel(S.panel);
+  };
 
   // server-filled query per city chip, {init} left in; the first one is the default
   const sqlFor = (name) => S.cfg.sql_places[name];
@@ -813,9 +859,9 @@
     ]);
     $("#sqlFoot").textContent =
       S.sqlPlace === MY && S.myCoords
-        ? `Mean composite intensity over ${MY} (${fmtCoords(S.myCoords.lat, S.myCoords.lon)}), next 2 h · PostgreSQL wire protocol`
+        ? `Mean composite intensity over ${MY} (${fmtCoords(S.myCoords.lat, S.myCoords.lon)}), 0–2 h from init · PostgreSQL wire protocol`
         : S.sqlPlace
-          ? `Mean composite intensity over ${S.sqlPlace}, next 2 h · PostgreSQL wire protocol`
+          ? `Mean composite intensity over ${S.sqlPlace}, 0–2 h from init · PostgreSQL wire protocol`
           : "Your query · PostgreSQL wire protocol";
   }
 
@@ -1082,7 +1128,7 @@
       const k = e.key.toLowerCase();
       if (k === "arrowright" || k === "pagedown") { S.manualUntil = Date.now() + 60000; showPanel(S.panel + 1); }
       else if (k === "arrowleft" || k === "pageup") { S.manualUntil = Date.now() + 60000; showPanel(S.panel - 1); }
-      else if (k === " ") { S.rotatePaused = !S.rotatePaused; showPanel(S.panel); e.preventDefault(); }
+      else if (k === " ") { togglePanelPause(); e.preventDefault(); }
       else if (k === "p") togglePlay();
       else if (k === "o") toggleLoop();
       else if (k === "s") { const names = Object.keys(SPEEDS); setSpeed(names[(names.indexOf(S.speed) + 1) % names.length]); }
