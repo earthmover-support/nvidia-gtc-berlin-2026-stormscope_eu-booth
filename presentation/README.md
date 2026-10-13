@@ -150,4 +150,4 @@ mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"fr
 
 Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
 
-Redeployed 2026-10-09.
+Redeployed 2026-10-13.
