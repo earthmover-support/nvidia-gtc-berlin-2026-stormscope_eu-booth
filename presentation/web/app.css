@@ -77,13 +77,14 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .viz { position: relative; background: var(--viz); border: 1px solid var(--line); border-radius: 0; overflow: hidden; min-height: 0; }
 #globe { position: absolute; inset: 0; background: #05070A; }
 .maplibregl-ctrl, .maplibregl-ctrl-attrib, .maplibregl-ctrl button { border-radius: 0 !important; }
+.maplibregl-ctrl-bottom-right { bottom: 150px; } /* above the init / slider / tick rows */
 .station { display: flex; align-items: center; gap: 12px; pointer-events: none; }
 .station i { box-sizing: border-box; width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--lime); box-shadow: 0 0 0 1.5px #000, inset 0 0 0 1.5px #000; }
 .station span { padding: 5px 8px; border-radius: 0; background: rgba(10, 10, 12, .8); color: var(--text); font: 600 15px/1.25 var(--sans); white-space: pre; }
 
 .viz-top, .viz-bottom { position: absolute; left: 0; right: 0; z-index: 2; padding: 18px 22px; }
 .viz-top { top: 0; display: flex; justify-content: space-between; align-items: flex-start; background: rgba(5, 7, 10, .72); }
-.viz-bottom { bottom: 0; display: flex; flex-direction: column; gap: 10px; background: rgba(5, 7, 10, .82); }
+.viz-bottom { bottom: 0; display: flex; flex-direction: column; gap: 10px; background: rgba(5, 7, 10, .94); }
 .init-block { display: flex; flex-direction: column; gap: 4px; }
 .init-title { font-size: 26px; font-weight: 600; }
 .valid { font: 14px var(--mono); color: #C9CFD6; }
@@ -102,9 +103,15 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .play[aria-pressed="true"] { background: var(--lime); border-color: var(--lime); color: var(--lime-ink); }
 .loop { margin-left: auto; white-space: nowrap; display: flex; align-items: center; gap: 8px; font: 13px var(--mono); color: #C9CFD6; }
 
+.scrub { display: flex; flex-direction: column; gap: 6px; }
+.scrub input[type=range] { width: 100%; margin: 0; height: 22px; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+.scrub input[type=range]::-webkit-slider-runnable-track { height: 4px; background: #2A2F37; }
+.scrub input[type=range]::-moz-range-track { height: 4px; background: #2A2F37; }
+.scrub input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 22px; margin-top: -9px; background: var(--text); border: 0; }
+.scrub input[type=range]::-moz-range-thumb { width: 14px; height: 22px; background: var(--text); border: 0; border-radius: 0; }
 .ticks { display: flex; gap: 6px; }
-.ticks div { flex: 1 1 0; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font: 13px var(--mono); color: var(--muted); border: 1px solid #23272E; }
-.ticks div.obs { flex-grow: 2.5; } /* "+0 · satellite" needs more room than "+10" */
+.ticks div { flex: 1 1 0; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 0; font: 13px var(--mono); color: var(--muted); border: 1px solid #23272E; }
+/* all ticks equal so the slider thumb above lines up with them */
 .ticks div.now { background: var(--text); color: var(--ground); border-color: var(--text); font-weight: 600; }
 
 .notice { position: absolute; z-index: 3; top: 120px; left: 22px; right: 22px; padding: 10px 14px; border-radius: 0; background: #2A1A10; color: #FFD2A6; font: 13px var(--mono); }

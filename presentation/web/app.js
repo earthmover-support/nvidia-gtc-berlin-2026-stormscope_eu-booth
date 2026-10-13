@@ -33,7 +33,7 @@
     variable: "true_color",
     frame: 0,
     animPaused: false,
-    speed: "normal",
+    speed: "slow",
     panel: 0,
     rotatePaused: false,
     manualUntil: 0,
@@ -46,7 +46,7 @@
   };
 
   // seconds each forecast frame stays on screen
-  const SPEEDS = { slow: 0.75, normal: 0.5, fast: 0.25 };
+  const SPEEDS = { slow: 1, medium: 0.5, fast: 0.25 };
 
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
@@ -242,6 +242,9 @@
     }
   }
 
+  // frame indices whose lead has loaded in `set`, in playback order
+  const readyFrames = (set) => (set ? S.cfg.leads.flatMap((l, k) => (set.loaded.has(l) ? [k] : [])) : []);
+
   // Every lead has been added, and the last one has loaded or timed out.
   const complete = (set) =>
     set.layers.size === S.cfg.leads.length &&
@@ -324,7 +327,7 @@
   function scheduleAnim() {
     clearTimeout(animTimer);
     if (S.animPaused) return;
-    const last = shown && S.frame === S.cfg.leads.length - 1;
+    const last = shown && readyFrames(shown).find((k) => k > S.frame) == null;
     animTimer = setTimeout(animate, SPEEDS[S.speed] * 1000 + (last ? S.cfg.hold_ms : 0));
   }
 
@@ -437,13 +440,33 @@
   function renderTicks(current) {
     const box = $("#ticks");
     box.replaceChildren();
-    for (const lead of S.cfg.leads) {
-      const d = el("div", lead ? null : "obs", lead ? `+${lead}` : "+0 · satellite");
+    S.cfg.leads.forEach((lead, k) => {
+      const d = el("div", lead ? null : "obs", lead ? `+${lead}` : "+0 · sat");
       if (lead === current) d.classList.add("now");
+      d.addEventListener("click", () => scrubTo(k));
       box.append(d);
-    }
+    });
+    const r = $("#scrub");
+    r.max = String(S.cfg.leads.length - 1);
+    if (!scrubbing) r.value = String(S.frame);
   }
 
+  // slider / tick click: jump to the nearest lead that has loaded; the loop carries on from there
+  let scrubbing = false; // pointer down on the slider: no auto-advance, no thumb writes
+  function scrubTo(k) {
+    if (!shown) return;
+    const ready = readyFrames(shown);
+    if (!ready.length) return;
+    const dir = Math.sign(k - S.frame); // ties go the way the visitor is moving
+    S.frame = ready.reduce((best, i) => {
+      const di = Math.abs(i - k), db = Math.abs(best - k);
+      return di < db || (di === db && Math.sign(i - S.frame) === dir) ? i : best;
+    }, ready[0]);
+    showFrame();
+    scheduleAnim();
+  }
+
+  // top left: the valid time of the frame on screen, big; the init line below is renderInits'
   function renderValid(run, lead, suffix) {
     if (!run || lead == null) {
       $("#validEyebrow").textContent = "FORECAST";
@@ -985,6 +1008,13 @@
     renderVarCards();
     renderPlayback();
     $("#playBtn").addEventListener("click", togglePlay);
+    const scrub = $("#scrub");
+    scrub.addEventListener("input", (e) => scrubTo(Number(e.target.value)));
+    scrub.addEventListener("pointerdown", () => { scrubbing = true; });
+    const released = () => { if (scrubbing) { scrubbing = false; scrub.blur(); showFrame(); scheduleAnim(); } };
+    for (const type of ["pointerup", "pointercancel"]) window.addEventListener(type, released);
+    window.addEventListener("blur", released); // pointer let go outside the window
+    scrub.addEventListener("change", () => scrub.blur()); // keyboard nudges must not swallow the booth shortcuts
     initGlobe();
     initPanels();
     initKeys();

@@ -62,7 +62,10 @@
             <div class="seg" id="speedToggle" role="group" aria-label="Playback speed"></div>
           </div>
         </div>
-        <div class="ticks" id="ticks"></div>
+        <div class="scrub">
+          <input type="range" id="scrub" min="0" max="12" step="1" value="0" aria-label="Lead time">
+          <div class="ticks" id="ticks"></div>
+        </div>
       </div>
 
       <div class="notice" id="notice" hidden></div>

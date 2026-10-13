@@ -43,7 +43,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 | ← / → | previous / next panel (auto-rotation resumes after 60 s) |
 | Space | pause / resume panel rotation |
 | P | pause / resume the forecast loop |
-| S | cycle playback speed (slow / normal / fast) |
+| S | cycle playback speed (slow 1 s / medium 0.5 s / fast 0.25 s per frame) |
 | T / A | `true_color` / `airmass` |
 | 1–9, L | pick an initialisation (1 = L = latest) |
 
