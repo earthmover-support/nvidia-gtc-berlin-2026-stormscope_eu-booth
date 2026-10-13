@@ -22,7 +22,7 @@
 
 - RGB rendering on the tileserver
 - Tile server compute region selector
-- Repo + frontend hosting on Vercel, blog: NVIDIA corporate
+- Repo + frontend hosting on Vercel
 
 ## Improvements
 
