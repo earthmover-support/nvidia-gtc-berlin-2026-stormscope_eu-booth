@@ -24,19 +24,30 @@ Run from the repo root:
 
     uv run presentation/server.py            # live, needs ARRAYLAKE_API_TOKEN in .env
     uv run presentation/server.py --demo     # fake commits, no network needed
+    uv run presentation/server.py --fetch-offline   # online: save a few runs to presentation/offline/
+    uv run presentation/server.py --offline  # replay the saved runs, no network needed
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import gzip
+import html
+import itertools
 import json
 import logging
+import math
 import os
+import re
 import threading
 import time
+import urllib.error
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, quote, unquote, urlencode
 
 from booth import (
     CONFIG,
@@ -47,6 +58,7 @@ from booth import (
     default_sql,
     fill_init,
     open_repo,
+    place_queries,
     public_config,
     read_commits,
     read_times,
@@ -62,6 +74,14 @@ NODE = HERE / "node_modules"
 load_dotenv(HERE.parent / ".env")
 
 log = logging.getLogger("booth")
+MODE = "live"  # "live", "demo" or "offline"; set in main()
+
+# --offline: what --fetch-offline saves, and how far the page may zoom into it
+OFFLINE = HERE / "offline"
+OFFLINE_RUNS = 3
+OFFLINE_ZOOM = 5  # deepest tile level saved; MapLibre overzooms past it
+CARTO_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+UA = "Mozilla/5.0 (Macintosh) AppleWebKit/537.36 Chrome/131.0 Safari/537.36"  # woff2 from Google
 
 # URL prefix -> directory for vendored front-end libraries (npm install in ./presentation)
 VENDOR = {
@@ -173,6 +193,260 @@ def poll_demo(stop: threading.Event) -> None:
         stop.wait(2)
 
 
+# --------------------------------------------------------------------------- offline
+#
+# presentation/offline/ after --fetch-offline:
+#   runs.json                                  the saved runs [{init, time, ref}], newest first
+#   tiles/<ref>/<variable>/<lead>/<z>/<y>/<x>.png
+#   sql/<ref>/<place>.json                     default query per run and place
+#   basemap/style.json, sprite*, tiles/<z>/<x>/<y>.pbf, fonts/<fontstack>/<range>.pbf
+#   fonts/fonts.css, *.woff2                   Geist, as index.html loads it from Google
+
+
+def tile_xy(lon: float, lat: float, z: int) -> tuple[int, int]:
+    """Web-mercator tile (x, y) holding a point at zoom z."""
+    k = 2**z
+    lat = math.radians(max(-85.0511, min(85.0511, lat)))
+    x = int((lon + 180) / 360 * k)
+    y = int((1 - math.asinh(math.tan(lat)) / math.pi) / 2 * k)
+    return min(k - 1, max(0, x)), min(k - 1, max(0, y))
+
+
+def tiles_in(bounds, zooms):
+    """(z, x, y) of every web-mercator tile touching bounds [west, south, east, north]."""
+    w, s, e, n = bounds
+    for z in zooms:
+        (x0, y0), (x1, y1) = tile_xy(w, n, z), tile_xy(e, s, z)
+        for x in range(x0, x1 + 1):
+            for y in range(y0, y1 + 1):
+                yield z, x, y
+
+
+def tile_url(run: dict, variable: str, lead: int, z: int, x: int, y: int) -> str:
+    """The URL app.js tileTemplate() asks for, with 512 px tiles."""
+    v = CONFIG["variables"][variable]
+    p = urlencode(
+        {
+            "variables": variable,
+            "style": v["style"],
+            "colorscalerange": v["colorscalerange"],
+            "time": run["time"],
+            "lead_time": f"{lead} minutes",
+            "ensemble": "0",
+            "f": "png",
+            "width": "512",
+            "height": "512",
+        }
+    )
+    ref = quote(run["ref"], safe="")
+    return f"{CONFIG['tile_base']}/{ref}/tiles/WebMercatorQuad/{z}/{y}/{x}?{p}"
+
+
+def get(url: str) -> bytes | None:
+    """Body of `url`, gunzipped; None on 404 (a tile outside the data)."""
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            body = r.read()
+            return gzip.decompress(body) if r.headers.get("Content-Encoding") == "gzip" else body
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return None
+        raise
+
+
+def save(job: tuple[str, Path]) -> bool:
+    """Download one (url, path); existing files are kept, so a rerun resumes."""
+    url, path = job
+    if path.exists():
+        return True
+    try:
+        body = get(url)
+    except Exception as exc:
+        log.warning("fetch failed: %s: %s", url[:120], exc)
+        return False
+    if body is None:
+        return True
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".part")
+    tmp.write_bytes(body)
+    tmp.replace(path)  # an interrupted fetch never leaves half a file
+    return True
+
+
+def basemap_jobs() -> list[tuple[str, Path]]:
+    """Save the Carto style with local URLs; return its tiles, sprites and glyphs to fetch.
+
+    "{origin}" in the saved style is replaced per request (MapLibre wants absolute URLs).
+    """
+    out = OFFLINE / "basemap"
+    style = json.loads(get(CARTO_STYLE))
+    src = style["sources"]["carto"]
+    tilejson = json.loads(get(src["url"]))
+    style["sources"]["carto"] = {
+        "type": "vector",
+        "tiles": ["{origin}/offline/basemap/tiles/{z}/{x}/{y}.pbf"],
+        "maxzoom": OFFLINE_ZOOM,
+        "attribution": tilejson.get("attribution", ""),
+    }
+    jobs = []
+    # whole globe when zoomed out, the forecast domain closer in
+    world = tiles_in([-180, -85, 180, 85], range(4))
+    for z, x, y in itertools.chain(
+        world, tiles_in(CONFIG["data_bounds"], range(4, OFFLINE_ZOOM + 1))
+    ):
+        url = (
+            tilejson["tiles"][0]
+            .replace("{z}", str(z))
+            .replace("{x}", str(x))
+            .replace("{y}", str(y))
+        )
+        jobs.append((url, out / "tiles" / str(z) / str(x) / f"{y}.pbf"))
+    for suffix in ("", "@2x"):
+        for ext in (".json", ".png"):
+            jobs.append((style["sprite"] + suffix + ext, out / f"sprite{suffix}{ext}"))
+    style["sprite"] = "{origin}/offline/basemap/sprite"
+    stacks = {
+        ",".join(layer["layout"]["text-font"])
+        for layer in style["layers"]
+        if isinstance(layer.get("layout", {}).get("text-font"), list)
+    }
+    for stack in stacks:
+        for start in (0, 256, 512, 768, 8192):  # Latin, Latin extended, punctuation
+            rng = f"{start}-{start + 255}"
+            url = style["glyphs"].replace("{fontstack}", quote(stack)).replace("{range}", rng)
+            jobs.append((url, out / "fonts" / stack / f"{rng}.pbf"))
+    style["glyphs"] = "{origin}/offline/basemap/fonts/{fontstack}/{range}.pbf"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "style.json").write_text(json.dumps(style))
+    return jobs
+
+
+def google_fonts_href() -> str:
+    """The Google Fonts stylesheet index.html links."""
+    m = re.search(
+        r'href="(https://fonts\.googleapis\.com/css2[^"]+)"', (WEB / "index.html").read_text()
+    )
+    return m[1]
+
+
+def font_jobs() -> list[tuple[str, Path]]:
+    """Save the Geist stylesheet with local URLs; return its woff2 files to fetch."""
+    out = OFFLINE / "fonts"
+    jobs = []
+
+    def local(m):
+        name = m[1].rsplit("/", 1)[-1]
+        jobs.append((m[1], out / name))
+        return f"url(/offline/fonts/{name})"
+
+    css = re.sub(r"url\((https://[^)]+)\)", local, get(html.unescape(google_fonts_href())).decode())
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "fonts.css").write_text(css)
+    return jobs
+
+
+def fetch_offline() -> None:
+    """Save the newest runs, the basemap, fonts and SQL results for --offline."""
+    repo = open_repo()
+    commits = read_commits(repo)
+    runs = build_runs(read_times(repo), commits)[:OFFLINE_RUNS]
+    if len({r["ref"] for r in runs}) < len(runs):
+        raise SystemExit("the newest runs share a snapshot; history_depth too small?")
+    log.info("saving runs %s", ", ".join(r["init"] for r in runs))
+    OFFLINE.mkdir(exist_ok=True)
+
+    for run in runs:
+        for place, query in place_queries().items():
+            path = OFFLINE / "sql" / run["ref"] / f"{place}.json"
+            if path.exists():
+                continue
+            try:
+                result = run_sql_once(fill_init(query, run["time"]))
+            except Exception as exc:  # the tiles matter more: carry on, a rerun retries
+                log.warning("sql for %s %s failed: %s", run["init"], place, exc)
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(result, default=str))
+
+    jobs = font_jobs() + basemap_jobs()
+    frames = itertools.product(runs, CONFIG["variables"], all_leads())
+    for run, variable, lead in frames:
+        for z, x, y in tiles_in(CONFIG["data_bounds"], range(OFFLINE_ZOOM + 1)):
+            path = (
+                OFFLINE / "tiles" / run["ref"] / variable / str(lead) / str(z) / str(y) / f"{x}.png"
+            )
+            jobs.append((tile_url(run, variable, lead, z, x, y), path))
+    log.info("%d files to fetch (existing ones are skipped)", len(jobs))
+    failed = 0
+    with ThreadPoolExecutor(8) as pool:
+        for i, ok in enumerate(pool.map(save, jobs), 1):
+            failed += not ok
+            if i % 500 == 0 or i == len(jobs):
+                log.info("%d / %d done, %d failed", i, len(jobs), failed)
+    (OFFLINE / "runs.json").write_text(json.dumps(runs, indent=1))
+    if failed:
+        log.warning("%d files failed: run --fetch-offline again to retry them", failed)
+
+
+def offline_state(now: dt.datetime, saved: list[dict]) -> tuple[list[dict], list[dict]]:
+    """The demo cadence (a run lands every interval) filled with the saved runs in turn.
+
+    Each slot replays saved run (slot number % len(saved)), so the newest run on screen
+    changes every interval and the visible runs are always distinct.
+    Returns (commits, runs), newest first.
+    """
+    commits, times = demo_commits(now)
+    n, step = len(saved), CONFIG["run_interval_min"] * 60
+    runs = []
+    for c, t in zip(commits[:n], times[:n], strict=True):
+        slot = int(dt.datetime.fromisoformat(t).replace(tzinfo=dt.UTC).timestamp() // step)
+        src = saved[slot % n]
+        c["id"] = src["ref"]
+        c["message"] += f" (replay of {src['init']} UTC)"
+        runs.append({"init": t[:16], "time": t, "ref": src["ref"]})
+    return commits[:n], runs
+
+
+def poll_offline(stop: threading.Event) -> None:
+    saved = json.loads((OFFLINE / "runs.json").read_text())
+    while not stop.is_set():
+        commits, runs = offline_state(utcnow(), saved)
+        SHARED.set_state(status="offline", commits=commits, runs=runs)
+        stop.wait(2)
+
+
+def offline_sql(query: str) -> dict:
+    """The saved result when `query` is a place query for the newest run."""
+    run = SHARED.get("state")["runs"][0]
+    for place, template in place_queries().items():
+        path = OFFLINE / "sql" / run["ref"] / f"{place}.json"
+        if fill_init(template, run["time"]) == query and path.exists():
+            saved = json.loads(path.read_text())
+            return {**saved, "status": "offline", "query": query, "ran_at": utcnow().isoformat()}
+    return dict(status="error", query=query, error="offline: only the saved place queries run")
+
+
+def offline_path(path: str) -> Path:
+    """File under OFFLINE for an /offline/... URL; forecast tiles drop to their saved key."""
+    clean, _, query = path.partition("#")[0].partition("?")
+    parts = unquote(clean).split("/")[2:]
+    # tiles/<ref>/tiles/WebMercatorQuad/<z>/<y>/<x>?variables=..&lead_time=10 minutes
+    if len(parts) == 7 and parts[0] == "tiles" and parts[2] == "tiles":
+        q = parse_qs(query)
+        lead = q.get("lead_time", ["0"])[0].split()[0]
+        parts = [
+            "tiles",
+            parts[1],
+            q.get("variables", [""])[0],
+            lead,
+            *parts[4:6],
+            parts[6] + ".png",
+        ]
+    target = OFFLINE.joinpath(*parts).resolve()
+    return target if target.is_relative_to(OFFLINE.resolve()) else OFFLINE / "__forbidden__"
+
+
 # --------------------------------------------------------------------------- SQL
 
 
@@ -190,7 +464,7 @@ def newest_init() -> str | None:
     return runs[0]["time"] if runs else None
 
 
-def poll_sql(stop: threading.Event, demo: bool) -> None:
+def poll_sql(stop: threading.Event) -> None:
     """Run the default (Berlin) query once per new init, and otherwise only on Run (panel 07).
 
     Each new init resets the editor to the default query, so the booth screen returns to
@@ -201,7 +475,7 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
     cache: dict[str, dict] = {}  # query text -> result, for init `cache_init`
     cache_init = None
     while not stop.is_set():
-        if not demo and not sql_host():
+        if MODE == "live" and not sql_host():
             SHARED.set_sql(
                 status="disabled",
                 reason="Set ARRAYLAKE_SQL_HOST in .env (al compute enable gtc-berlin sql)",
@@ -219,9 +493,9 @@ def poll_sql(stop: threading.Event, demo: bool) -> None:
         if query in cache:
             SHARED.set_sql(**cache[query], cached=True)
             continue
-        if demo:
-            import math
-
+        if MODE == "offline":
+            result = offline_sql(query)
+        elif MODE == "demo":
             phase = time.time() / 600 + len(query) % 7
             rows = [[m, 60 + 25 * math.sin(m / 20 + phase)] for m in all_leads()]
             result = dict(
@@ -255,7 +529,17 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         path = self.path.split("?", 1)[0]
         if path == "/api/config":
+            if MODE == "offline":
+                return send_json(self, self.offline_config())
             return send_json(self, public_config(sql_editable=True))
+        if MODE == "offline" and path in ("/", "/index.html"):
+            page = (WEB / "index.html").read_text()
+            return self.send_text(
+                page.replace(google_fonts_href(), "/offline/fonts/fonts.css"), "text/html"
+            )
+        if MODE == "offline" and path == "/offline/basemap/style.json":
+            style = (OFFLINE / "basemap" / "style.json").read_text()
+            return self.send_text(style.replace("{origin}", self.origin()), "application/json")
         if path == "/api/state":
             return send_json(self, SHARED.get("state"))
         if path == "/api/sql":
@@ -276,8 +560,32 @@ class Handler(SimpleHTTPRequestHandler):
             return send_json(self, {"error": str(exc)}, 400)
         return send_json(self, {"ok": True})
 
+    def origin(self) -> str:
+        return f"http://{self.headers.get('Host', 'localhost')}"
+
+    def offline_config(self) -> dict:
+        """public_config() pointed at the saved tiles and basemap, zoom capped near them."""
+        cfg = public_config(sql_editable=True)
+        cam = cfg["camera"]
+        return cfg | {
+            "tile_base": f"{self.origin()}/offline/tiles",
+            "basemap": f"{self.origin()}/offline/basemap/style.json",
+            "max_tile_level": OFFLINE_ZOOM,
+            "camera": cam | {"max_zoom": min(cam.get("max_zoom", 8.5), OFFLINE_ZOOM + 1)},
+        }
+
+    def send_text(self, text: str, mime: str) -> None:
+        body = text.encode()
+        self.send_response(200)
+        self.send_header("Content-Type", f"{mime}; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def translate_path(self, path):
         clean = path.split("?", 1)[0].split("#", 1)[0]
+        if MODE == "offline" and clean.startswith("/offline/"):
+            return str(offline_path(path))
         for prefix, root in VENDOR.items():
             if clean.startswith(prefix):
                 rel = Path(clean[len(prefix) :])
@@ -306,17 +614,32 @@ def main() -> None:
     )
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
-    ap.add_argument("--demo", action="store_true", help="fake commits and SQL, no Arraylake access")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--demo", action="store_true", help="fake commits and SQL, no Arraylake access"
+    )
+    mode.add_argument(
+        "--offline", action="store_true", help="replay runs saved by --fetch-offline, no network"
+    )
+    mode.add_argument(
+        "--fetch-offline", action="store_true", help=f"save the newest runs to {OFFLINE}, then exit"
+    )
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    global MODE
+    MODE = "demo" if args.demo else "offline" if args.offline else "live"
 
+    if args.fetch_offline:
+        return fetch_offline()
+    if args.offline and not (OFFLINE / "runs.json").exists():
+        raise SystemExit(f"{OFFLINE / 'runs.json'} missing: run --fetch-offline while online")
     if not (NODE / "maplibre-gl").exists():
         log.warning("presentation/node_modules missing: run `npm install` in presentation/ first")
-    if not args.demo and not os.environ.get("ARRAYLAKE_API_TOKEN"):
+    if MODE == "live" and not os.environ.get("ARRAYLAKE_API_TOKEN"):
         log.warning(
             "ARRAYLAKE_API_TOKEN not set: commit polling will fail (use --demo to rehearse)"
         )
-    if not args.demo:
+    if MODE == "live":
         try:
             import psycopg  # noqa: F401
         except ImportError:
@@ -326,14 +649,12 @@ def main() -> None:
             )
 
     stop = threading.Event()
-    poller = poll_demo if args.demo else poll_arraylake
+    poller = {"demo": poll_demo, "offline": poll_offline, "live": poll_arraylake}[MODE]
     threading.Thread(target=poller, args=(stop,), daemon=True).start()
-    threading.Thread(target=poll_sql, args=(stop, args.demo), daemon=True).start()
+    threading.Thread(target=poll_sql, args=(stop,), daemon=True).start()
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
-    log.info(
-        "booth page on http://%s:%d %s", args.host, args.port, "(demo mode)" if args.demo else ""
-    )
+    log.info("booth page on http://%s:%d (%s mode)", args.host, args.port, MODE)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

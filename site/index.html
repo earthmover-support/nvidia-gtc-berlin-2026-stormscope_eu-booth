@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>StormScope-EU GTC Berlin mobile</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.js"></script>
 <style>
@@ -169,7 +170,7 @@ function startRun(time, background = false) {
   if (next && !keep) dropRun(next);
   const r = keep ? next : { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
   next = background ? r : null;
-  if (!background) promote(r, 0);
+  if (!background) promote(r, leads.length ? Math.min(frame, leads.length - 1) : 0); // keep the time step across RGB switches
   tick();
 }
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>StormScope-EU GTC Berlin dashboard</title>
-<link rel="icon" href="data:,">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
@@ -176,10 +176,9 @@
           <div class="sql-head"><b>Live SQL</b><span id="sqlStatus">…</span></div>
           <div class="sql-run">
             <div class="sql-places" id="sqlPlaces"></div>
-            <button type="button" id="sqlRun" title="⌘/Ctrl + Enter · Esc leaves the editor">Run ▸</button>
             <button type="button" id="sqlReset">Reset</button>
           </div>
-          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="8" aria-label="SQL query"></textarea>
+          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="8" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea>
           <div class="bars" id="sqlBars"></div>
           <div class="sql-foot" id="sqlFoot">How cloudy over Berlin, next 2 h · PostgreSQL wire protocol</div>
         </div>
