@@ -89,7 +89,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
 6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 6).
-7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
+7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `UTC`),
    whatever the booth machine or a hosted viewer's browser is set to.
 8. **Offline backup**: with tiles and SQL up, save a fallback in case the venue has no
    internet:
@@ -151,3 +151,24 @@ mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"fr
 Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
 
 Redeployed 2026-10-09.
+
+
+## Six-panel scientific narrative
+
+The six panels explain generative autoregressive prediction, FCI observations,
+recurring Earth2Studio cycles, overlapped uploads and atomic Icechunk publication,
+Compute tiles and SQL, and the complete workflow. Observation cards show real +0
+composite tiles over the configured Berlin tile and switch the globe layer when
+clicked; unavailable previews retain an explicit fallback.
+
+All booth timestamps default to UTC. The persistent map status shows the displayed
+run's observation/initialization time, matching snapshot publication time, observation
+age, and forecast horizon **from initialization**. The API reports publications, not
+GPU progress: the bottom strip's countdown and phase activity are labeled estimates.
+A publication more than two configured run intervals old is marked overdue; this does
+not diagnose the pipeline. Demo and offline replay clearly identify simulated timing.
+SQL reports mean composite intensity, not cloud fraction.
+
+The model feedback, recurring-cycle, upload, delivery, and architecture diagrams are
+schematics, not live measurements. Viewer and raw-tile QR codes use independent grid
+sizes and a four-module quiet zone to improve scanning of the shorter viewer URL.

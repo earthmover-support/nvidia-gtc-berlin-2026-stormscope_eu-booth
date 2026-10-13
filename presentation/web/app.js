@@ -52,12 +52,11 @@
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
   const initDate = (init) => new Date(init + ":00Z"); // inits are stored in UTC
-  // Every time on screen is in one zone, config.json `timezone` (the booth's); the viewer's
-  // own zone is only a fallback for a missing or unknown value. Set in boot() once the
-  // config has loaded.
-  let TZ = "Europe/Berlin", HM, YMD;
+  // All screen timestamps use config.json `timezone`, with UTC as the fallback.
+  // Set in boot() once the config has loaded.
+  let TZ = "UTC", HM, YMD;
   function setTimezone(zone) {
-    for (const z of [zone, Intl.DateTimeFormat().resolvedOptions().timeZone, "Europe/Berlin"]) {
+    for (const z of [zone, "UTC"]) {
       try {
         if (!z) continue;
         new Intl.DateTimeFormat("en", { timeZone: z }); // throws on a zone it doesn't know
@@ -408,7 +407,49 @@
 
   // panel 02's two cards highlight the variable on the globe
   function renderVarCards() {
-    for (const c of document.querySelectorAll(".card[data-var]")) c.classList.toggle("on", c.dataset.var === S.variable);
+    for (const c of document.querySelectorAll(".card[data-var]")) {
+      c.classList.toggle("on", c.dataset.var === S.variable);
+      c.setAttribute("aria-pressed", String(c.dataset.var === S.variable));
+    }
+  }
+
+  // Real +0 composite tiles, never invented observed-history thumbnails.
+  function renderCompositePreviews() {
+    const run = shown?.run || selectedRun();
+    for (const img of document.querySelectorAll("[data-composite]")) {
+      if (!run) { img.hidden = true; continue; }
+      const tile = S.cfg.qr_tile;
+      const src = tileTemplate(run, img.dataset.composite, 0, tile.size)
+        .replace("{z}", tile.z).replace("{x}", tile.x).replace("{y}", tile.y);
+      if (img.dataset.source === src) continue;
+      img.dataset.source = src;
+      img.hidden = true;
+      img.onload = () => { img.hidden = false; };
+      img.onerror = () => { img.hidden = true; };
+      img.src = src;
+    }
+    $("#compositeCaption").textContent = run
+      ? `OBSERVED +0 · ${hhmm(run.init)} UTC · BERLIN REGION`
+      : "OBSERVED +0 FRAME · WAITING FOR DATA";
+  }
+
+  // Only publication is reported by the API; inference progress is not telemetry.
+  function renderCycleStatus() {
+    const run = shown?.run || selectedRun();
+    const head = S.commits[0];
+    const publication = run && S.commits.find((c) => c.id === run.ref && (c.message || "").includes(run.init));
+    $("#cycleInit").textContent = run ? `${ymdhm(initDate(run.init))}` : "—";
+    $("#cyclePublished").textContent = publication ? ymdhm(new Date(publication.written_at)) : "Unavailable";
+    $("#cycleAge").textContent = run ? `${ago(initDate(run.init).toISOString())} since observation` : "—";
+    $("#cycleHorizon").textContent = `+${S.cfg.leads.at(-1)} min`;
+    let message = run ? "Published snapshot · waiting for the next published cycle" : "Waiting for published forecast data";
+    if (S.status === "demo") message = "DEMO · simulated publication history and SQL";
+    else if (S.status === "offline") message = "REPLAY · recorded imagery with simulated cycle times";
+    else if (S.status === "error") message = "Disconnected · showing last known publication";
+    else if (head && Date.now() - new Date(head.written_at).getTime() > S.cfg.run_interval_min * 120000)
+      message = "Publication overdue · no inference status available";
+    $("#cycleState").textContent = message;
+    $(".cycle-status").classList.toggle("stale", S.status === "error");
   }
 
   function renderVarToggle() {
@@ -500,6 +541,7 @@
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
     $("#validEyebrow").textContent = (lead ? `FORECAST · +${lead} MIN` : "OBSERVED · SATELLITE") + suffix.toUpperCase();
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
+    renderCompositePreviews();
   }
 
   function showNotice(text) {
@@ -538,6 +580,7 @@
     const c = S.cfg;
     const now = new Date();
     renderClock();
+    renderCycleStatus();
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
@@ -557,7 +600,7 @@
 
     const latest = S.runs[0];
     if (!latest || !head) {
-      $("#countdownLabel").textContent = "NEXT RUN IN";
+      $("#countdownLabel").textContent = "NEXT RUN · ESTIMATE";
       $("#countdown").textContent = "--:--";
       $("#ingestLabel").textContent = "Waiting for Arraylake…";
       return;
@@ -576,7 +619,7 @@
 
     if (elapsed < 0) {
       // Between runs: the last committed run stays complete until the next one starts.
-      $("#countdownLabel").textContent = "NEXT RUN IN";
+      $("#countdownLabel").textContent = "NEXT RUN · ESTIMATE";
       $("#countdown").textContent = mmss(-elapsed);
       for (const d of cells.children) {
         d.classList.remove("past", "active");
@@ -601,10 +644,10 @@
       const frac = Math.min(1, Math.max(0, (elapsed - ends[k] + ph.s) / ph.s));
       d.firstChild.style.width = `${frac * 100}%`;
     });
-    const next = new Date(initDate(latest.init).getTime() + c.run_interval_min * 60000);
-    $("#countdownLabel").textContent = "COMMIT IN";
+    const next = new Date(start);
+    $("#countdownLabel").textContent = "COMMIT · ESTIMATE";
     $("#countdown").textContent = mmss(Math.max(0, total - elapsed));
-    $("#ingestLabel").textContent = `Run start ${HM.format(next)} · ${phases[active].busy}`;
+    $("#ingestLabel").textContent = `Estimated cycle start ${HM.format(next)} UTC · ${phases[active].busy} (not live telemetry)`;
   }
 
   // ------------------------------------------------------------------ panels
@@ -648,6 +691,7 @@
   function renderCommits() {
     const box = $("#commitList");
     box.replaceChildren();
+    if (!S.commits.length) box.append(el("div", "commit", "Waiting for publication history…"));
     S.commits.slice(0, 4).forEach((c, k) => {
       const row = el("div", "commit" + (k === 0 ? " fresh" : ""));
       row.append(
@@ -660,8 +704,7 @@
   }
 
   // ------------------------------------------------------------------ QR codes
-  // Level H leaves room for the logo; the viewer QR borrows the tile QR's version so both
-  // codes have the same grid.
+  // Level H leaves room for the logo. Each URL uses its smallest QR grid.
   const qrCache = {};
   function setQR(id, text, type = 0) {
     const box = document.getElementById(id);
@@ -671,7 +714,7 @@
     const qr = qrcode(type, "H");
     qr.addData(text);
     qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) +
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 16, scalable: true }) +
       '<img src="img/earthmover-mark.svg" alt="">';
     qrCache[id] = { key, type: (qr.getModuleCount() - 17) / 4 };
     return qrCache[id].type;
@@ -680,14 +723,13 @@
   function renderQRs() {
     const c = S.cfg;
     const latest = latestShown();
-    let type = 0;
     if (latest) {
       const q = c.qr_tile;
       const url = tileTemplate(latest, "true_color", c.leads[1], q.size) // leads[0] is the observed frame
         .replace("{z}", q.z).replace("{y}", q.y).replace("{x}", q.x);
-      type = setQR("qrTiles", url);
+      setQR("qrTiles", url);
     }
-    setQR("qrViewer", c.viewer_url, type);
+    setQR("qrViewer", c.viewer_url);
   }
 
   // ------------------------------------------------------------------ SQL
@@ -982,6 +1024,7 @@
     syncLayers();
     showFrame();
     renderCommits();
+    renderCompositePreviews();
     renderQRs();
     renderStrip();
   }
@@ -1087,6 +1130,9 @@
     document.addEventListener("click", (e) => e.target.closest?.("button")?.blur());
     initGlobe();
     initPanels();
+    for (const card of document.querySelectorAll(".card[data-var]")) {
+      card.addEventListener("click", () => setVariable(card.dataset.var));
+    }
     initStrip();
     initKeys();
     initAttractReset();
