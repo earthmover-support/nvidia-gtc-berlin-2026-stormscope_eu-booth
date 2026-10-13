@@ -263,7 +263,7 @@
       pending = { id: sets++, run, variable: S.variable, layers: new Map(), loaded: new Set(), addedAt: 0 };
     }
     // a pick goes on screen at once, keeping any frames the set loaded behind
-    if (pending && (pick || !shown)) promote(pending);
+    if (pending && (pick || !shown)) promote(pending, pick);
     addNext(shown);
     // the background set only loads once the one on screen is complete, so the two never
     // compete for the tiles service
@@ -273,10 +273,13 @@
     }
   }
 
-  function promote(set) {
+  function promote(set, pick = false) {
     if (shown) dropSet(shown);
-    // a complete run swapped in keeps the loop's place if that lead loaded; otherwise hold on +0
-    if (!complete(set) || !set.loaded.has(S.cfg.leads[S.frame])) S.frame = 0;
+    // a visitor pick (run or variable) keeps the time step so views of the same step can be
+    // compared; a complete run swapped in the background keeps the loop's place if that lead
+    // loaded, otherwise holds on +0
+    if (pick) S.frame = S.cfg.leads.length ? Math.min(Math.max(S.frame, 0), S.cfg.leads.length - 1) : 0;
+    else if (!complete(set) || !set.loaded.has(S.cfg.leads[S.frame])) S.frame = 0;
     shown = set;
     pending = null;
     renderInits();

@@ -170,7 +170,7 @@ function startRun(time, background = false) {
   if (next && !keep) dropRun(next);
   const r = keep ? next : { id: runs++, time, variable, added: 0, addedAt: 0, loaded: new Set() };
   next = background ? r : null;
-  if (!background) promote(r, 0);
+  if (!background) promote(r, leads.length ? Math.min(frame, leads.length - 1) : 0); // keep the time step across RGB switches
   tick();
 }
 
