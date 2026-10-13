@@ -62,8 +62,10 @@
     }
   })();
   const HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  const HMS = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
   const hhmm = (init) => (init ? HM.format(initDate(init)) : "--:--");
+  // en-CA gives YYYY-MM-DD
+  const YMD = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+  const ymdhm = (d) => `${YMD.format(d)} ${HM.format(d)}`;
   // Zone abbreviation for `d` (CEST vs CET depends on the date). en-GB names the European
   // zones, en-US the American ones; anywhere else this is an offset like "GMT+3".
   const tzName = (d) => {
@@ -313,6 +315,7 @@
     const lead = leads[S.frame];
     for (const [l, id] of shown?.layers ?? []) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
     renderTicks(lead);
+    renderClock();
     renderValid(run, lead, shown && !complete(shown) ? ` · loading ${shown.loaded.size}/${leads.length}` : "");
   }
 
@@ -419,7 +422,7 @@
     $("#loopLabel span").textContent = on
       ? `+${leads[0]}→+${leads.at(-1)}${S.animPaused ? " · paused" : ""}`
       : "";
-    $("#initTitle").textContent = on ? `${hhmm(on.init)} ${tzName(initDate(on.init))}` : "--:--";
+    $("#initTitle").textContent = on ? `${ymdhm(initDate(on.init))} ${tzName(initDate(on.init))}` : "--:--";
   }
 
   function selectInit(k) {
@@ -442,10 +445,14 @@
   }
 
   function renderValid(run, lead, suffix) {
-    if (!run || lead == null) { $("#validLabel").textContent = "waiting for the first frame…"; return; }
+    if (!run || lead == null) {
+      $("#validEyebrow").textContent = "FORECAST";
+      $("#validTitle").textContent = "waiting for the first frame…";
+      return;
+    }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
-    const what = lead ? `+${lead} min forecast` : "observed satellite";
-    $("#validLabel").textContent = `valid ${HM.format(t)} ${tzName(t)} · ${what}${suffix}`;
+    $("#validEyebrow").textContent = (lead ? `FORECAST · +${lead} MIN` : "OBSERVED · SATELLITE") + suffix.toUpperCase();
+    $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
   }
 
   function showNotice(text) {
@@ -455,6 +462,16 @@
   }
 
   // ------------------------------------------------------------------ strip
+  // header pill: the valid time of the frame on screen, not the wall clock
+  function renderClock() {
+    const lead = shown ? S.cfg.leads[S.frame] : null;
+    const valid = shown && lead != null ? new Date(initDate(shown.run.init).getTime() + lead * 60000) : null;
+    const tag = S.status === "demo" ? "DEMO" : "LIVE";
+    $("#clock").textContent = valid
+      ? `${tag} · ${HM.format(valid)} ${tzName(valid)} · ${lead ? `+${lead} min` : "satellite"}`
+      : `${tag} · --:--`;
+  }
+
   const mmss = (s) => `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}`;
 
   // A run's phases as the strip draws them, each with its estimated length (config
@@ -473,7 +490,7 @@
   function renderStrip() {
     const c = S.cfg;
     const now = new Date();
-    $("#clock").textContent = `${S.status === "demo" ? "DEMO" : "LIVE"} · ${HMS.format(now)} ${tzName(now)}`;
+    renderClock();
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
