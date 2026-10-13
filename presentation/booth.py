@@ -216,6 +216,7 @@ def public_config(sql_editable: bool) -> dict:
         "panel_seconds",
         "playback_speed",
         "hold_ms",
+        "attract_reset_s",
         "station",
         "camera",
         "viewer_url",

@@ -1004,6 +1004,30 @@
     $("#stripToggle").addEventListener("click", () => setStripCollapsed(!$(".app").classList.contains("strip-collapsed")));
   }
 
+  // ------------------------------------------------------------------ attract reset
+  // Anything a visitor or staffer toggles (loop, pause, speed, variable, init, rotation,
+  // strip) goes back to the defaults after attract_reset_s without input, like the camera.
+  let lastInput = Date.now();
+  function initAttractReset() {
+    const touch = () => { lastInput = Date.now(); };
+    for (const type of ["keydown", "pointerdown", "wheel"]) window.addEventListener(type, touch, { passive: true, capture: true });
+    const secs = S.cfg.attract_reset_s;
+    if (!secs) return;
+    setInterval(() => {
+      if (Date.now() - lastInput < secs * 1000) return;
+      const dirty = !S.loop || S.animPaused || S.rotatePaused || S.selInit || S.variable !== "true_color" ||
+        S.speed !== (S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "slow") || $(".app").classList.contains("strip-collapsed");
+      if (!dirty) return;
+      lastInput = Date.now();
+      S.loop = true; $("#loopLabel").setAttribute("aria-pressed", "true");
+      S.animPaused = false; S.rotatePaused = false; S.selInit = null;
+      S.speed = S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "slow";
+      setStripCollapsed(false);
+      if (S.variable !== "true_color") setVariable("true_color"); else syncLayers(true);
+      renderPlayback(); renderInits(); showFrame(); scheduleAnim(); showPanel(S.panel);
+    }, 1000);
+  }
+
   // ------------------------------------------------------------------ keys
   function initKeys() {
     window.addEventListener("keydown", (e) => {
@@ -1055,10 +1079,13 @@
     for (const type of ["pointerup", "pointercancel"]) window.addEventListener(type, released);
     window.addEventListener("blur", released); // pointer let go outside the window
     scrub.addEventListener("change", () => scrub.blur()); // keyboard nudges must not swallow the booth shortcuts
+    // clicked buttons must not keep focus either: Space would re-fire them and the shortcuts would go dead
+    document.addEventListener("click", (e) => e.target.closest?.("button")?.blur());
     initGlobe();
     initPanels();
     initStrip();
     initKeys();
+    initAttractReset();
     await refreshState();
     setInterval(refreshState, 4000);
     if (S.cfg.sql_editable) {

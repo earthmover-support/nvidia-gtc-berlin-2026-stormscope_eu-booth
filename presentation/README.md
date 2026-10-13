@@ -49,6 +49,10 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 | 1–9, L | pick an initialisation (1 = L = latest) |
 | C | collapse / expand the ingest strip |
 
+Every toggle (loop, pause, speed, variable, init, rotation, strip) reverts to the defaults
+after `attract_reset_s` (config.json, 180 s) without any input, so a visitor's click never
+sticks for the day. `config.json` is read when `server.py` starts: restart it after editing.
+
 ## Before the event
 
 1. **Tiles**: `al compute enable gtc-berlin tiles --sku-code s --is-public`, then
@@ -73,9 +77,9 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
    scales to zero: the first query after a sleep takes ~50 s, later ones ~20 s (each
    lead reads a full 1120 × 2432 frame; 8–16 s measured warm on 2026-10-07). Fire one query before visitors arrive.
    Panel 07 is a live editor: click a city chip (`sql.places`) or type any single
-   `SELECT`/`WITH` statement and press Run or ⌘/Ctrl+Enter; Esc leaves the box.
-   Chips and Reset only fill the editor; the server runs a query (with the token; the
-   browser never sees it) when Run is pressed, and once by itself for each new init: it
+   `SELECT`/`WITH` statement and press ⌘/Ctrl+Enter; Esc leaves the box.
+   A city chip fills the editor and runs at once; Reset only fills it. The server runs the
+   query (with the token; the browser never sees it), and once by itself for each new init: it
    resets the editor to the first city (Berlin) and keeps that result in memory until the
    next init. `{init}` is replaced by the newest complete init; `{lat}`/`{lon}`/`{box}` in `sql.query` are filled per city. `lat`/`lon` are
    2-D pixel coordinates, so filter on a `BETWEEN` box, never on equality.
