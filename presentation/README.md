@@ -88,7 +88,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
 5. **Run length**: the strip and scrubber show the observed +0 frame plus 12 steps,
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
-6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 6).
+6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 7).
 7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `UTC`),
    whatever the booth machine or a hosted viewer's browser is set to.
 8. **Offline backup**: with tiles and SQL up, save a fallback in case the venue has no
@@ -153,9 +153,10 @@ Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
 Redeployed 2026-10-09.
 
 
-## Six-panel scientific narrative
+## Seven-panel scientific narrative
 
-The six panels explain generative autoregressive prediction, FCI observations,
+The seven panels introduce the scientific definition of nowcasting, then explain
+generative autoregressive prediction, FCI observations,
 recurring Earth2Studio cycles, overlapped uploads and atomic Icechunk publication,
 Compute tiles and SQL, and the complete workflow. Observation cards show real +0
 composite tiles over the configured Berlin tile and switch the globe layer when
@@ -172,3 +173,6 @@ SQL reports mean composite intensity, not cloud fraction.
 The model feedback, recurring-cycle, upload, delivery, and architecture diagrams are
 schematics, not live measurements. Viewer and raw-tile QR codes use independent grid
 sizes and a four-module quiet zone to improve scanning of the shorter viewer URL.
+
+The opening panel distinguishes the general 0–6 h nowcasting window from this
+demo's 0–2 h satellite prediction horizon, following the [WMO definition](https://space.oscar.wmo.int/applicationareas). Headings and status labels use readable Title Case; scientific acronyms and product names retain their established casing.

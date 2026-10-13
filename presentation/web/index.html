@@ -31,7 +31,7 @@
         <img src="img/arraylake.svg" alt="Arraylake">
       </a>
     </div>
-    <div class="live" id="live"><span class="dot"></span><span id="clock">LIVE · --:--</span></div>
+    <div class="live" id="live"><span class="dot"></span><span id="clock">Live · --:--</span></div>
   </header>
 
   <main class="main">
@@ -42,7 +42,7 @@
 
       <div class="viz-top">
         <div class="init-block">
-          <div class="eyebrow" id="validEyebrow">FORECAST</div>
+          <div class="eyebrow" id="validEyebrow">Forecast</div>
           <div class="init-title" id="validTitle">--:--</div>
           <div class="valid">Forecast initialised <span id="initTitle">--:--</span> · Meteosat-12 FCI</div>
         </div>
@@ -50,16 +50,16 @@
       </div>
 
       <div class="cycle-status" aria-label="Forecast cycle status">
-        <div><span>OBSERVATION / INIT · UTC</span><b id="cycleInit">—</b></div>
-        <div><span>PUBLISHED · UTC</span><b id="cyclePublished">—</b></div>
-        <div><span>OBSERVATION AGE</span><b id="cycleAge">—</b></div>
-        <div><span>HORIZON FROM INIT</span><b id="cycleHorizon">+120 min</b></div>
+        <div><span>Observation / Init · UTC</span><b id="cycleInit">—</b></div>
+        <div><span>Published · UTC</span><b id="cyclePublished">—</b></div>
+        <div><span>Observation Age</span><b id="cycleAge">—</b></div>
+        <div><span>Horizon from Init</span><b id="cycleHorizon">+120 min</b></div>
         <p id="cycleState" role="status">Waiting for published forecast data</p>
       </div>
 
       <div class="viz-bottom">
         <div class="init-row">
-          <span class="eyebrow">INIT</span>
+          <span class="eyebrow">Init</span>
           <div class="inits" id="inits"></div>
           <button type="button" class="loop" id="loopLabel" aria-pressed="true" title="Loop / play once">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
@@ -82,38 +82,54 @@
     <!-- ============ rotating panels ============ -->
     <section class="panels" id="panels">
 
+      <article class="panel nv" data-panel="definition">
+        <div class="kicker">01 · What Is Nowcasting?</div>
+        <h2>Atmospheric Prediction on Minute-to-Hour Timescales</h2>
+        <p><b>Nowcasting</b> is spatially detailed analysis of the current atmosphere and prediction over the immediate future, conventionally from the present to six hours ahead.</p>
+        <p>Rapidly updated satellite, radar, lightning, and in-situ observations constrain the initial state. Methods include Lagrangian advection, statistical and machine-learning prediction, and blending with numerical weather prediction.</p>
+        <p>Convective initiation, growth, and dissipation cannot be captured by advection alone. Forecast uncertainty increases as atmospheric structures evolve.</p>
+        <div class="nowcast-scope" role="img" aria-label="Nowcasting spans the present to six hours ahead. This demo predicts satellite imagery through two hours from its observation-based initialization.">
+          <div class="label">General Nowcasting Window · Present to +6 h</div>
+          <div class="scope-axis"><span>Present</span><span>+2 h</span><span>+4 h</span><span>+6 h</span></div>
+          <div class="scope-window"><b>StormScope-EU Demo</b><span>0–2 h from initialization</span></div>
+          <div class="scope-note">16 predicted FCI channels · 10-minute intervals</div>
+        </div>
+        <p class="small">This demo predicts <b>multispectral satellite observations</b>. Lead time begins at initialization; observation age reduces the forecast horizon remaining beyond the present.</p>
+        <a class="science-source" href="https://space.oscar.wmo.int/applicationareas" target="_blank" rel="noopener">Definition: WMO · Nowcasting / Very Short-Range Forecasting</a>
+      </article>
+
       <article class="panel nv" data-panel="nowcasting">
-        <div class="kicker">01 · GENERATIVE AI NOWCASTING</div>
+        <div class="kicker">02 · Generative AI Nowcasting</div>
         <h2>What will the satellite see next?</h2>
         <p>Meteosat-12 observes Europe's atmosphere every 10 minutes. Can AI predict its next multispectral view?</p>
         <p><b>NVIDIA StormScope-EU</b> learns how satellite imagery evolves across 16 spectral channels using generative diffusion.</p>
         <p>Six observations condition the next frame. Each prediction re-enters the sliding context window: twelve autoregressive steps extend the forecast two hours from initialization.</p>
         <div class="box flow" role="img" aria-label="Six observed frames condition diffusion inference. Each next prediction is fed back into the sliding context for twelve steps.">
-          <div class="label">OBSERVED CONTEXT · MINUTES BEFORE INITIALIZATION</div>
+          <div class="label">Observed Context · Minutes Before Initialization</div>
           <div class="frames observed-frames"><span>−50</span><span>−40</span><span>−30</span><span>−20</span><span>−10</span><span>0</span></div>
           <div class="arrow">↓</div>
           <div class="engine"><b>StormScope-EU</b><span>Generative diffusion · NVIDIA GPU</span></div>
           <div class="arrow">↓</div>
           <div class="prediction"><b>+10 min</b><span>Next multispectral frame</span></div>
           <div class="feedback">↰ Shift the context window · feed the prediction back</div>
-          <div class="label">REPEAT INFERENCE → 12 PREDICTED FRAMES</div>
+          <div class="label">Repeat Inference → 12 Predicted Frames</div>
           <div class="frames out-frames"><span>+10</span><span>+20</span><span>+30</span><span>+40</span><span>+50</span><span>+60</span><span>+70</span><span>+80</span><span>+90</span><span>+100</span><span>+110</span><span>+120</span></div>
         </div>
-        <div class="eyebrow">16 FCI CHANNELS · AUTOREGRESSIVE ROLLOUT · 2-HOUR FORECAST HORIZON</div>
+        <div class="eyebrow">16 FCI Channels · Autoregressive Rollout · 2-Hour Forecast Horizon</div>
       </article>
 
       <article class="panel nv" data-panel="mtg">
-        <div class="kicker">02 · EARTH OBSERVATIONS</div>
+        <div class="kicker">03 · Earth Observations</div>
         <h2>Observing Europe's atmosphere from space</h2>
         <p>The forecast begins approximately 36,000 km above Earth.</p>
         <p>EUMETSAT's <b>Meteosat-12</b> observes Europe and surrounding regions using the Flexible Combined Imager (FCI). Its 16 spectral channels measure reflected solar and emitted thermal radiation, capturing evolving cloud systems, water vapor, and atmospheric structure.</p>
         <p>New observations provide updated initial conditions for successive AI forecast cycles.</p>
-        <div class="label">TWO VIEWS OF THE ATMOSPHERE</div>
+        <div class="label">Two Views of the Atmosphere</div>
         <div class="two">
           <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span>A natural-looking daylight composite of clouds and Earth's surface.</span></button>
           <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>Air Mass</b><span>An infrared composite highlighting water vapor and large-scale atmospheric structure.</span></button>
         </div>
-        <div class="label" id="compositeCaption">OBSERVED +0 FRAME · MATCHES SELECTED INITIALIZATION</div>
+        <div class="label" id="compositeCaption">Observed +0 Frame · Matches Selected Initialization</div>
         <div class="stats">
           <div><b>16</b><span>spectral channels</span></div>
           <div><b>10 min</b><span>scan cadence</span></div>
@@ -122,12 +138,12 @@
       </article>
 
       <article class="panel nv" data-panel="e2s">
-        <div class="kicker">03 · NVIDIA EARTH2STUDIO</div>
+        <div class="kicker">04 · NVIDIA Earth2Studio</div>
         <h2>New observations. New forecast cycles.</h2>
         <p>The atmosphere never stops evolving. Each new set of observations provides an opportunity to initialize an updated forecast.</p>
         <p>Using <b>NVIDIA Earth2Studio</b>, the workflow retrieves the latest six available Meteosat frames, prepares the model inputs, and executes StormScope-EU on NVIDIA GPUs.</p>
         <p>Each initialization produces twelve successive predictions, extending two hours beyond the forecast reference time. As new observations become available, another forecast cycle can begin.</p>
-        <div class="label">THE FORECAST CYCLE</div>
+        <div class="label">The Forecast Cycle</div>
         <div class="forecast-cycle" role="img" aria-label="Ingest observations, initialize, infer, output to Arraylake, and repeat when updated observations are available.">
           <div class="cycle-node"><i>01</i><b>Ingest</b><span>Six consecutive FCI observations</span></div>
           <div class="cycle-node"><i>02</i><b>Initialize</b><span>Latest observation defines reference time</span></div>
@@ -136,28 +152,28 @@
           <div class="cycle-node"><i>03</i><b>Infer</b><span>12 × 10-minute GPU predictions</span></div>
           <div class="cycle-repeat">↰ Repeat when a newer observation window is available</div>
         </div>
-        <div class="eyebrow">OBSERVE → INITIALIZE → PREDICT → REPEAT</div>
+        <div class="eyebrow">Observe → Initialize → Predict → Repeat</div>
       </article>
 
       <article class="panel em" data-panel="arraylake">
-        <div class="kicker">04 · EARTHMOVER ARRAYLAKE + ICECHUNK</div>
+        <div class="kicker">05 · Earthmover Arraylake + Icechunk</div>
         <h2>From GPU inference to versioned forecasts</h2>
         <p>Predictions must move efficiently from GPU compute to cloud storage.</p>
         <p><b>Earthmover Arraylake</b> receives outputs while the GPU predicts subsequent steps, overlapping transfer and inference to reduce publication latency.</p>
         <p>After all uploads finish, one atomic <b>Icechunk</b> commit publishes the complete run as a consistent, versioned snapshot of multidimensional arrays.</p>
         <div class="io-diagram" role="img" aria-label="GPU prediction steps overlap uploads. After all uploads finish, one atomic commit publishes a consistent snapshot.">
-          <div class="label">OVERLAPPED COMPUTE + TRANSFER · SCHEMATIC</div>
+          <div class="label">Overlapped Compute + Transfer · Schematic</div>
           <div class="io-lane"><b>GPU</b><span>+10</span><span>+20</span><span>…</span><span>+120</span></div>
           <div class="io-lane upload"><b>Upload</b><span class="idle"></span><span>+10</span><span>…</span><span>+120</span></div>
           <div class="atomic">↓ All writes finish → <b>one atomic Icechunk commit</b></div>
           <div class="snapshot">Consistent snapshot · version history · reproducible access</div>
         </div>
-        <div class="label">LIVE ARRAYLAKE ACTIVITY · latest commits · init times · snapshots</div>
+        <div class="label">Live Arraylake Activity · latest commits · init times · snapshots</div>
         <div class="commits" id="commitList"></div>
       </article>
 
       <article class="panel em" data-panel="compute">
-        <div class="kicker">05 · EARTHMOVER COMPUTE</div>
+        <div class="kicker">06 · Earthmover Compute</div>
         <h2>From scientific data to interactive forecasts</h2>
         <p>How can visitors explore a forecast without downloading the entire scientific dataset?</p>
         <p><b>Earthmover Compute</b> generates geospatial tiles and runs queries directly against Arraylake scientific arrays. One forecast powers interactive maps, analysis, and downstream applications.</p>
@@ -179,19 +195,19 @@
       </article>
 
       <article class="panel em" data-panel="access">
-        <div class="kicker">06 · THE COMPLETE WORKFLOW</div>
+        <div class="kicker">07 · The Complete Workflow</div>
         <h2>From satellite observations to your screen</h2>
         <p><b>EUMETSAT</b> provides observations. <b>NVIDIA StormScope-EU</b> predicts their evolution through <b>Earth2Studio</b>. <b>Arraylake and Icechunk</b> publish versioned forecasts; <b>Earthmover Compute</b> delivers them to interactive applications.</p>
         <p>A newer observation window starts the next forecast cycle.</p>
         <div class="architecture" role="img" aria-label="EUMETSAT observations flow through NVIDIA StormScope-EU and Earth2Studio to Arraylake and Icechunk, Earthmover Compute, and your browser.">
           <span class="eu">EUMETSAT<small>Satellite observations</small></span><i>→</i><span class="nv">NVIDIA<small>StormScope-EU · Earth2Studio</small></span><i>→</i><span class="em">Earthmover<small>Arraylake · Icechunk · Compute</small></span>
         </div>
-        <div class="label">SCAN TO EXPLORE STORMSCOPE-EU</div>
+        <div class="label">Scan to Explore StormScope-EU</div>
         <div class="two qr">
           <div class="qrcard"><div class="qrbox" id="qrViewer"></div><b>Animated viewer</b><span>Explore Europe, compare composites, and animate two hours from initialization</span></div>
           <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw forecast tiles</b><span>Latest run, served straight from Arraylake by Earthmover Compute</span></div>
         </div>
-        <div class="eyebrow">CONTINUOUS OBSERVATIONS → RECURRING FORECASTS → YOUR SCREEN</div>
+        <div class="eyebrow">Continuous Observations → Recurring Forecasts → Your Screen</div>
         <div class="legend"><span class="eu">EUMETSAT</span><span class="nv">NVIDIA</span><span class="em">Earthmover</span></div>
       </article>
 
@@ -201,7 +217,7 @@
           <div class="keys">←→ · space · P play · O once · S speed · T/A · 1–9 · C strip</div>
           <div class="panel-nav">
             <button type="button" id="panelPrev" aria-label="Previous panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-            <span class="panel-count" id="panelCount">1 / 6</span>
+            <span class="panel-count" id="panelCount">1 / 7</span>
             <button type="button" id="panelNext" aria-label="Next panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
           </div>
         </div>
@@ -214,12 +230,12 @@
     <button type="button" class="strip-toggle" id="stripToggle" aria-expanded="true" title="Collapse / expand (C)">
       <svg width="16" height="16" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1 3h10L6 9z"/></svg>
     </button>
-    <div class="next"><div class="eyebrow" id="countdownLabel">NEXT RUN · ESTIMATE</div><div class="big mono" id="countdown">--:--</div></div>
+    <div class="next"><div class="eyebrow" id="countdownLabel">Next Run · Estimate</div><div class="big mono" id="countdown">--:--</div></div>
     <div class="ingest">
       <div class="muted" id="ingestLabel">Waiting for Arraylake…</div>
       <div class="cells" id="cells"></div>
     </div>
-    <div class="last"><div class="eyebrow">LAST COMMIT</div><div class="mono lime" id="lastCommit">—</div></div>
+    <div class="last"><div class="eyebrow">Last Commit</div><div class="mono lime" id="lastCommit">—</div></div>
   </footer>
 </div>
 <script src="app.js"></script>

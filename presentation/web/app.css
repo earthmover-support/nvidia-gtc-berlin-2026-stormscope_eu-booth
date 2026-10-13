@@ -358,3 +358,11 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="access"] .qr .qrcard { padding: 10px; }
 .notice { top: 225px; }
 [data-panel="arraylake"] .commits { gap: 6px; }
+
+.nowcast-scope { padding: 16px; border: 1px solid #2E3C20; background: #111; display: flex; flex-direction: column; gap: 12px; }
+.scope-axis { display: flex; justify-content: space-between; border-bottom: 2px solid #555; padding-bottom: 8px; font-size: 14px; color: #BDBDBD; }
+.scope-window { width: 33.333%; padding: 10px; background: var(--nv-green); color: #000; display: flex; flex-direction: column; gap: 4px; }
+.scope-window b { font-size: 16px; }
+.scope-window span { font-size: 13px; }
+.scope-note { font-size: 14px; color: #CFCFCF; }
+.science-source { font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }

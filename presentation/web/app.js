@@ -4,7 +4,7 @@
  *   /api/config  -> static settings (config.json)
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
  *   /api/sql     -> latest Zax-SQL result (polled every 10 s, 1 s while a query runs)
- *                   POST {query} runs what is in the panel 07 editor; chips and
+ *                   POST {query} runs what is in the panel 06 editor; chips and
  *                   ⌘/Ctrl+Enter send it (there is no Run button)
  *                   (the server also runs the Berlin query once for each new init)
  *                   Hosted page (`sql_editable: false`): the editor is read-only and Run
@@ -405,7 +405,7 @@
   // display names for the variable keys in config.json
   const VAR_LABELS = { true_color: "True Color", airmass: "Air Mass" };
 
-  // panel 02's two cards highlight the variable on the globe
+  // panel 03's two cards highlight the variable on the globe
   function renderVarCards() {
     for (const c of document.querySelectorAll(".card[data-var]")) {
       c.classList.toggle("on", c.dataset.var === S.variable);
@@ -429,8 +429,8 @@
       img.src = src;
     }
     $("#compositeCaption").textContent = run
-      ? `OBSERVED +0 · ${hhmm(run.init)} UTC · BERLIN REGION`
-      : "OBSERVED +0 FRAME · WAITING FOR DATA";
+      ? `Observed +0 · ${hhmm(run.init)} UTC · Berlin Region`
+      : "Observed +0 Frame · Waiting for Data";
   }
 
   // Only publication is reported by the API; inference progress is not telemetry.
@@ -534,12 +534,12 @@
   // top left: the valid time of the frame on screen, big; the init line below is renderInits'
   function renderValid(run, lead, suffix) {
     if (!run || lead == null) {
-      $("#validEyebrow").textContent = "FORECAST";
+      $("#validEyebrow").textContent = "Forecast";
       $("#validTitle").textContent = "waiting for the first frame…";
       return;
     }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
-    $("#validEyebrow").textContent = (lead ? `FORECAST · +${lead} MIN` : "OBSERVED · SATELLITE") + suffix.toUpperCase();
+    $("#validEyebrow").textContent = (lead ? `Forecast · +${lead} min` : "Observed · Satellite") + suffix;
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
     renderCompositePreviews();
   }
@@ -555,7 +555,7 @@
   function renderClock() {
     const lead = shown ? S.cfg.leads[S.frame] : null;
     const valid = shown && lead != null ? new Date(initDate(shown.run.init).getTime() + lead * 60000) : null;
-    const tag = { demo: "DEMO", offline: "REPLAY" }[S.status] ?? "LIVE";
+    const tag = { demo: "Demo", offline: "Replay" }[S.status] ?? "Live";
     $("#clock").textContent = valid
       ? `${tag} · ${HM.format(valid)} ${tzName(valid)} · ${lead ? `+${lead} min` : "satellite"}`
       : `${tag} · --:--`;
@@ -600,7 +600,7 @@
 
     const latest = S.runs[0];
     if (!latest || !head) {
-      $("#countdownLabel").textContent = "NEXT RUN · ESTIMATE";
+      $("#countdownLabel").textContent = "Next Run · Estimate";
       $("#countdown").textContent = "--:--";
       $("#ingestLabel").textContent = "Waiting for Arraylake…";
       return;
@@ -619,7 +619,7 @@
 
     if (elapsed < 0) {
       // Between runs: the last committed run stays complete until the next one starts.
-      $("#countdownLabel").textContent = "NEXT RUN · ESTIMATE";
+      $("#countdownLabel").textContent = "Next Run · Estimate";
       $("#countdown").textContent = mmss(-elapsed);
       for (const d of cells.children) {
         d.classList.remove("past", "active");
@@ -645,7 +645,7 @@
       d.firstChild.style.width = `${frac * 100}%`;
     });
     const next = new Date(start);
-    $("#countdownLabel").textContent = "COMMIT · ESTIMATE";
+    $("#countdownLabel").textContent = "Commit · Estimate";
     $("#countdown").textContent = mmss(Math.max(0, total - elapsed));
     $("#ingestLabel").textContent = `Estimated cycle start ${HM.format(next)} UTC · ${phases[active].busy} (not live telemetry)`;
   }
