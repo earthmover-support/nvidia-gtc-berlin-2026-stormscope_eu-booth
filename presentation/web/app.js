@@ -373,11 +373,19 @@
   }
 
   // ------------------------------------------------------------------ viz chrome
+  // display names for the variable keys in config.json
+  const VAR_LABELS = { true_color: "True Color", airmass: "Air Mass" };
+
+  // panel 02's two cards highlight the variable on the globe
+  function renderVarCards() {
+    for (const c of document.querySelectorAll(".card[data-var]")) c.classList.toggle("on", c.dataset.var === S.variable);
+  }
+
   function renderVarToggle() {
     const box = $("#varToggle");
     box.replaceChildren();
     for (const name of Object.keys(S.cfg.variables)) {
-      const b = el("button", null, name);
+      const b = el("button", null, VAR_LABELS[name] ?? name);
       b.type = "button";
       b.setAttribute("aria-pressed", String(name === S.variable));
       b.addEventListener("click", () => setVariable(name));
@@ -389,6 +397,7 @@
     if (!(name in S.cfg.variables) || name === S.variable) return;
     S.variable = name;
     renderVarToggle();
+    renderVarCards();
     syncLayers(true);
     showFrame();
   }
@@ -956,6 +965,7 @@
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
     initSqlEditor();
     renderVarToggle();
+    renderVarCards();
     renderPlayback();
     $("#playBtn").addEventListener("click", togglePlay);
     initGlobe();
