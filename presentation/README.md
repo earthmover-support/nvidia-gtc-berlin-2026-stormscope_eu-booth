@@ -46,6 +46,7 @@ chromium --app=http://127.0.0.1:8000 --window-position=0,0 --window-size=1920,10
 | S | cycle playback speed (slow 1 s / medium 0.5 s / fast 0.25 s per frame) |
 | T / A | `true_color` / `airmass` |
 | 1–9, L | pick an initialisation (1 = L = latest) |
+| C | collapse / expand the ingest strip |
 
 ## Before the event
 

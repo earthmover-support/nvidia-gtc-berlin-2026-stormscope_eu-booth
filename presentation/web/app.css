@@ -244,7 +244,18 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .keys { font: 11px var(--mono); color: #6B7280; }
 
 /* ---------------- strip ---------------- */
-.strip { display: flex; align-items: center; gap: 24px; padding: 0 24px; background: #111317; border: 1px solid var(--line); border-radius: 14px; }
+.strip { position: relative; display: flex; align-items: center; gap: 24px; padding: 0 24px; background: #111317; border: 1px solid var(--line); border-radius: 0; }
+/* triangle in the strip's top-right corner: points down to collapse, up to expand */
+.strip-toggle { position: absolute; top: 6px; right: 10px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.strip-toggle:hover { color: var(--text); }
+.strip-toggle svg { transition: transform .2s; }
+/* collapsed: a thin bar with the countdown only; the globe and panels take the room */
+.app.strip-collapsed { grid-template-rows: 56px minmax(0, 1fr) 44px; }
+.app.strip-collapsed .strip-toggle { top: 50%; transform: translateY(-50%); }
+.app.strip-collapsed .strip-toggle svg { transform: rotate(180deg); }
+.app.strip-collapsed .strip .ingest, .app.strip-collapsed .strip .last { display: none; }
+.app.strip-collapsed .strip .next { width: auto; flex-direction: row; align-items: baseline; gap: 12px; }
+.app.strip-collapsed .strip .big { font-size: 18px; }
 .strip .next { width: 150px; display: flex; flex-direction: column; gap: 2px; }
 .strip .big { font-size: 34px; font-weight: 600; }
 .strip .ingest { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }

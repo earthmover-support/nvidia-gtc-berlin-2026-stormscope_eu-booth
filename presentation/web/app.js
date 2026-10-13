@@ -193,9 +193,10 @@
     const center = [cam.lon, cam.lat];
     let home = cam.zoom;
     const fitZoom = () => {
+      const atHome = Math.abs(map.getZoom() - home) < 0.01; // a visitor's pan/zoom survives a resize
       home = Math.max(cam.zoom, coverZoom(cam, map.getContainer()));
       map.setMinZoom(Math.min(cam.min_zoom ?? home, home)); // visitors may zoom out to camera.min_zoom
-      map.jumpTo({ center, zoom: home });
+      if (atHome) map.jumpTo({ center, zoom: home });
     };
     fitZoom();
     map.on("resize", fitZoom);
@@ -967,6 +968,18 @@
     renderSql();
   }
 
+  // ------------------------------------------------------------------ ingest strip collapse
+  function setStripCollapsed(on) {
+    $(".app").classList.toggle("strip-collapsed", on);
+    $("#stripToggle").setAttribute("aria-expanded", String(!on));
+    map?.resize(); // the globe's row changed height
+  }
+  // not persisted: the booth must always start with the live strip showing
+  function initStrip() {
+    setStripCollapsed(false);
+    $("#stripToggle").addEventListener("click", () => setStripCollapsed(!$(".app").classList.contains("strip-collapsed")));
+  }
+
   // ------------------------------------------------------------------ keys
   function initKeys() {
     window.addEventListener("keydown", (e) => {
@@ -981,6 +994,7 @@
       else if (k === "t") setVariable("true_color");
       else if (k === "a") setVariable("airmass");
       else if (k === "l") selectInit(0);
+      else if (k === "c") setStripCollapsed(!$(".app").classList.contains("strip-collapsed"));
       else if (/^[1-9]$/.test(k)) selectInit(Number(k) - 1);
       else return;
     });
@@ -1017,6 +1031,7 @@
     scrub.addEventListener("change", () => scrub.blur()); // keyboard nudges must not swallow the booth shortcuts
     initGlobe();
     initPanels();
+    initStrip();
     initKeys();
     await refreshState();
     setInterval(refreshState, 4000);
