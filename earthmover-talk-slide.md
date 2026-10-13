@@ -36,3 +36,7 @@
 - Co-location of input data / inference compute / storage / tiles compute / user request — 2x
 - Pending: HTTP/2 — unlimited requests from the client instead of 6 in-flight tiles with HTTP/1.1
 - Hard: measuring improvements with cold instances and caching
+
+## Feature recommendation
+
+- "Create pyramids" button: one-click low-resolution pyramid levels — the only thing that shortens a single tile (#9)
