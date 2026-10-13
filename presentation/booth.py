@@ -31,13 +31,17 @@ def all_leads() -> list[int]:
     return [CONFIG["lead_step_min"] * i for i in range(CONFIG["lead_steps"] + 1)]
 
 
-def place_queries() -> dict[str, str]:
-    """config.json query filled in per sql.places entry; {init} stays for fill_init()."""
+def query_for_coords(lat: float, lon: float) -> str:
+    """config.json query for an arbitrary point; {init} stays for fill_init()."""
     sql = CONFIG["sql"]
     template = "\n".join(sql["query"]).replace("{box}", str(sql["box_deg"]))
+    return template.replace("{lat}", f"{lat:.4f}").replace("{lon}", f"{lon:.4f}")
+
+
+def place_queries() -> dict[str, str]:
+    """config.json query filled in per sql.places entry; {init} stays for fill_init()."""
     return {
-        name: template.replace("{lat}", str(lat)).replace("{lon}", str(lon))
-        for name, (lat, lon) in sql["places"].items()
+        name: query_for_coords(lat, lon) for name, (lat, lon) in CONFIG["sql"]["places"].items()
     }
 
 
@@ -221,5 +225,6 @@ def public_config(sql_editable: bool) -> dict:
     return {k: CONFIG[k] for k in keys} | {
         "leads": all_leads(),
         "sql_places": place_queries(),
+        "sql_box": CONFIG["sql"]["box_deg"],
         "sql_editable": sql_editable,
     }

@@ -202,10 +202,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .sql-places { display: flex; flex-wrap: wrap; gap: 6px; }
 .sql-places button, .sql-run button { font: 500 12px var(--mono); padding: 4px 10px; border-radius: 999px; border: 1px solid #3A3852; background: transparent; color: #E2DFF0; cursor: pointer; }
 .sql-places button.on { background: var(--em-lav); border-color: var(--em-lav); color: #15141E; }
+.sql-places button:disabled { opacity: .5; cursor: progress; }
 .sql-run { display: flex; align-items: flex-start; gap: 6px; }
 .sql-run .sql-places { flex: 1; }
-.sql-run #sqlRun { background: var(--em-lav); border-color: var(--em-lav); color: #15141E; }
-.sql-run #sqlRun:disabled { opacity: .5; cursor: progress; }
 .sql.running .bars { opacity: .35; }
 .bars { display: flex; align-items: flex-end; gap: 4px; height: 56px; }
 .bars div { flex: 1; min-height: 3px; border-radius: 3px 3px 0 0; background: var(--em-lav); position: relative; }
