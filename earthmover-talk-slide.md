@@ -10,7 +10,7 @@
 ## Delivery
 
 - Tiles to users — must work on phones, therefore an external tileserver (not deck.gl-raster).
-- 13-step animated forecast = bombarding the tile server with ~260 requests per run.
+- 13-step animated forecast = bombarding the tile server with 260 requests per run.
 
 ## Tech stack
 
