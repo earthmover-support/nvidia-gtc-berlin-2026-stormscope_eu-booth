@@ -1,3 +1,15 @@
+/* NVIDIA Sans, self-hosted so the booth runs without Google Fonts. Static weights only:
+   300/400/500/700 (+ italics); 600 falls through to 700. No NVIDIA Sans Mono exists, so
+   --mono is NVIDIA Sans too; its digits are all the same width, tabular-nums below is belt and braces. */
+@font-face { font-family: "NVIDIA Sans"; font-weight: 300; font-style: normal; font-display: block; src: url("fonts/NVIDIASans_Lt.ttf") format("truetype"); }
+@font-face { font-family: "NVIDIA Sans"; font-weight: 300; font-style: italic; font-display: block; src: url("fonts/NVIDIASans_LtIt.ttf") format("truetype"); }
+@font-face { font-family: "NVIDIA Sans"; font-weight: 400; font-style: normal; font-display: block; src: url("fonts/NVIDIASans_Rg.ttf") format("truetype"); }
+@font-face { font-family: "NVIDIA Sans"; font-weight: 400; font-style: italic; font-display: block; src: url("fonts/NVIDIASans_It.ttf") format("truetype"); }
+@font-face { font-family: "NVIDIA Sans"; font-weight: 500; font-style: normal; font-display: block; src: url("fonts/NVIDIASans_Md.ttf") format("truetype"); }
+@font-face { font-family: "NVIDIA Sans"; font-weight: 500; font-style: italic; font-display: block; src: url("fonts/NVIDIASans_MdIt.ttf") format("truetype"); }
+@font-face { font-family: "NVIDIA Sans"; font-weight: 600 700; font-style: normal; font-display: block; src: url("fonts/NVIDIASans_Bd.ttf") format("truetype"); }
+@font-face { font-family: "NVIDIA Sans"; font-weight: 600 700; font-style: italic; font-display: block; src: url("fonts/NVIDIASans_BdIt.ttf") format("truetype"); }
+
 :root {
   --ground: #0A0A0C;
   --viz: #05070A;
@@ -15,14 +27,17 @@
   --em-purple: #6D0EDB;
   --em-lav: #C396F9;
   --em-text: #D9D6E8;
-  --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: "NVIDIA Sans", Arial, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "NVIDIA Sans", Arial, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body { background: var(--ground); color: var(--text); font-family: var(--sans); overflow: hidden; }
 .mono { font-family: var(--mono); }
+.mono, .eyebrow, .valid, .ticks div, .cells div, .inits button, .commit .id, #clock { font-variant-numeric: tabular-nums; }
+/* pressed state in Medium, not Bold: content-sized buttons must not change width */
+.seg button[aria-pressed="true"], .inits button[aria-pressed="true"] { font-weight: 500; }
 .muted { color: var(--muted); }
 .lime { color: var(--lime); }
 .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); }
