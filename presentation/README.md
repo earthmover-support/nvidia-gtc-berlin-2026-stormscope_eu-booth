@@ -91,6 +91,18 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
 6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 7).
 7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
    whatever the booth machine or a hosted viewer's browser is set to.
+8. **Offline backup**: with tiles and SQL up, save a fallback in case the venue has no
+   internet:
+   ```bash
+   uv run presentation/server.py --fetch-offline   # ~25 min with 8 replicas; rerun resumes
+   uv run presentation/server.py --offline         # no network needed
+   ```
+   The fetch saves the 3 newest runs (both variables, ~170 tiles per frame up to z5), the
+   Carto basemap for the same zooms, the Geist fonts and each run's city SQL results into
+   `presentation/offline/` (gitignored, ~1.2 GB). `--offline` replays the saved runs on the
+   demo cadence, one landing every 10 min; the header reads REPLAY and each commit names
+   the run it replays. Zoom stops at 6 (one level past the saved tiles), and only the city
+   SQL queries answer. The QR codes still point online: phones use mobile data.
 
 ## Hosted on Vercel
 

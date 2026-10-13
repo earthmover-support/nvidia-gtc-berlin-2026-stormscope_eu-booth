@@ -150,7 +150,7 @@
     try {
       map = new maplibregl.Map({
         container: "globe",
-        style: BASEMAP,
+        style: c.basemap ?? BASEMAP, // server.py --offline serves its saved copy
         center: [c.camera.lon, c.camera.lat],
         zoom: c.camera.zoom,
         pitch: c.camera.pitch,
@@ -537,7 +537,7 @@
   function renderStrip() {
     const c = S.cfg;
     const now = new Date();
-    renderClock();
+    $("#clock").textContent = `${{ demo: "DEMO", offline: "REPLAY" }[S.status] ?? "LIVE"} ·${HMS.format(now)} ${tzName(now)}`;
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
@@ -921,7 +921,7 @@
     // first numeric column after the x column, so hand-written queries still plot
     const yi = (r.rows && r.rows[0] ? r.rows[0].findIndex((v, i) => i > 0 && typeof v === "number") : -1);
     const rows = yi > 0 ? r.rows.filter((row) => typeof row[yi] === "number") : [];
-    status.textContent = `${r.status === "demo" ? "demo · " : ""}ran ${ago(r.ran_at)} ago · ${r.seconds} s · ${r.cached ? "cached · " : ""}${(r.rows || []).length} rows`;
+    status.textContent = `${{ demo: "demo · ", offline: "saved · " }[r.status] ?? ""}ran ${ago(r.ran_at)} ago · ${r.seconds} s · ${r.cached ? "cached · " : ""}${(r.rows || []).length} rows`;
     if (!rows.length) { empty(); return; }
     bars.replaceChildren();
     for (const row of rows.slice(0, 60)) {
