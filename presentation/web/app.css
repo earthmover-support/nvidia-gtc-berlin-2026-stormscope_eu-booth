@@ -668,3 +668,23 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
   [data-panel="e2s"] .steps { gap: 6px; }
   [data-panel="e2s"] .steps li { padding: 8px 12px; }
 }
+
+/* Deployed booth typography baseline applied consistently across all seven chapters.
+   Overrides earlier per-panel experimental font scaling without changing content. */
+.panels .panel { gap: 12px; }
+.panels .panel .kicker { font: 400 14px/1.3 var(--mono); letter-spacing: .08em; }
+.panels .panel h2 { font-size: 34px; line-height: 1.1; font-weight: 600; letter-spacing: -.02em; }
+.panels .panel[data-panel="definition"] h2 { font-weight: 400; }
+.panels .panel p { font-size: 18px; line-height: 1.5; }
+.panels .panel p.small { font-size: 16px; }
+.panels .panel .label, .panels .panel .diagram-note { font-size: 13px; line-height: 1.4; }
+.panels .panel .stats b { font-size: 32px; }
+.panels .panel .qrcard b { font-size: 15px; }
+.panels .panel .pipeline-steps strong, .panels .panel .steps b { font-size: 17px; }
+.panels .panel .pipeline-steps span, .panels .panel .steps span { font-size: 14px; }
+@media (max-height: 850px) {
+  .panels .panel { gap: 9px; }
+  .panels .panel h2 { font-size: 30px; }
+  .panels .panel p { font-size: 16px; line-height: 1.4; }
+  .panels .panel .stats b { font-size: 26px; }
+}
