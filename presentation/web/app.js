@@ -451,12 +451,12 @@
         large.onerror = () => { large.hidden = true; empty.hidden = false; };
         large.src = source;
       }
-      large.alt = `${VAR_LABELS[S.variable]} composite at initialization ${hhmm(run.init)} UTC`;
+      large.alt = `${VAR_LABELS[S.variable]} composite at initialization ${hhmm(run.init)} ${tzName(initDate(run.init))}`;
     } else {
       large.removeAttribute("src"); large.dataset.source = ""; large.hidden = true; empty.hidden = false;
     }
     $("#compositeCaption").textContent = run
-      ? `Observed +0 · ${hhmm(run.init)} UTC · Berlin Region`
+      ? `Observed +0 · ${hhmm(run.init)} ${tzName(initDate(run.init))} · Berlin Region`
       : "Observed +0 Frame · Waiting for Data";
   }
 
@@ -526,9 +526,9 @@
     const rows = [...document.querySelectorAll("[data-cycle-row]")];
     const runs = S.runs.slice(0, 3).reverse();
     $("#cycleHistoryCaption").textContent = {
-      demo: "Simulated Forecast Cycles · UTC", offline: "Replay Forecast Cycles · UTC",
-      error: "Last Known Published Cycles · UTC",
-    }[S.status] || "Published Forecast Cycles · UTC";
+      demo: "Simulated Forecast Cycles", offline: "Replay Forecast Cycles",
+      error: "Last Known Published Cycles",
+    }[S.status] || "Published Forecast Cycles";
     rows.forEach((row, index) => {
       const run = runs[index];
       const fields = ["window", "init", "horizon", "publication"];
@@ -539,7 +539,7 @@
       row.querySelector("[data-cycle-horizon]").textContent = HM.format(new Date(init.getTime() + S.cfg.leads.at(-1) * 60000));
       const pub = publicationForRun(run);
       row.querySelector("[data-cycle-publication]").textContent = pub ? HM.format(new Date(pub.written_at)) : "Unknown";
-      row.setAttribute("aria-label", `Forecast initialized ${ymdhm(init)} UTC, published ${pub ? ymdhm(new Date(pub.written_at)) + " UTC" : "time unavailable"}`);
+      row.setAttribute("aria-label", `Forecast initialized ${ymdhm(init)} ${tzName(init)}, published ${pub ? ymdhm(new Date(pub.written_at)) + " " + tzName(new Date(pub.written_at)) : "time unavailable"}`);
     });
   }
 
@@ -550,7 +550,7 @@
     if (!run) { img.hidden = true; $("#computeTileCaption").textContent = "Waiting for forecast metadata"; return; }
     const lead = S.cfg.leads[S.frame] ?? 0;
     const source = thumbnailUrl(run, S.variable, lead);
-    $("#computeTileCaption").textContent = `${VAR_LABELS[S.variable]} · +${lead} min · Init ${hhmm(run.init)} UTC`;
+    $("#computeTileCaption").textContent = `${VAR_LABELS[S.variable]} · +${lead} min · Init ${hhmm(run.init)} ${tzName(initDate(run.init))}`;
     if (img.dataset.source === source) return;
     img.dataset.source = source;
     img.hidden = true;
