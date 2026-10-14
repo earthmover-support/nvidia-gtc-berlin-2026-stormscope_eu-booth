@@ -52,7 +52,7 @@
 
       <div class="cycle-status" aria-label="StormScope-EU forecast cycle status">
         <strong class="cycle-heading">StormScope-EU · Forecast Cycle Status</strong>
-        <div><span>Latest Obs in Run · UTC</span><b id="cycleObservation">—</b></div>
+        <div><span>Latest Input Observation · UTC</span><b id="cycleObservation">—</b></div>
         <div><span>Init · UTC</span><b id="cycleInit">—</b></div>
         <div><span>Valid · UTC</span><b id="cycleValid">—</b></div>
         <div><span>Published · UTC</span><b id="cyclePublished">—</b></div>
@@ -92,11 +92,11 @@
     <section class="panels" id="panels">
 
       <article class="panel nv" data-panel="definition">
-        <div class="kicker" role="heading" aria-level="2"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#clock"/></svg><span>01 · What Is Nowcasting?</span></div>
-        <p>Nowcasting predicts short-term atmospheric evolution, from minutes to a few hours, using recent observations and rapidly updated models.</p>
-        <p>This demo shows an end-to-end AI nowcasting workflow that transforms Meteosat satellite observations into two-hour forecasts of multispectral satellite imagery using NVIDIA StormScope-EU.</p>
-        <p>In this demo, we use the NVIDIA StormScope-EU model to generate the predictions, Earth2Studio connects the scientific workflow, and Earthmover enables low-latency forecast publication and interactive data access.</p>
-        <p class="small">A forecast starts from an initial condition derived from recent observations.</p>
+        <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#clock"/></svg><span>01 · Weather Nowcasting</span></div>
+        <h2>What Is Nowcasting?</h2>
+        <p>Nowcasting uses recent observations to predict atmospheric evolution over the next minutes to hours.</p>
+        <div class="label">This Demo Shows</div>
+        <p>StormScope-EU forecasts multispectral Meteosat imagery at 10-minute intervals through a two-hour horizon. Earth2Studio connects data and GPU inference; forecast outputs are transferred to Earthmover for versioned publication and low-latency interactive access.</p>
         <div class="observation-timeline" role="img" aria-label="Six recent observations lead to initialization at +0, followed by twelve predicted frames through +120 minutes. The timeline is relative to initialization, not the current clock.">
           <div class="timeline-head"><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg> Observed</span><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg> AI Forecast</span></div>
           <div class="timeline-track"><div class="observed-track"></div><div class="predicted-track"></div></div>
@@ -109,9 +109,9 @@
       <article class="panel nv" data-panel="mtg">
         <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg><span>02 · Earth Observations</span></div>
         <h2>Observing the Atmosphere from Space</h2>
-        <p>Approximately 36,000 km above Earth, EUMETSAT’s Meteosat-12 observes Europe and surrounding regions.</p>
-        <p>Its Flexible Combined Imager (FCI) measures reflected solar and emitted thermal radiation across 16 spectral channels. Six consecutive observations provide the initial condition for StormScope-EU.</p>
-        <div class="label">Two Views of the Atmosphere</div>
+        <p>From geostationary orbit, EUMETSAT’s Meteosat-12 observes Europe and surrounding regions roughly 36,000 km above Earth.</p>
+        <p>Its Flexible Combined Imager (FCI) measures reflected solar and emitted thermal radiation in 16 spectral channels. Six consecutive observations form StormScope-EU’s initial temporal context.</p>
+        <div class="label">Two Satellite Composites</div>
         <div class="two">
           <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#sun"/></svg>True Color</b><span>A natural-looking daylight composite of clouds and Earth's surface.</span></button>
           <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#layers"/></svg>Air Mass</b><span>An infrared composite highlighting water vapor and large-scale atmospheric structure.</span></button>
@@ -128,8 +128,8 @@
       <article class="panel nv" data-panel="nowcasting">
         <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg><span>03 · NVIDIA StormScope-EU</span></div>
         <h2>Predicting the Next Satellite Observation</h2>
-        <p>StormScope-EU learns spatiotemporal relationships across 16 satellite channels. Conditioned on six consecutive observations, it generates the next multispectral frame through iterative diffusion sampling.</p>
-        <p>Each prediction replaces the oldest frame in the sliding context window. Repeating this process produces twelve successive 10-minute predictions, extending the forecast to +120 minutes.</p>
+        <p>StormScope-EU is a generative diffusion model that predicts the next 16-channel Meteosat image from six consecutive satellite observations using iterative sampling.</p>
+        <p>Each predicted frame replaces the oldest frame in the sliding input window. Twelve autoregressive steps extend the forecast to +120 minutes from initialization.</p>
 <svg class="science-diagram" viewBox="0 0 544 362" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
           <title id="autoregressive-model-title">Autoregressive Model</title><desc id="autoregressive-model-desc">Six actual observation thumbnails condition one next-frame diffusion inference. Each prediction enters a shifting context window and returns to the model. Forecast thumbnails use published outputs. Context shifting is an illustration, not live GPU progress.</desc>
           <defs><marker id="autoregressive-model-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
@@ -265,8 +265,8 @@
       <article class="panel nv" data-panel="e2s">
         <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#refresh"/></svg><span>04 · NVIDIA Earth2Studio</span></div>
         <h2>New Observations. New Forecast Cycles.</h2>
-        <p>Earth2Studio provides reusable components for retrieving observations, preparing model inputs, executing StormScope-EU on NVIDIA GPUs, and writing forecast outputs.</p>
-        <p>When a newer complete observation window becomes available, the workflow initializes another forecast. Each cycle incorporates updated observations and streams predictions to Arraylake during inference.</p>
+        <p>Earth2Studio provides reusable interfaces for satellite data access, input preparation, StormScope-EU inference on NVIDIA GPUs, and scientific forecast output.</p>
+        <p>A newer, complete six-frame observation window can initialize a separate two-hour forecast. Each published run has its own initialization and publication times—not just another step in the previous forecast.</p>
         <div class="diagram-note">Ingest → Initialize → Predict → Output → Repeat</div>
 <svg class="science-diagram" viewBox="0 0 544 265" role="img" aria-labelledby="successive-initializations-title successive-initializations-desc">
           <title id="successive-initializations-title">Successive Initializations</title><desc id="successive-initializations-desc">Three distinct published forecasts show their six-frame observation windows, initialization times, two-hour horizons, and publication times. These are separate runs, not predictions fed back within one run.</desc>
@@ -346,8 +346,8 @@
       <article class="panel em" data-panel="arraylake">
         <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#database"/></svg><span>05 · Earthmover Arraylake + Icechunk</span></div>
         <h2>Upload While Computing. Publish Atomically.</h2>
-        <p>Forecast outputs move to Arraylake while the GPU computes subsequent predictions, overlapping data transfer with inference.</p>
-        <p>After every write finishes, one atomic Icechunk commit publishes the complete forecast as a consistent, versioned snapshot. Earlier snapshots remain available for reproducible analysis.</p>
+        <p>StormScope-EU writes predicted fields to Earthmover Arraylake while the GPU generates subsequent steps. Overlapping transfer with inference helps reduce time to publication.</p>
+        <p>After all writes complete, one Icechunk commit atomically publishes the forecast as a consistent, versioned snapshot. Earlier snapshots remain available for traceable comparison.</p>
         <div class="diagram-note">Overlapped Uploads · Atomic Publication · Versioned History</div>
         <svg class="science-diagram" viewBox="0 0 544 194" role="img" aria-labelledby="overlapped-publication-title overlapped-publication-desc">
           <title id="overlapped-publication-title">Overlapped Publication</title><desc id="overlapped-publication-desc">Successive GPU prediction steps overlap delayed uploads. A completion barrier waits for every upload, then one atomic Icechunk commit exposes the complete forecast snapshot to readers. Widths illustrate overlap and are not measured durations.</desc>
@@ -390,7 +390,7 @@
       <article class="panel em" data-panel="compute">
         <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chart"/></svg><span>06 · Earthmover Compute</span></div>
         <h2>From Scientific Arrays to Interactive Maps</h2>
-        <p>Earthmover Compute generates geospatial tiles and supports SQL queries directly against Arraylake datasets. Applications request selected regions, composites, and forecast lead times without downloading the entire forecast.</p>
+        <p>Earthmover Compute serves on-demand geospatial tiles and SQL queries from Arraylake forecast datasets. Applications can access selected regions, composites, and lead times without downloading the complete forecast.</p>
 <svg class="science-diagram" viewBox="0 0 544 132" role="img" aria-labelledby="forecast-delivery-title forecast-delivery-desc">
           <title id="forecast-delivery-title">Forecast Delivery</title><desc id="forecast-delivery-desc">A published Arraylake snapshot passes through Earthmover Compute to a real map tile preview and live SQL query results.</desc>
           <defs><marker id="forecast-delivery-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
@@ -411,7 +411,7 @@
         </svg>
         <div class="interface-captions"><span><b>Visualize</b> — Render forecast tiles on demand.</span><span><b>Query</b> — Analyze regions and lead times through SQL.</span></div>
         <div class="diagram-note">Integrate — Access scientific data through cloud-native services.</div>
-        <div class="diagram-note">The live SQL example shows mean composite intensity across forecast lead times.</div>
+        <div class="diagram-note">Live SQL: mean rendered-composite intensity by forecast lead, not cloud fraction.</div>
         <div class="compute-evidence">
           <div class="tile-evidence"><div class="label">Map Tile · Berlin Region</div><div class="tile-preview"><img id="computeTile" alt="Published forecast map tile over the Berlin region" hidden><span>Tile unavailable</span></div><span id="computeTileCaption">Waiting for forecast metadata</span></div>
         <div class="sql">
@@ -430,12 +430,12 @@
       <article class="panel em" data-panel="access">
         <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#viewer"/></svg><span>07 · Explore StormScope-EU</span></div>
         <h2>Take the Forecast With You</h2>
-        <p>Scan the viewer to explore Europe, compare True Color and Air Mass composites, and animate AI-generated satellite imagery through two hours from initialization.</p>
-        <p>The same versioned forecast supports the interactive map, scientific queries, and downstream applications.</p>
+        <p>Scan to open the interactive forecast. Explore Europe, switch between True Color and Air Mass, and animate AI predictions through +120 minutes from initialization.</p>
+        <p>The same versioned forecast supports map tiles, scientific queries, and downstream applications.</p>
         <div class="architecture-ribbon" role="img" aria-label="Meteosat observations pass through NVIDIA AI and Earthmover to the viewer">
           <span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg>Meteosat</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg>NVIDIA AI</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#database"/></svg>Earthmover</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#viewer"/></svg>Viewer</span>
         </div>
-        <div class="label">Open the Viewer · Explore the Data</div>
+        <div class="label">Scan to Explore the Forecast</div>
         <div class="two qr">
           <a class="qrcard" id="viewerLink" href="https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/" target="_blank" rel="noopener"><div class="qrbox" id="qrViewer"></div><b>Open the Viewer</b></a>
           <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Developer Tiles</b></div>
