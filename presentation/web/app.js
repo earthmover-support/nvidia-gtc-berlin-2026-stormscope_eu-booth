@@ -33,7 +33,8 @@
     variable: "true_color",
     frame: 0,
     animPaused: false,
-    speed: "normal",
+    loop: true, // false: play to the last lead, then pause
+    speed: "slow",
     panel: 0,
     rotatePaused: false,
     manualUntil: 0,
@@ -46,24 +47,30 @@
   };
 
   // seconds each forecast frame stays on screen
-  const SPEEDS = { slow: 0.75, normal: 0.5, fast: 0.25 };
+  const SPEEDS = { slow: 1, medium: 0.5, fast: 0.25 };
 
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
   const initDate = (init) => new Date(init + ":00Z"); // inits are stored in UTC
-  // Times show in the viewer's own zone, or Berlin's when the browser reports none.
-  const TZ = (() => {
-    try {
-      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      new Intl.DateTimeFormat("en", { timeZone: zone }); // throws on a zone it doesn't know
-      return zone || "Europe/Berlin";
-    } catch {
-      return "Europe/Berlin";
+  // Every time on screen is in one zone, config.json `timezone` (the booth's); the viewer's
+  // own zone is only a fallback for a missing or unknown value. Set in boot() once the
+  // config has loaded.
+  let TZ = "Europe/Berlin", HM, YMD;
+  function setTimezone(zone) {
+    for (const z of [zone, Intl.DateTimeFormat().resolvedOptions().timeZone, "Europe/Berlin"]) {
+      try {
+        if (!z) continue;
+        new Intl.DateTimeFormat("en", { timeZone: z }); // throws on a zone it doesn't know
+        TZ = z;
+        break;
+      } catch {}
     }
-  })();
-  const HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  const HMS = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+    HM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    YMD = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }); // YYYY-MM-DD
+  }
+  setTimezone();
   const hhmm = (init) => (init ? HM.format(initDate(init)) : "--:--");
+  const ymdhm = (d) => `${YMD.format(d)} ${HM.format(d)}`;
   // Zone abbreviation for `d` (CEST vs CET depends on the date). en-GB names the European
   // zones, en-US the American ones; anywhere else this is an offset like "GMT+3".
   const tzName = (d) => {
@@ -191,9 +198,10 @@
     const center = [cam.lon, cam.lat];
     let home = cam.zoom;
     const fitZoom = () => {
+      const atHome = Math.abs(map.getZoom() - home) < 0.01; // a visitor's pan/zoom survives a resize
       home = Math.max(cam.zoom, coverZoom(cam, map.getContainer()));
       map.setMinZoom(Math.min(cam.min_zoom ?? home, home)); // visitors may zoom out to camera.min_zoom
-      map.jumpTo({ center, zoom: home });
+      if (atHome) map.jumpTo({ center, zoom: home });
     };
     fitZoom();
     map.on("resize", fitZoom);
@@ -239,6 +247,9 @@
       map.removeSource(id);
     }
   }
+
+  // frame indices whose lead has loaded in `set`, in playback order
+  const readyFrames = (set) => (set ? S.cfg.leads.flatMap((l, k) => (set.loaded.has(l) ? [k] : [])) : []);
 
   // Every lead has been added, and the last one has loaded or timed out.
   const complete = (set) =>
@@ -313,6 +324,7 @@
     const lead = leads[S.frame];
     for (const [l, id] of shown?.layers ?? []) map.setPaintProperty(id, "raster-opacity", l === lead ? 1 : 0);
     renderTicks(lead);
+    renderClock();
     renderValid(run, lead, shown && !complete(shown) ? ` · loading ${shown.loaded.size}/${leads.length}` : "");
   }
 
@@ -321,16 +333,23 @@
   function scheduleAnim() {
     clearTimeout(animTimer);
     if (S.animPaused) return;
-    const last = shown && S.frame === S.cfg.leads.length - 1;
+    const last = shown && readyFrames(shown).find((k) => k > S.frame) == null;
     animTimer = setTimeout(animate, SPEEDS[S.speed] * 1000 + (last ? S.cfg.hold_ms : 0));
   }
 
   // Holds the first frame until every lead has loaded (or timed out), then loops over the
   // leads that loaded (a lead that timed out is skipped).
   function animate() {
-    if (shown && complete(shown)) {
-      const ready = S.cfg.leads.flatMap((l, k) => (shown.loaded.has(l) ? [k] : []));
-      if (ready.length) S.frame = ready.find((k) => k > S.frame) ?? ready[0];
+    if (shown && complete(shown) && !scrubbing) {
+      const ready = readyFrames(shown);
+      const next = ready.find((k) => k > S.frame);
+      if (next == null && !S.loop && ready.length) { // play once: stop on the last lead
+        S.animPaused = true;
+        renderPlayback();
+        renderInits();
+        return;
+      }
+      if (ready.length) S.frame = next ?? ready[0];
       showFrame();
     }
     scheduleAnim();
@@ -357,8 +376,19 @@
     }
   }
 
+  function toggleLoop() {
+    S.loop = !S.loop;
+    $("#loopLabel").setAttribute("aria-pressed", String(S.loop));
+    renderInits();
+  }
+
   function togglePlay() {
     S.animPaused = !S.animPaused;
+    // resuming a finished single run starts it over
+    if (!S.animPaused && !S.loop && shown) {
+      const ready = readyFrames(shown);
+      if (ready.length && ready.find((k) => k > S.frame) == null) { S.frame = ready[0]; showFrame(); }
+    }
     renderPlayback();
     renderInits();
     scheduleAnim();
@@ -373,11 +403,19 @@
   }
 
   // ------------------------------------------------------------------ viz chrome
+  // display names for the variable keys in config.json
+  const VAR_LABELS = { true_color: "True Color", airmass: "Air Mass" };
+
+  // panel 02's two cards highlight the variable on the globe
+  function renderVarCards() {
+    for (const c of document.querySelectorAll(".card[data-var]")) c.classList.toggle("on", c.dataset.var === S.variable);
+  }
+
   function renderVarToggle() {
     const box = $("#varToggle");
     box.replaceChildren();
     for (const name of Object.keys(S.cfg.variables)) {
-      const b = el("button", null, name);
+      const b = el("button", null, VAR_LABELS[name] ?? name);
       b.type = "button";
       b.setAttribute("aria-pressed", String(name === S.variable));
       b.addEventListener("click", () => setVariable(name));
@@ -389,6 +427,7 @@
     if (!(name in S.cfg.variables) || name === S.variable) return;
     S.variable = name;
     renderVarToggle();
+    renderVarCards();
     syncLayers(true);
     showFrame();
   }
@@ -408,9 +447,9 @@
     });
     const leads = S.cfg.leads;
     $("#loopLabel span").textContent = on
-      ? `+${leads[0]}→+${leads.at(-1)}${S.animPaused ? " · paused" : ""}`
+      ? `+${leads[0]}→+${leads.at(-1)} · ${S.loop ? "loop" : "once"}`
       : "";
-    $("#initTitle").textContent = on ? `${hhmm(on.init)} ${tzName(initDate(on.init))}` : "--:--";
+    $("#initTitle").textContent = on ? `${ymdhm(initDate(on.init))} ${tzName(initDate(on.init))}` : "--:--";
   }
 
   function selectInit(k) {
@@ -425,18 +464,42 @@
   function renderTicks(current) {
     const box = $("#ticks");
     box.replaceChildren();
-    for (const lead of S.cfg.leads) {
-      const d = el("div", lead ? null : "obs", lead ? `+${lead}` : "+0 · satellite");
+    S.cfg.leads.forEach((lead, k) => {
+      const d = el("div", lead ? null : "obs", lead ? `+${lead}` : "+0 · sat");
       if (lead === current) d.classList.add("now");
+      d.addEventListener("click", () => scrubTo(k));
       box.append(d);
-    }
+    });
+    const r = $("#scrub");
+    r.max = String(S.cfg.leads.length - 1);
+    if (!scrubbing) r.value = String(S.frame);
   }
 
+  // slider / tick click: jump to the nearest lead that has loaded; the loop carries on from there
+  let scrubbing = false; // pointer down on the slider: no auto-advance, no thumb writes
+  function scrubTo(k) {
+    if (!shown) return;
+    const ready = readyFrames(shown);
+    if (!ready.length) return;
+    const dir = Math.sign(k - S.frame); // ties go the way the visitor is moving
+    S.frame = ready.reduce((best, i) => {
+      const di = Math.abs(i - k), db = Math.abs(best - k);
+      return di < db || (di === db && Math.sign(i - S.frame) === dir) ? i : best;
+    }, ready[0]);
+    showFrame();
+    scheduleAnim();
+  }
+
+  // top left: the valid time of the frame on screen, big; the init line below is renderInits'
   function renderValid(run, lead, suffix) {
-    if (!run || lead == null) { $("#validLabel").textContent = "waiting for the first frame…"; return; }
+    if (!run || lead == null) {
+      $("#validEyebrow").textContent = "FORECAST";
+      $("#validTitle").textContent = "waiting for the first frame…";
+      return;
+    }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
-    const what = lead ? `+${lead} min forecast` : "observed satellite";
-    $("#validLabel").textContent = `valid ${HM.format(t)} ${tzName(t)} · ${what}${suffix}`;
+    $("#validEyebrow").textContent = (lead ? `FORECAST · +${lead} MIN` : "OBSERVED · SATELLITE") + suffix.toUpperCase();
+    $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
   }
 
   function showNotice(text) {
@@ -446,6 +509,16 @@
   }
 
   // ------------------------------------------------------------------ strip
+  // header pill: the valid time of the frame on screen, not the wall clock
+  function renderClock() {
+    const lead = shown ? S.cfg.leads[S.frame] : null;
+    const valid = shown && lead != null ? new Date(initDate(shown.run.init).getTime() + lead * 60000) : null;
+    const tag = { demo: "DEMO", offline: "REPLAY" }[S.status] ?? "LIVE";
+    $("#clock").textContent = valid
+      ? `${tag} · ${HM.format(valid)} ${tzName(valid)} · ${lead ? `+${lead} min` : "satellite"}`
+      : `${tag} · --:--`;
+  }
+
   const mmss = (s) => `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}`;
 
   // A run's phases as the strip draws them, each with its estimated length (config
@@ -464,7 +537,7 @@
   function renderStrip() {
     const c = S.cfg;
     const now = new Date();
-    $("#clock").textContent = `${{ demo: "DEMO", offline: "REPLAY" }[S.status] ?? "LIVE"} ·${HMS.format(now)} ${tzName(now)}`;
+    renderClock();
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
@@ -542,6 +615,10 @@
     const prog = $("#progress");
     prog.replaceChildren(...panels().map(() => el("span")));
     showPanel(0);
+    // buttons behave like the arrow keys: manual for 60 s, then the rotation resumes
+    const step = (d) => { S.manualUntil = Date.now() + 60000; showPanel(S.panel + d); };
+    $("#panelPrev").addEventListener("click", () => step(-1));
+    $("#panelNext").addEventListener("click", () => step(1));
     setInterval(() => {
       if (S.rotatePaused || Date.now() < S.manualUntil) return;
       showPanel(S.panel + 1);
@@ -553,6 +630,7 @@
     S.panel = (i + ps.length) % ps.length;
     ps.forEach((p, k) => p.classList.toggle("active", k === S.panel));
     $("#panels").classList.toggle("em-theme", ps[S.panel].classList.contains("em"));
+    $("#panelCount").textContent = `${S.panel + 1} / ${ps.length}`;
     [...$("#progress").children].forEach((s, k) => {
       s.className = k === S.panel ? "on" : "";
       s.replaceChildren();
@@ -918,6 +996,42 @@
     renderSql();
   }
 
+  // ------------------------------------------------------------------ ingest strip collapse
+  function setStripCollapsed(on) {
+    $(".app").classList.toggle("strip-collapsed", on);
+    $("#stripToggle").setAttribute("aria-expanded", String(!on));
+    map?.resize(); // the globe's row changed height
+  }
+  // not persisted: the booth must always start with the live strip showing
+  function initStrip() {
+    setStripCollapsed(false);
+    $("#stripToggle").addEventListener("click", () => setStripCollapsed(!$(".app").classList.contains("strip-collapsed")));
+  }
+
+  // ------------------------------------------------------------------ attract reset
+  // Anything a visitor or staffer toggles (loop, pause, speed, variable, init, rotation,
+  // strip) goes back to the defaults after attract_reset_s without input, like the camera.
+  let lastInput = Date.now();
+  function initAttractReset() {
+    const touch = () => { lastInput = Date.now(); };
+    for (const type of ["keydown", "pointerdown", "wheel"]) window.addEventListener(type, touch, { passive: true, capture: true });
+    const secs = S.cfg.attract_reset_s;
+    if (!secs) return;
+    setInterval(() => {
+      if (Date.now() - lastInput < secs * 1000) return;
+      const dirty = !S.loop || S.animPaused || S.rotatePaused || S.selInit || S.variable !== "true_color" ||
+        S.speed !== (S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "slow") || $(".app").classList.contains("strip-collapsed");
+      if (!dirty) return;
+      lastInput = Date.now();
+      S.loop = true; $("#loopLabel").setAttribute("aria-pressed", "true");
+      S.animPaused = false; S.rotatePaused = false; S.selInit = null;
+      S.speed = S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "slow";
+      setStripCollapsed(false);
+      if (S.variable !== "true_color") setVariable("true_color"); else syncLayers(true);
+      renderPlayback(); renderInits(); showFrame(); scheduleAnim(); showPanel(S.panel);
+    }, 1000);
+  }
+
   // ------------------------------------------------------------------ keys
   function initKeys() {
     window.addEventListener("keydown", (e) => {
@@ -928,10 +1042,12 @@
       else if (k === "arrowleft" || k === "pageup") { S.manualUntil = Date.now() + 60000; showPanel(S.panel - 1); }
       else if (k === " ") { S.rotatePaused = !S.rotatePaused; showPanel(S.panel); e.preventDefault(); }
       else if (k === "p") togglePlay();
+      else if (k === "o") toggleLoop();
       else if (k === "s") { const names = Object.keys(SPEEDS); setSpeed(names[(names.indexOf(S.speed) + 1) % names.length]); }
       else if (k === "t") setVariable("true_color");
       else if (k === "a") setVariable("airmass");
       else if (k === "l") selectInit(0);
+      else if (k === "c") setStripCollapsed(!$(".app").classList.contains("strip-collapsed"));
       else if (/^[1-9]$/.test(k)) selectInit(Number(k) - 1);
       else return;
     });
@@ -953,14 +1069,28 @@
     fitStage();
     window.addEventListener("resize", fitStage);
     S.cfg = await (await fetch("/api/config")).json();
+    setTimezone(S.cfg.timezone);
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
     initSqlEditor();
     renderVarToggle();
+    renderVarCards();
     renderPlayback();
     $("#playBtn").addEventListener("click", togglePlay);
+    $("#loopLabel").addEventListener("click", toggleLoop);
+    const scrub = $("#scrub");
+    scrub.addEventListener("input", (e) => scrubTo(Number(e.target.value)));
+    scrub.addEventListener("pointerdown", () => { scrubbing = true; });
+    const released = () => { if (scrubbing) { scrubbing = false; scrub.blur(); showFrame(); scheduleAnim(); } };
+    for (const type of ["pointerup", "pointercancel"]) window.addEventListener(type, released);
+    window.addEventListener("blur", released); // pointer let go outside the window
+    scrub.addEventListener("change", () => scrub.blur()); // keyboard nudges must not swallow the booth shortcuts
+    // clicked buttons must not keep focus either: Space would re-fire them and the shortcuts would go dead
+    document.addEventListener("click", (e) => e.target.closest?.("button")?.blur());
     initGlobe();
     initPanels();
+    initStrip();
     initKeys();
+    initAttractReset();
     await refreshState();
     setInterval(refreshState, 4000);
     if (S.cfg.sql_editable) {
