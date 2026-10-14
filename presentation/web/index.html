@@ -97,8 +97,8 @@
         <h2>From Satellite Observations to AI Forecasts</h2>
         <p>Nowcasting uses recent observations to predict weather over the next minutes to hours.</p>
         
-        <p>This demo shows how AI can forecast future satellite imagery over Europe. StormScope-EU is an NVIDIA-trained generative AI model that uses six recent Meteosat-12 observations to predict twelve future satellite frames at 10-minute intervals, extending up to two hours ahead.</p>
-        <p>Earth2Studio connects satellite data and NVIDIA GPU inference, while Earthmover stores and serves the published forecasts.</p>
+        <p>StormScope-EU uses six Meteosat-12 observations to predict twelve future satellite frames at 10-minute intervals, covering the next two hours.</p>
+        
         <div class="observation-timeline" role="img" aria-label="Six recent observations lead to initialization at +0, followed by twelve predicted frames through +120 minutes. The timeline is relative to initialization, not the current clock.">
           <div class="timeline-head"><span> Observed</span><span> AI Forecast</span></div>
           <div class="timeline-track"><div class="observed-track"></div><div class="predicted-track"></div></div>
@@ -111,8 +111,8 @@
       <article class="panel nv" data-panel="mtg">
         <div class="kicker"><span>02 · Earth Observations</span></div>
         <h2>Observing the Atmosphere from Space</h2>
-        <p>Meteosat-12 observes Europe from geostationary orbit, about 36,000 km above Earth.</p>
-        <p>Its Flexible Combined Imager (FCI) observes 16 spectral channels. Six observations, 10 minutes apart, start each StormScope-EU forecast.</p>
+        <p>Meteosat-12 observes Europe from geostationary orbit, approximately 36,000 km above Earth.</p>
+        <p>Its Flexible Combined Imager measures 16 spectral channels. Six observations, 10 minutes apart, provide the model's initial context.</p>
         <div class="label">Select Satellite Composite</div>
         <div class="large-composite" aria-label="Selected Meteosat satellite composite"><img id="largeCompositeImage" alt="Selected satellite composite at forecast initialization" hidden><span id="largeCompositeEmpty">Satellite image unavailable</span></div>
         <div class="two">
@@ -131,7 +131,7 @@
       <article class="panel nv" data-panel="nowcasting">
         <div class="kicker"><span>03 · NVIDIA StormScope-EU</span></div>
         <h2>Generative Diffusion and Autoregressive Forecasting</h2>
-        <p>StormScope-EU uses generative diffusion to predict the next satellite frame from six input frames. Each prediction shifts the context window and becomes input for the next step. Twelve steps reach +120 minutes.</p>
+        <p>StormScope-EU predicts the next satellite frame using generative diffusion. Each prediction replaces the oldest frame in the six-frame context window. Twelve steps produce a two-hour forecast.</p>
         <div class="model-key" aria-label="Diagram legend"><span class="key-observed">Observed input</span><span class="key-predicted">Model-generated frame</span></div>
 <svg class="science-diagram model-process" viewBox="0 0 544 288" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
           <title id="autoregressive-model-title">Autoregressive Model</title><desc id="autoregressive-model-desc">Six satellite frames enter generative diffusion on GPU. Each new prediction joins the sliding six-frame context. Observed frames are progressively replaced by predicted frames. Illustrative sequence, not live GPU telemetry.</desc>
@@ -220,8 +220,8 @@
       <article class="panel nv" data-panel="e2s">
         <div class="kicker"><span>04 · NVIDIA Earth2Studio</span></div>
         <h2>New Observations. New Forecasts.</h2>
-        <p>Earth2Studio connects satellite data, input preparation, StormScope-EU inference on NVIDIA GPUs, and forecast output.</p>
-        <p>Each StormScope-EU run predicts two hours ahead. As newer observations become available, a new six-frame window can start a separate forecast with its own initialization and publication time.</p>
+        <p>Earth2Studio connects satellite data, input preparation, and model inference on NVIDIA GPUs.</p>
+        <p>As new observations become available, a new six-frame window can initialize another two-hour forecast.</p>
         <div class="diagram-note">Observations → Initialize → Predict → Publish · Repeat with newer observations</div>
 <svg class="science-diagram" viewBox="0 0 544 265" role="img" aria-labelledby="successive-initializations-title successive-initializations-desc">
           <title id="successive-initializations-title">Successive Initializations</title><desc id="successive-initializations-desc">Three distinct published forecasts show their six-frame observation windows, initialization times, two-hour horizons, and publication times. These are separate runs, not predictions fed back within one run.</desc>
@@ -301,8 +301,8 @@
       <article class="panel em" data-panel="arraylake">
         <div class="kicker"><span>05 · Earthmover Arraylake + Icechunk</span></div>
         <h2>Compute and Upload Together. Publish Once.</h2>
-        <p>As StormScope-EU generates predictions on NVIDIA GPUs, forecast fields are uploaded to Earthmover Arraylake. GPU inference and data transfer can run at the same time.</p>
-        <p>Once all writes finish, a single Icechunk commit atomically publishes the complete two-hour forecast as a consistent, versioned snapshot. Earlier snapshots remain available for comparison.</p>
+        <p>Forecast data is uploaded to Earthmover Arraylake while StormScope-EU generates subsequent predictions on GPUs.</p>
+        <p>Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
         <div class="diagram-note">Overlapped Uploads · Atomic Publication · Versioned History</div>
         <svg class="science-diagram" viewBox="0 0 544 194" role="img" aria-labelledby="overlapped-publication-title overlapped-publication-desc">
           <title id="overlapped-publication-title">Overlapped Publication</title><desc id="overlapped-publication-desc">Successive GPU prediction steps overlap delayed uploads. A completion barrier waits for every upload, then one atomic Icechunk commit exposes the complete forecast snapshot to readers. Widths illustrate overlap and are not measured durations.</desc>
@@ -346,7 +346,7 @@
       <article class="panel em" data-panel="compute">
         <div class="kicker"><span>06 · Earthmover Compute</span></div>
         <h2>From Forecast Data to Interactive Maps</h2>
-        <p>Earthmover Compute makes published StormScope-EU forecasts available through map tiles and SQL queries. Applications can explore selected regions, composites, and forecast times without downloading the full dataset.</p>
+        <p>Earthmover Compute serves published forecasts as map tiles and SQL queries. Applications can access selected locations and forecast times without downloading the entire dataset.</p>
 <svg class="science-diagram" viewBox="0 0 544 132" role="img" aria-labelledby="forecast-delivery-title forecast-delivery-desc">
           <title id="forecast-delivery-title">Forecast Delivery</title><desc id="forecast-delivery-desc">A published Arraylake snapshot passes through Earthmover Compute to a real map tile preview and live SQL query results.</desc>
           <defs><marker id="forecast-delivery-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
@@ -386,8 +386,8 @@
       <article class="panel em" data-panel="access">
         <div class="kicker"><span>07 · Explore StormScope-EU</span></div>
         <h2>Explore Europe's AI Weather Forecast</h2>
-        <p>Explore StormScope-EU predictions across Europe. Switch between True Color and Air Mass, select published forecast runs, and animate predictions up to two hours ahead of initialization.</p>
-        <p>The same versioned data can support interactive visualization, scientific queries, and downstream applications.</p>
+        <p>Explore published StormScope-EU predictions across Europe. Switch between True Color and Air Mass, choose a forecast, and animate predictions up to two hours ahead.</p>
+        
         <div class="architecture-ribbon" role="img" aria-label="Meteosat observations pass through NVIDIA AI and Earthmover to the viewer">
           <span>Meteosat</span><span>NVIDIA AI</span><span>Earthmover</span><span>Viewer</span>
         </div>
