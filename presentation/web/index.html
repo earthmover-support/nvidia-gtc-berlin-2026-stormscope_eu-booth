@@ -91,7 +91,9 @@
           <div class="timeline-track"><div class="observed-track"></div><div class="predicted-track"></div></div>
           <div class="timeline-times"><span>−50 min</span><b>Init +0</b><span>+120 min</span></div>
         </div>
-        <div class="diagram-note">Observe → Predict → Publish → Explore</div>
+        <div class="architecture-ribbon" role="img" aria-label="Meteosat observations pass through NVIDIA AI and Earthmover to the viewer">
+          <span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg>Meteosat</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg>NVIDIA AI</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#database"/></svg>Earthmover</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#viewer"/></svg>Viewer</span>
+        </div>
         <div class="diagram-note">10-minute forecast steps · 2-hour horizon · GPU-accelerated AI</div>
       </article>
 
@@ -421,9 +423,6 @@
         <h2>Take the Forecast With You</h2>
         <p>Scan to open the interactive forecast. Explore Europe, switch between True Color and Air Mass, and animate AI predictions through +120 minutes from initialization.</p>
         <p>The same versioned forecast supports map tiles, scientific queries, and downstream applications.</p>
-        <div class="architecture-ribbon" role="img" aria-label="Meteosat observations pass through NVIDIA AI and Earthmover to the viewer">
-          <span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg>Meteosat</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg>NVIDIA AI</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#database"/></svg>Earthmover</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#viewer"/></svg>Viewer</span>
-        </div>
         <div class="label">Scan to Explore the Forecast</div>
         <div class="two qr">
           <a class="qrcard" id="viewerLink" href="https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/" target="_blank" rel="noopener"><div class="qrbox" id="qrViewer"></div><b>Open the Viewer</b></a>
