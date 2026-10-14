@@ -102,7 +102,8 @@
         <div class="kicker"><span>02 · Earth Observations</span></div>
         <h2>Observing the Atmosphere from Space</h2>
         <p>Meteosat-12 observes Europe from geostationary orbit, approximately 36,000 km above Earth.</p>
-        <p>Its Flexible Combined Imager measures 16 spectral channels. This demo shows two satellite composites, each formed by combining multiple spectral channels.</p>
+        <p>Its Flexible Combined Imager measures 16 spectral channels.</p>
+        <p>This demo shows two satellite composites, each formed by combining multiple spectral channels.</p>
         <div class="label">Two Satellite Composites</div>
         <div class="two variable-comparison" aria-label="Satellite composite options">
           <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span class="variable-definition"><span class="variable-composition">Visible + near-infrared channels</span><span class="variable-explanation">Natural-looking daytime view of clouds and Earth’s surface.</span></span></button>
@@ -188,16 +189,16 @@
           <rect class="diagram-publication" x="94" y="152" width="386" height="34" rx="7"/>
           <text class="diagram-strong" x="287" y="175" text-anchor="middle">One Atomic Icechunk Commit</text>
         </svg>
-        <details class="history-reveal"><summary>Recent published forecasts</summary><div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
-        <div class="publication-timeline" id="publicationTimeline" aria-label="Recent forecast snapshots in publication order; spacing does not represent elapsed time"></div>
-        </details>
       </article>
 
       <article class="panel em" data-panel="compute">
         <div class="kicker">06 · THE DATA LAKE</div>
         <h2>Every forecast run is a commit</h2>
-        <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Readers never see a half-written forecast.</p>
+        <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
+        <details class="history-reveal"><summary>Recent published forecasts</summary><div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
+        <div class="publication-timeline" id="publicationTimeline" aria-label="Recent forecast snapshots in publication order; spacing does not represent elapsed time"></div>
         <div class="commits" id="commitList"></div>
+        </details>
         <div class="two">
           <div class="card"><b>Transactional</b><span>Icechunk: open-source, cloud-native Zarr storage</span></div>
           <div class="card"><b>Time travel</b><span>Open any past forecast by its snapshot ID</span></div>
