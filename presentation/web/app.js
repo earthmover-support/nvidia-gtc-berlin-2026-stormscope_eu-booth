@@ -492,7 +492,7 @@
       setFrameImage(group, run ? thumbnailUrl(run, S.variable, lead) : null);
     }
     $("#modelNextLead").textContent = `+${(contextExample + 1) * 10} min`;
-    $("#modelContextState").textContent = `Illustrative shift · context for +${(contextExample + 2) * 10} min`;
+    $("#modelContextState").textContent = `Illustrative step ${contextExample + 1}/12 · context for +${(contextExample + 2) * 10} min`;
     updateThumbnailAvailability();
   }
 
@@ -541,7 +541,7 @@
     if (!S.cfg.sql_editable) editor.querySelector("summary").textContent = "Inspect SQL";
     setInterval(() => {
       if (document.hidden || S.rotatePaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches || panels()[S.panel]?.dataset.panel !== "nowcasting") return;
-      contextExample = (contextExample + 1) % 3;
+      contextExample = (contextExample + 1) % 12;
       renderModelSequence();
     }, 5000);
   }
@@ -860,19 +860,30 @@
     const box = $("#commitList");
     box.replaceChildren();
     $("#historyFeedState").textContent = { demo: "Demo", offline: "Replay", error: "Disconnected · last known" }[S.status] || "Live";
-    const head = S.commits[0]?.id;
+    const forecasts = S.commits.filter(c => /stormscope-eu\s+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(c.message || "") && c.id && c.written_at);
+    const head = forecasts[0]?.id;
     const isNew = !!(lastPublicationId && head && head !== lastPublicationId);
     lastPublicationId = head || lastPublicationId;
+    // Each node corresponds to a real published forecast snapshot. Gaps are not durations.
+    const history = $("#publicationTimeline");
+    history.replaceChildren();
+    forecasts.slice(0, 4).reverse().forEach((c, i, a) => {
+      const node = el("span", "publication-event" + (i === a.length - 1 ? " newest" : ""));
+      node.title = `Published ${ymdhm(new Date(c.written_at))} UTC · snapshot ${c.id}`;
+      node.setAttribute("aria-label", node.title);
+      history.append(node);
+    });
+    if (!forecasts.length) history.textContent = "No verified forecast publications";
     const columns = el("div", "commit-heading");
     columns.append(el("span", null, "Init · UTC"), el("span", null, "Published · UTC"), el("span", null, "Snapshot"), el("span", null, "Status"), el("span", null, "Age"));
     box.append(columns);
-    if (!S.commits.length) box.append(el("div", "commit", "Waiting for publication history…"));
-    S.commits.slice(0, 4).forEach((c, k) => {
+    if (!forecasts.length) box.append(el("div", "commit", "No forecast publications available"));
+    forecasts.slice(0, 4).forEach((c, k) => {
       const row = el("div", "commit" + (k === 0 ? " fresh" : ""));
       if (k === 0 && isNew) row.classList.add("new-publication");
       row.title = c.id;
       row.append(
-        el("span", "init", (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1].replace("T", " ") || "Other commit"),
+        el("span", "init", (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1].replace("T", " ")),
         el("span", "published-at", ymdhm(new Date(c.written_at))),
         el("span", "id", c.id.slice(0, 8)),
         el("span", "publication-status", "Published"),
