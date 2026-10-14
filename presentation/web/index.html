@@ -219,84 +219,15 @@
       </article>
 
       <article class="panel nv" data-panel="e2s">
-        <div class="kicker"><span>04 · NVIDIA Earth2Studio</span></div>
-        <h2>New Observations. New Forecasts.</h2>
-        <p>Earth2Studio connects satellite data, input preparation, and model inference on NVIDIA GPUs.</p>
-        <p>As new observations become available, a new six-frame window can initialize another two-hour forecast.</p>
-        <div class="diagram-note">Observations → Initialize → Predict → Publish · Repeat with newer observations</div>
-<svg class="science-diagram" viewBox="0 0 544 265" role="img" aria-labelledby="successive-initializations-title successive-initializations-desc">
-          <title id="successive-initializations-title">Successive Initializations</title><desc id="successive-initializations-desc">Three distinct published forecasts show their six-frame observation windows, initialization times, two-hour horizons, and publication times. These are separate runs, not predictions fed back within one run.</desc>
-          <defs><marker id="successive-initializations-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-          <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <text class="diagram-strong" x="272" y="19" text-anchor="middle" id="cycleHistoryCaption">Published Forecast Cycles · UTC</text>
-          <text class="diagram-label" x="100" y="45" text-anchor="middle" >Observation Window</text>
-          <text class="diagram-label" x="258" y="45" text-anchor="middle" >Init</text>
-          <text class="diagram-label" x="364" y="45" text-anchor="middle" >Forecast</text>
-          <text class="diagram-label" x="472" y="45" text-anchor="middle" >Published</text>
-          <g data-cycle-row="0">
-          <rect class="diagram-observed" x="16" y="59" width="172" height="45" rx="7" />
-          
-          <text class="diagram-label" x="116" y="76" text-anchor="middle" data-cycle-window="">—</text>
-          <rect class="diagram-observed" x="61" y="84" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="80" y="84" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="99" y="84" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="118" y="84" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="137" y="84" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="156" y="84" width="14" height="12" rx="7" />
-          <path class="diagram-edge " d="M190 81H212" marker-end="url(#successive-initializations-arrow)"/>
-          <rect class="diagram-engine" x="215" y="59" width="86" height="45" rx="7" />
-          <text class="diagram-strong" x="258" y="87" text-anchor="middle" data-cycle-init="">—</text>
-          <path class="diagram-edge " d="M303 81H319" marker-end="url(#successive-initializations-arrow)"/>
-          <rect class="diagram-predicted" x="322" y="59" width="84" height="45" rx="7" />
-          <text class="diagram-label" x="364" y="76" text-anchor="middle" >+120 min</text>
-          <text class="diagram-label" x="364" y="95" text-anchor="middle" data-cycle-horizon="">—</text>
-          <path class="diagram-edge " d="M408 81H425" marker-end="url(#successive-initializations-arrow)"/>
-          <rect class="diagram-publication" x="428" y="59" width="99" height="45" rx="7" />
-          <text class="diagram-label" x="478" y="87" text-anchor="middle" data-cycle-publication="">—</text></g>
-          <g data-cycle-row="1">
-          <rect class="diagram-observed" x="16" y="117" width="172" height="45" rx="7" />
-          
-          <text class="diagram-label" x="116" y="134" text-anchor="middle" data-cycle-window="">—</text>
-          <rect class="diagram-observed" x="61" y="142" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="80" y="142" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="99" y="142" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="118" y="142" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="137" y="142" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="156" y="142" width="14" height="12" rx="7" />
-          <path class="diagram-edge " d="M190 139H212" marker-end="url(#successive-initializations-arrow)"/>
-          <rect class="diagram-engine" x="215" y="117" width="86" height="45" rx="7" />
-          <text class="diagram-strong" x="258" y="145" text-anchor="middle" data-cycle-init="">—</text>
-          <path class="diagram-edge " d="M303 139H319" marker-end="url(#successive-initializations-arrow)"/>
-          <rect class="diagram-predicted" x="322" y="117" width="84" height="45" rx="7" />
-          <text class="diagram-label" x="364" y="134" text-anchor="middle" >+120 min</text>
-          <text class="diagram-label" x="364" y="153" text-anchor="middle" data-cycle-horizon="">—</text>
-          <path class="diagram-edge " d="M408 139H425" marker-end="url(#successive-initializations-arrow)"/>
-          <rect class="diagram-publication" x="428" y="117" width="99" height="45" rx="7" />
-          <text class="diagram-label" x="478" y="145" text-anchor="middle" data-cycle-publication="">—</text></g>
-          <g data-cycle-row="2">
-          <rect class="diagram-observed" x="16" y="175" width="172" height="45" rx="7" />
-          
-          <text class="diagram-label" x="116" y="192" text-anchor="middle" data-cycle-window="">—</text>
-          <rect class="diagram-observed" x="61" y="200" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="80" y="200" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="99" y="200" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="118" y="200" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="137" y="200" width="14" height="12" rx="7" />
-          <rect class="diagram-observed" x="156" y="200" width="14" height="12" rx="7" />
-          <path class="diagram-edge " d="M190 197H212" marker-end="url(#successive-initializations-arrow)"/>
-          <rect class="diagram-engine" x="215" y="175" width="86" height="45" rx="7" />
-          <text class="diagram-strong" x="258" y="203" text-anchor="middle" data-cycle-init="">—</text>
-          <path class="diagram-edge " d="M303 197H319" marker-end="url(#successive-initializations-arrow)"/>
-          <rect class="diagram-predicted" x="322" y="175" width="84" height="45" rx="7" />
-          <text class="diagram-label" x="364" y="192" text-anchor="middle" >+120 min</text>
-          <text class="diagram-label" x="364" y="211" text-anchor="middle" data-cycle-horizon="">—</text>
-          <path class="diagram-edge " d="M408 197H425" marker-end="url(#successive-initializations-arrow)"/>
-          <rect class="diagram-publication" x="428" y="175" width="99" height="45" rx="7" />
-          <text class="diagram-label" x="478" y="203" text-anchor="middle" data-cycle-publication="">—</text></g>
-          <text class="diagram-label" x="272" y="247" text-anchor="middle" >New Observations → New Initialization → Separate Forecast</text>
-        </svg>
-        <div class="diagram-note">New observation windows enable new initializations; scan cadence and publication cadence are distinct.</div>
-
+        <div class="kicker"><span>04 · THE PIPELINE</span></div>
+        <h2>Earth2Studio wires data, model and storage together</h2>
+        <p>Earth2Studio is NVIDIA's open-source Python toolkit for AI weather and climate. Swap data sources, models and outputs without rewriting the workflow.</p>
+        <ol class="pipeline-steps" aria-label="Earth2Studio forecasting and delivery pipeline">
+          <li><span class="pipeline-number">1</span><div><strong>Fetch</strong><span>Latest six Meteosat FCI frames from the EUMETSAT Data Store</span></div></li>
+          <li><span class="pipeline-number">2</span><div><strong>Predict</strong><span>StormScope-EU generates twelve 10-minute forecast steps on NVIDIA GPUs</span></div></li>
+          <li><span class="pipeline-number">3</span><div><strong>Write</strong><span>Upload predictions to Earthmover Arraylake while inference continues</span></div></li>
+          <li><span class="pipeline-number">4</span><div><strong>Serve</strong><span>Earthmover Compute serves published forecasts as map tiles</span></div></li>
+        </ol>
       </article>
 
       <article class="panel em" data-panel="arraylake">
