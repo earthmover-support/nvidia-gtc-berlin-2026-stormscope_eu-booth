@@ -150,8 +150,6 @@ mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"fr
 
 Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
 
-Redeployed 2026-10-09.
-
 
 ## Seven-panel scientific narrative
 
@@ -222,3 +220,6 @@ Compute shows a snapshot-pinned map tile beside live SQL results. The editable q
 remains available through Inspect / Edit SQL; hosted read-only queries use Inspect SQL.
 The result header identifies the queried composite. The final panel uses a thin
 architecture ribbon and prioritizes the viewer QR over developer tiles.
+
+Redeployed 2026-10-14.
+
