@@ -697,3 +697,19 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
   .panels .panel p { font-size: 16px; line-height: 1.4; }
   .panels .panel .stats b { font-size: 26px; }
 }
+
+/* Slide 06: deployed main-branch Earthmover Data Lake palette and proportions. */
+.panels [data-panel="compute"].panel.em { background: #201F2C; color: #D9D6E8; }
+.panels [data-panel="compute"] .kicker { color: #B7E400; }
+.panels [data-panel="compute"] h2 { color: #F5F5F5; }
+.panels [data-panel="compute"] p { color: #D9D6E8; }
+[data-panel="compute"] .commits { display: flex; flex-direction: column; gap: 8px; }
+[data-panel="compute"] .commit { padding: 12px 14px; border-radius: 0; background: #27263A; }
+[data-panel="compute"] .commit.fresh { background: #2E2C40; outline: 1px solid #C396F9; }
+[data-panel="compute"] .commit .id { color: #C396F9; }
+[data-panel="compute"] .commit .ago { color: #A9A6BD; }
+[data-panel="compute"] .two { gap: 12px; }
+[data-panel="compute"] .card { background: #2A2939; padding: 14px; border-radius: 0; gap: 4px; }
+[data-panel="compute"] .card b { color: #F5F5F5; font-size: 16px; }
+[data-panel="compute"] .card span { color: #C9C6DA; }
+[data-panel="compute"] .callout { margin-top: auto; padding: 14px 18px; border-radius: 0; background: #6D0EDB; color: #fff; font-size: 16px; font-weight: 500; }
