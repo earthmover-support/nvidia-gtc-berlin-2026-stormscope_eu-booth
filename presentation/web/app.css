@@ -704,3 +704,31 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="compute"] .card b { color: #F5F5F5; font-size: 16px; }
 [data-panel="compute"] .card span { color: #C9C6DA; }
 [data-panel="compute"] .callout { margin-top: auto; padding: 14px 18px; border-radius: 0; background: #6D0EDB; color: #fff; font-size: 16px; font-weight: 500; }
+
+/* Slide 07 mirrors the deployed main-branch Your Turn card and Live SQL palette. */
+.panels [data-panel="access"].panel.em { background: #201F2C; color: #D9D6E8; gap: 12px; }
+.panels [data-panel="access"] .kicker { color: #B7E400; }
+.panels [data-panel="access"] h2 { color: #F5F5F5; }
+.panels [data-panel="access"] .two.qr { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.panels [data-panel="access"] .qr .qrcard {
+  text-decoration: none; text-align: center; padding: 12px;
+  background: #F5F5F5; color: #201F2C; border: 0; border-radius: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0;
+}
+.panels [data-panel="access"] .qrcard .qrbox { width: min(100%, 168px); aspect-ratio: 1; }
+.panels [data-panel="access"] .qrcard b { font-size: 15px; color: #201F2C; }
+.panels [data-panel="access"] .qrcard span { font-size: 12px; line-height: 1.35; color: #4E4E4E; }
+.panels [data-panel="access"] .sql {
+  display: flex; flex-direction: column; gap: 8px; min-width: 0;
+  padding: 12px 14px; background: #15141E; border: 0; border-radius: 0;
+}
+.panels [data-panel="access"] .sql-head b { font-size: 15px; color: #F5F5F5; }
+.panels [data-panel="access"] .sql-run { gap: 8px; }
+.panels [data-panel="access"] .sql .bars { height: 68px; }
+.panels [data-panel="access"] .sql-foot { font-size: 12px; line-height: 1.3; color: #A9A6BD; }
+.panels [data-panel="access"] .sql-editor summary { color: #D9D6E8; }
+@media (max-height: 850px) {
+  .panels [data-panel="access"].panel.em { gap: 8px; }
+  .panels [data-panel="access"] .qrcard .qrbox { width: min(100%, 138px); }
+  .panels [data-panel="access"] .sql { padding: 9px 12px; gap: 5px; }
+}
