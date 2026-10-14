@@ -546,34 +546,6 @@
     }, 5000);
   }
 
-  // Only publication is reported by the API; inference progress is not telemetry.
-  function renderCycleStatus() {
-    const run = shown?.run || selectedRun();
-    const head = S.commits[0];
-    const publication = run && S.commits.find((c) => c.id === run.ref && (c.message || "").includes(run.init));
-    // The most recent input observation defines this pipeline's initialization time.
-    // This is the published run's observation, not telemetry of incoming EUMETSAT scans.
-    $("#cycleObservation").textContent = run ? ymdhm(initDate(run.init)) : "—";
-    $("#cycleInit").textContent = run ? ymdhm(initDate(run.init)) : "—";
-    const lead = shown ? S.cfg.leads[S.frame] : null;
-    $("#cycleValid").textContent = shown && lead != null
-      ? ymdhm(new Date(initDate(shown.run.init).getTime() + lead * 60000)) : "—";
-    $("#cycleLead").textContent = lead == null ? "—" : `+${lead} min`;
-    $("#cycleSnapshot").textContent = run?.ref ? run.ref.slice(0, 12) : "Unavailable";
-    $("#cycleSnapshot").title = run?.ref || "No snapshot metadata available";
-    $("#cyclePublished").textContent = publication ? ymdhm(new Date(publication.written_at)) : "Unavailable";
-    $("#cycleAge").textContent = run ? ago(initDate(run.init).toISOString()) : "—";
-    $("#cycleHorizon").textContent = `+${S.cfg.leads.at(-1)} min`;
-    let message = run ? "Published snapshot · waiting for the next published cycle" : "Waiting for published forecast data";
-    if (S.status === "demo") message = "DEMO · simulated publication history and SQL";
-    else if (S.status === "offline") message = "REPLAY · recorded imagery with simulated cycle times";
-    else if (S.status === "error") message = "Disconnected · showing last known publication";
-    else if (head && Date.now() - new Date(head.written_at).getTime() > S.cfg.run_interval_min * 120000)
-      message = "Publication overdue · no inference status available";
-    $("#cycleState").textContent = message;
-    $(".cycle-status").classList.toggle("stale", S.status === "error");
-  }
-
   function renderVarToggle() {
     const box = $("#varToggle");
     box.replaceChildren();
@@ -664,7 +636,6 @@
     $("#validEyebrow").textContent = (lead ? `Forecast · +${lead} min` : "Observed · Satellite") + suffix;
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
     renderCompositePreviews();
-    renderCycleStatus();
     renderModelSequence();
     renderComputeTile();
   }
@@ -702,7 +673,6 @@
     const c = S.cfg;
     const now = new Date();
     renderClock();
-    renderCycleStatus();
     $("#live").classList.toggle("stale", S.status === "error");
 
     const head = S.commits[0];
