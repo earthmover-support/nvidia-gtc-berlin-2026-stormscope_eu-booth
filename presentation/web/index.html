@@ -195,7 +195,7 @@
         <div class="kicker">06 · THE DATA LAKE</div>
         <h2>Every forecast run is a commit</h2>
         <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
-        <details class="history-reveal"><summary>Recent published forecasts</summary><div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
+        <details class="history-reveal" open><summary>Recent published forecasts</summary><div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
         <div class="publication-timeline" id="publicationTimeline" aria-label="Recent forecast snapshots in publication order; spacing does not represent elapsed time"></div>
         <div class="commits" id="commitList"></div>
         </details>
