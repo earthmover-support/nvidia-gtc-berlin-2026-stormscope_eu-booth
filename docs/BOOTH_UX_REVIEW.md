@@ -6,7 +6,7 @@ references, and the visitor's control over the rotating story.
 
 | Finding | Improvement |
 | --- | --- |
-| Dense introduction competes with its diagram during a 25 s rotation | Shorter scientific copy; 18 px body text and clear message-first headlines |
+| Dense introduction competes with its diagram during a 25 s rotation | Shorter scientific copy; 16 px body text and clear message-first headlines |
 | AI appeared before its observation source | Order: definition → observations → generative prediction → orchestration → publication → delivery → exploration |
 | Model feedback was a text annotation | Directed SVG shows six observations, next-frame inference, the updated context dropping −50 and adding +10, and a feedback edge |
 | Cycle was a collection of cards without connecting edges | Clockwise, numbered ingest → initialize → infer → output cycle; newer observations trigger repetition |
@@ -46,8 +46,8 @@ was completed as “A forecast starts from an initial condition derived from rec
 The introductory horizon comparison was replaced by the requested observe → predict →
 publish → explore workflow. The persistent UTC metadata retains the separate time references.
 
-The panel column is widened to 680 px; body text stays at 18 px and numbered titles stay
-at 24 px bold. Diagrams stay capped at 544 px. Repeated widget descriptions are removed,
+The panel column retains its original 560 px width; body text uses 16 px and numbered
+titles stay at 24 px bold. Visual spacing fits the narrower column. Repeated widget descriptions are removed,
 and the publication/delivery diagrams are compacted without reducing their label font sizes.
 All four publication-history rows remain visible. The initialization selector scrolls when
 needed so the narrower globe's playback controls remain visible with a full run history.

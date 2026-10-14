@@ -178,8 +178,8 @@ The opening panel introduces observation-based nowcasting and the end-to-end dem
 The approved seven-panel wording is implemented with minor typo corrections and an
 initial-condition sentence completed from its unfinished draft. Headings retain readable
 Title Case and 24 px bold numbered titles; scientific acronyms keep established casing.
-The panel column is 680 px at the 1080p booth size; diagrams remain capped at 544 px
-so their labels do not shrink to accommodate the longer copy.
+The panel column retains its original 560 px width at the 1080p booth size.
+Visual spacing is compacted to fit the approved copy and diagrams.
 
 
 Panel navigation includes Pause/Resume and seven directly selectable chapter markers.
@@ -187,7 +187,7 @@ Manual navigation holds a chapter for 60 s; focusing or using the SQL editor ext
 that hold to 120 s. The visible progress marker follows the same timing as rotation.
 Hidden panels are inert so their buttons, links, and editor stay out of keyboard navigation.
 The header labels the current wall clock; forecast valid time stays on the globe.
-Body copy uses 18 px text at the 1080p booth size, with 15–18 px diagram labels.
+Body copy uses 16 px text at the 1080p booth size, with 15–18 px diagram labels.
 
 
 The persistent forecast-cycle status includes separate UTC observation, initialization,

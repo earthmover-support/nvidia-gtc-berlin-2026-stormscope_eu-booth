@@ -293,10 +293,10 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(183, 228, 0, .9); } 100% { box-shadow: 0 0 0 14px rgba(183, 228, 0, 0); } }
 
 /* Exhibition narrative: readable copy, connected diagrams, and explicit live-data provenance. */
-.main { grid-template-columns: minmax(0, 1fr) 680px; }
+.main { grid-template-columns: minmax(0, 1fr) 560px; }
 .panel { gap: 14px; }
-.panel h2 { font-size: 32px; line-height: 1.1; }
-.panel p { font-size: 18px; line-height: 1.4; }
+.panel h2 { font-size: 30px; line-height: 1.1; }
+.panel p { font-size: 16px; line-height: 1.4; }
 .panel p.small { font-size: 16px; }
 .kicker { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: .02em; }
 .label, .diagram-note { font-size: 14px; color: #BDBDBD; }
@@ -475,3 +475,16 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .compute-evidence .bars { height: 68px; }
 /* Long service errors remain available through the status tooltip without pushing the chart into navigation. */
 .compute-evidence .sql-foot { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+
+/* Restore the original panel width while retaining 24 px bold numbered titles. */
+.architecture-ribbon { padding: 10px; gap: 6px; }
+.architecture-ribbon > span { flex-direction: column; gap: 5px; font-size: 13px; }
+[data-panel="access"] .qr { grid-template-columns: 1.6fr 1fr; }
+[data-panel="access"] #qrViewer { width: 230px; }
+[data-panel="access"] #qrTiles { width: 130px; }
+[data-panel="access"] .qrcard { padding: 12px; }
+
+[data-panel="mtg"] { gap: 10px; }
+[data-panel="mtg"] .composite-image { height: 132px; }
+[data-panel="nowcasting"] { gap: 5px; }
+[data-panel="compute"] { gap: 5px; }
