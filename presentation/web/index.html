@@ -50,16 +50,18 @@
         <div class="seg" id="varToggle" role="group" aria-label="Variable"></div>
       </div>
 
-      <div class="cycle-status" aria-label="StormScope-EU forecast cycle status">
-        <strong class="cycle-heading">StormScope-EU · Forecast Cycle Status</strong>
-        <div><span>Latest Input Observation · UTC</span><b id="cycleObservation">—</b></div>
-        <div><span>Init · UTC</span><b id="cycleInit">—</b></div>
-        <div><span>Valid · UTC</span><b id="cycleValid">—</b></div>
-        <div><span>Published · UTC</span><b id="cyclePublished">—</b></div>
-        <div><span>Forecast Lead</span><b id="cycleLead">—</b></div>
-        <div><span>Snapshot</span><b id="cycleSnapshot">—</b></div>
-        <p class="cycle-context">Observation age: <span id="cycleAge">—</span> · Horizon from init: <span id="cycleHorizon">+120 min</span></p>
-        <p id="cycleState" role="status">Waiting for published forecast data</p>
+      <div class="cycle-status" aria-label="Current forecast">
+        <div class="cycle-primary"><span>Initialized <b id="cycleInit">—</b></span><span>Lead <b id="cycleLead">—</b></span><span id="cycleState" role="status">Waiting for forecast data</span></div>
+        <details class="cycle-details"><summary>Forecast details</summary>
+          <div class="cycle-secondary">
+            <div>Latest input observation <b id="cycleObservation">—</b></div>
+            <div>Valid UTC <b id="cycleValid">—</b></div>
+            <div>Published UTC <b id="cyclePublished">—</b></div>
+            <div>Snapshot <b id="cycleSnapshot">—</b></div>
+            <div>Observation age <b id="cycleAge">—</b></div>
+            <div>Horizon <b id="cycleHorizon">+120 min</b></div>
+          </div>
+        </details>
       </div>
 
       <div class="viz-bottom">
@@ -338,9 +340,9 @@
           <rect class="diagram-publication" x="94" y="152" width="386" height="34" rx="7"/>
           <text class="diagram-strong" x="287" y="175" text-anchor="middle">One Atomic Icechunk Commit</text>
         </svg>
-        <div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
+        <details class="history-reveal"><summary>Recent published forecasts</summary><div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
         <div class="publication-timeline" id="publicationTimeline" aria-label="Recent forecast snapshots in publication order; spacing does not represent elapsed time"></div>
-        <div class="commits" id="commitList"></div>
+        <div class="commits" id="commitList"></div></details>
       </article>
 
       <article class="panel em" data-panel="compute">
@@ -370,7 +372,8 @@
         <div class="diagram-note">Live SQL: mean rendered-composite intensity by forecast lead, not cloud fraction.</div>
         <div class="compute-evidence">
           <div class="tile-evidence"><div class="label">Map Tile · Berlin Region</div><div class="tile-preview"><img id="computeTile" alt="Published forecast map tile over the Berlin region" hidden><span>Tile unavailable</span></div><span id="computeTileCaption">Waiting for forecast metadata</span></div>
-        <div class="sql">
+        <details class="sql-reveal"><summary>Explore SQL queries</summary>
+          <div class="sql">
           <div class="sql-head"><b id="sqlMetric">SQL Result</b><span id="sqlStatus">…</span></div>
           <div class="sql-run">
             <div class="sql-places" id="sqlPlaces"></div>
@@ -378,7 +381,7 @@
           </div>
           <details class="sql-editor" id="sqlEditor"><summary>Inspect / Edit SQL</summary><div class="sql-editor-popover"><button type="button" id="sqlEditorClose">Close</button><textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="6" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea></div></details>
           <div class="bars" id="sqlBars" role="img" aria-label="Mean composite intensity by forecast lead time"></div><div class="bars-axis"><span>+0</span><span>+60</span><span>+120 min</span></div>
-          <div class="sql-foot" id="sqlFoot">Mean composite intensity over Berlin · 0–2 h from init · PostgreSQL wire protocol</div>
+          <div class="sql-foot" id="sqlFoot">Mean composite intensity over Berlin · 0–2 h from init · PostgreSQL wire protocol</div></details>
         </div>
         </div>
       </article>
