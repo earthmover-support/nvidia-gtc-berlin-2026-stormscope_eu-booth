@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>StormScope-EU GTC Berlin dashboard</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="preload" as="font" type="font/ttf" crossorigin href="fonts/NVIDIASans_Rg.ttf">
+<link rel="preload" as="font" type="font/ttf" crossorigin href="fonts/NVIDIASans_Md.ttf">
+<link rel="preload" as="font" type="font/ttf" crossorigin href="fonts/NVIDIASans_Bd.ttf">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
 <link rel="stylesheet" href="app.css">
 <script src="/vendor/maplibre/maplibre-gl.js"></script>
@@ -30,7 +31,7 @@
         <img src="img/arraylake.svg" alt="Arraylake">
       </a>
     </div>
-    <div class="live" id="live"><span class="dot"></span><span id="clock">LIVE · --:--:--</span></div>
+    <div class="live" id="live"><span class="dot"></span><span id="clock">LIVE · --:--</span></div>
   </header>
 
   <main class="main">
@@ -41,9 +42,9 @@
 
       <div class="viz-top">
         <div class="init-block">
-          <div class="eyebrow">FORECAST INITIALISED</div>
-          <div class="init-title"><span id="initTitle">--:--</span> · Meteosat-12 FCI</div>
-          <div class="valid" id="validLabel">&nbsp;</div>
+          <div class="eyebrow" id="validEyebrow">FORECAST</div>
+          <div class="init-title" id="validTitle">--:--</div>
+          <div class="valid">Forecast initialised <span id="initTitle">--:--</span> · Meteosat-12 FCI</div>
         </div>
         <div class="seg" id="varToggle" role="group" aria-label="Variable"></div>
       </div>
@@ -52,16 +53,19 @@
         <div class="init-row">
           <span class="eyebrow">INIT</span>
           <div class="inits" id="inits"></div>
-          <div class="loop" id="loopLabel">
+          <button type="button" class="loop" id="loopLabel" aria-pressed="true" title="Loop / play once">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
             <span></span>
-          </div>
+          </button>
           <div class="playback">
             <button type="button" class="play" id="playBtn" aria-label="Pause"></button>
             <div class="seg" id="speedToggle" role="group" aria-label="Playback speed"></div>
           </div>
         </div>
-        <div class="ticks" id="ticks"></div>
+        <div class="scrub">
+          <input type="range" id="scrub" min="0" max="12" step="1" value="0" aria-label="Lead time">
+          <div class="ticks" id="ticks"></div>
+        </div>
       </div>
 
       <div class="notice" id="notice" hidden></div>
@@ -102,8 +106,8 @@
         </div>
         <div class="label">ON THE GLOBE</div>
         <div class="two">
-          <div class="card on"><code>true_color</code><span>What your eye would see: red, green and blue light combined</span></div>
-          <div class="card"><code>airmass</code><span>Infrared water-vapour and ozone channels: red dry sinking air, green warm tropical air, blue cold polar air, white thick high cloud</span></div>
+          <div class="card" data-var="true_color"><b>True Color</b><span>What your eye would see: red, green and blue light combined</span></div>
+          <div class="card" data-var="airmass"><b>Air Mass</b><span>Infrared water-vapour and ozone channels: red dry sinking air, green warm tropical air, blue cold polar air, white thick high cloud</span></div>
         </div>
       </article>
 
@@ -117,7 +121,7 @@
           <div class="arrow">↓</div>
           <div class="engine"><b>StormScope-EU on GPU</b><span>48 denoising steps · bf16</span></div>
           <div class="arrow">↓</div>
-          <div class="out"><span class="pill">+10 min</span><span>The new frame is fed back in. 12 rollouts reach +120 min.</span></div>
+          <div class="out"><span class="pill">+10 min</span><span>The new frame is fed back in. 12 rollouts reach +120&nbsp;min.</span></div>
         </div>
         <ul class="facts">
           <li>Conditioned on orography and land–sea mask</li>
@@ -178,7 +182,7 @@
             <div class="sql-places" id="sqlPlaces"></div>
             <button type="button" id="sqlReset">Reset</button>
           </div>
-          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="8" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea>
+          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="7" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea>
           <div class="bars" id="sqlBars"></div>
           <div class="sql-foot" id="sqlFoot">How cloudy over Berlin, next 2 h · PostgreSQL wire protocol</div>
         </div>
@@ -186,13 +190,23 @@
 
       <footer class="panel-foot">
         <div class="progress" id="progress"></div>
-        <div class="keys">← → panels · space pause · P play · S speed · T/A variable · 1–9 init</div>
+        <div class="foot-row">
+          <div class="keys">←→ · space · P play · O once · S speed · T/A · 1–9 · C strip</div>
+          <div class="panel-nav">
+            <button type="button" id="panelPrev" aria-label="Previous panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <span class="panel-count" id="panelCount">1 / 7</span>
+            <button type="button" id="panelNext" aria-label="Next panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          </div>
+        </div>
       </footer>
     </section>
   </main>
 
   <!-- ============ ingest strip ============ -->
   <footer class="strip">
+    <button type="button" class="strip-toggle" id="stripToggle" aria-expanded="true" title="Collapse / expand (C)">
+      <svg width="16" height="16" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1 3h10L6 9z"/></svg>
+    </button>
     <div class="next"><div class="eyebrow" id="countdownLabel">NEXT RUN IN</div><div class="big mono" id="countdown">--:--</div></div>
     <div class="ingest">
       <div class="muted" id="ingestLabel">Waiting for Arraylake…</div>
