@@ -666,3 +666,14 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
   [data-panel="e2s"] .pipeline-steps strong { font-size: 18px; }
   [data-panel="e2s"] .pipeline-steps li > div > span { font-size: 14px; }
 }
+
+/* Slide 04: retain the deployed pipeline's compact, sharp-edged steps and role colors. */
+[data-panel="e2s"] .steps { gap: 8px; }
+[data-panel="e2s"] .steps li { gap: 14px; padding: 12px 14px; border-radius: 0; background: var(--nv-card); }
+[data-panel="e2s"] .steps i { width: 32px; height: 32px; font: normal 600 14px var(--mono); border-radius: 0; }
+[data-panel="e2s"] .steps b { font-size: 17px; }
+[data-panel="e2s"] .steps span { font-size: 14px; line-height: 1.35; }
+@media (max-height: 850px) {
+  [data-panel="e2s"] .steps { gap: 6px; }
+  [data-panel="e2s"] .steps li { padding: 8px 12px; }
+}
