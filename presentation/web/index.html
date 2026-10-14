@@ -288,32 +288,22 @@
       </article>
 
       <article class="panel em" data-panel="access">
-        <div class="kicker"><span>07 · Explore StormScope-EU</span></div>
-        <h2>Explore Europe's AI Weather Forecast</h2>
-        <p>Explore published StormScope-EU predictions across Europe. Switch between True Color and Air Mass, choose a forecast, and animate predictions up to two hours ahead.</p>
-        
-        <div class="architecture-ribbon" role="img" aria-label="Meteosat observations pass through NVIDIA AI and Earthmover to the viewer">
-          <span>Meteosat</span><span>NVIDIA AI</span><span>Earthmover</span><span>Viewer</span>
-        </div>
-        <div class="label">Scan to Explore the Forecast</div>
+        <div class="kicker">07 · YOUR TURN</div>
+        <h2>Take the forecast with you</h2>
         <div class="two qr">
-          <a class="qrcard" id="viewerLink" href="https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/" target="_blank" rel="noopener"><div class="qrbox" id="qrViewer"></div><b>Open the Viewer</b></a>
-          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Developer Tiles</b></div>
+          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw tiles</b><span>Latest run, 10-min forecast, served via Earthmover Compute</span></div>
+          <a class="qrcard" id="viewerLink" href="https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/" target="_blank" rel="noopener"><div class="qrbox" id="qrViewer"></div><b>Animated viewer</b><span>Every run, every lead time</span></a>
         </div>
-
-        <div class="legacy-query" hidden aria-hidden="true"><div id="computeTileCaption"></div><img id="computeTile" hidden><details class="sql-reveal"><summary>Explore SQL queries</summary>
-          <div class="sql">
-          <div class="sql-head"><b id="sqlMetric">SQL Result</b><span id="sqlStatus">…</span></div>
-          <div class="sql-run">
-            <div class="sql-places" id="sqlPlaces"></div>
-            <button type="button" id="sqlReset">Reset</button>
-          </div>
+        <div class="sql">
+          <div class="sql-head"><b>Live SQL</b><span id="sqlStatus">…</span></div>
+          <div class="sql-run"><div class="sql-places" id="sqlPlaces"></div><button type="button" id="sqlReset">Reset</button></div>
           <details class="sql-editor" id="sqlEditor"><summary>Inspect / Edit SQL</summary><div class="sql-editor-popover"><button type="button" id="sqlEditorClose">Close</button><textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="6" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea></div></details>
-          <div class="bars" id="sqlBars" role="img" aria-label="Mean composite intensity by forecast lead time"></div><div class="bars-axis"><span>+0</span><span>+60</span><span>+120 min</span></div>
-          <div class="sql-foot" id="sqlFoot">Mean composite intensity over Berlin · 0–2 h from init · PostgreSQL wire protocol</div>
-          </div></details></div>
-        <div class="partner-credit">EUMETSAT × NVIDIA × Earthmover</div>
-
+          <div class="bars" id="sqlBars" role="img" aria-label="Mean rendered-composite intensity by forecast lead time"></div>
+          <div class="bars-axis"><span>+0</span><span>+60</span><span>+120 min</span></div>
+          <div class="sql-foot" id="sqlFoot">Mean rendered-composite intensity over Berlin · 0–2 h · not cloud fraction</div>
+          <span id="sqlMetric" hidden></span>
+        </div>
+        <div id="computeTileCaption" hidden></div><img id="computeTile" hidden alt="">
       </article>
 
       <footer class="panel-foot">
