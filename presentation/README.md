@@ -202,8 +202,8 @@ Publication history explicitly labels each committed snapshot Published.
 Font Awesome Free 6.7.2 symbols are served as `web/img/fontawesome.svg`; no icon CDN
 or icon font is needed. `npm run icons` regenerates the selected SVG symbols and
 copies the package license. `npm run vendor` also performs this step for hosted builds.
-Rounded diagrams consistently distinguish observations (slate), model predictions
-(green), Arraylake I/O (blue), and atomic publication (amber), with text labels.
+Rounded diagrams consistently distinguish observations (slate), NVIDIA compute
+(NVIDIA green), Arraylake I/O and atomic publication (Earthmover lavender), with text labels.
 
 The model panel loads actual snapshot-pinned +0 thumbnails from published runs whose
 initialization matches each required observed timestamp, and forecast thumbnails from
