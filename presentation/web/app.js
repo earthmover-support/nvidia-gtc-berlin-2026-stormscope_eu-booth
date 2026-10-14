@@ -420,7 +420,9 @@
     for (const c of document.querySelectorAll(".card[data-var]")) {
       c.classList.toggle("on", c.dataset.var === S.variable);
       c.setAttribute("aria-pressed", String(c.dataset.var === S.variable));
-      setVariableHelp(c, c.dataset.var);
+      c.removeAttribute("data-tooltip");
+      c.removeAttribute("title");
+      c.removeAttribute("aria-description"); // Panel 02 definitions are visible beside each variable.
     }
   }
 
