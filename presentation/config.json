@@ -32,7 +32,7 @@
   "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
 
   "sql": {
-    "host": "sql-501bbe54f844df18.compute.arraylake.app",
+    "host": "sql-b6a9ba6fa495a59c.eu-west-1.compute.arraylake.app",
     "max_rows": 200,
     "box_deg": 0.05,
     "places": {
