@@ -572,14 +572,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="mtg"] .composite-card.on { border-color: #76B900; background: #263322; }
 [data-panel="mtg"] .stats { margin-top: auto; }
 /* Fixed viewer QR remains visible as the explanatory story rotates. */
-.panel-foot .persistent-viewer-qr { pointer-events: auto; position: absolute; right: 0; bottom: 55px; display: flex; gap: 8px; align-items: center; background: #FFFFFF; color: #111820; text-decoration: none; padding: 7px 10px; border: 2px solid #E5ECF1; border-radius: 5px; font-size: 14px; font-weight: 600; z-index: 10; }
-.persistent-viewer-qr .mini-qr { width: 92px; height: 92px; display: block; background: #fff; }
-.persistent-viewer-qr .mini-qr svg { display: block; width: 100%; height: 100%; }
-.persistent-viewer-qr .mini-qr img { display: none; }
-[data-panel="access"].active ~ .panel-foot .persistent-viewer-qr { display: none; }
 @media (max-height: 860px) {
- .panel-foot .persistent-viewer-qr { bottom: 45px; }
- .persistent-viewer-qr .mini-qr { width: 76px; height: 76px; }
  [data-panel="mtg"] .large-composite { height: 185px; }
 }
 
@@ -597,6 +590,4 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 @media (max-width: 1500px), (max-height: 850px) {
   .panel p { font-size: 17px; }
   [data-panel="mtg"] .large-composite { height: 175px; }
-  .viz > .persistent-viewer-qr { right: 12px; bottom: 133px; font-size: 13px; }
-  .viz > .persistent-viewer-qr .mini-qr { width: 84px; height: 84px; }
 }
