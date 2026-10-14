@@ -346,8 +346,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .commits { gap: 6px; }
 .qrcard { text-decoration: none; }
 .qrcard:focus-visible { outline: 3px solid var(--em-lav); outline-offset: 3px; }
-.qrcard b { font-size: 17px; }
-.qrcard span { font-size: 14px; }
 .nowcast-scope { padding: 16px; border: 1px solid #2E3C20; background: #111; display: flex; flex-direction: column; gap: 12px; }
 .scope-axis { display: flex; justify-content: space-between; border-bottom: 2px solid #919CA9; padding-bottom: 8px; font-size: 16px; color: #C9CFD6; }
 .scope-window { padding: 12px; border-left: 3px solid #A5D85B; background: #172510; display: flex; flex-direction: column; gap: 4px; }

@@ -874,9 +874,9 @@
     ]);
     $("#sqlFoot").textContent =
       S.sqlPlace === MY && S.myCoords
-        ? `Mean composite intensity over ${MY} (${fmtCoords(S.myCoords.lat, S.myCoords.lon)}), 0–2 h from init · PostgreSQL wire protocol`
+        ? `How cloudy over ${MY} (${fmtCoords(S.myCoords.lat, S.myCoords.lon)}), next 2 h · PostgreSQL wire protocol`
         : S.sqlPlace
-          ? `Mean composite intensity over ${S.sqlPlace}, 0–2 h from init · PostgreSQL wire protocol`
+          ? `How cloudy over ${S.sqlPlace}, next 2 h · PostgreSQL wire protocol`
           : "Your query · PostgreSQL wire protocol";
   }
 
