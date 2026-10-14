@@ -633,3 +633,21 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
   [data-panel="mtg"] .variable-comparison .composite-card { min-height: 100px; padding: 9px 10px; gap: 5px; }
   [data-panel="mtg"] .variable-comparison .composite-card .variable-definition { font-size: 14px; }
 }
+
+/* Slide 02: two equal square composite cards with visible scientific definitions. */
+[data-panel="mtg"] .variable-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+[data-panel="mtg"] .variable-comparison .composite-card {
+  aspect-ratio: 1 / 1; height: auto; min-height: 0; width: 100%;
+  border-radius: 0; box-shadow: none; padding: 14px;
+  display: flex; flex-direction: column; justify-content: center; gap: 10px;
+  overflow: hidden;
+}
+[data-panel="mtg"] .variable-comparison .composite-card b { font-size: 19px; line-height: 1.1; }
+[data-panel="mtg"] .variable-comparison .composite-card .variable-definition { display: flex; flex-direction: column; gap: 9px; font-size: inherit; }
+[data-panel="mtg"] .variable-composition { font-size: 15px; color: #B6D5ED; line-height: 1.3; }
+[data-panel="mtg"] .variable-explanation { font-size: 15px; color: #E3E9EF; line-height: 1.35; }
+[data-panel="mtg"] .variable-comparison .composite-card::after { display: none !important; }
+@media (max-height: 850px) {
+  [data-panel="mtg"] .variable-comparison .composite-card { padding: 9px; gap: 6px; }
+  [data-panel="mtg"] .variable-composition, [data-panel="mtg"] .variable-explanation { font-size: 13px; }
+}
