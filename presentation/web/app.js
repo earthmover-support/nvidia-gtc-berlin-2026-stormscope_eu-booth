@@ -492,7 +492,7 @@
       setFrameImage(group, run ? thumbnailUrl(run, S.variable, lead) : null);
     }
     $("#modelNextLead").textContent = `+${(contextExample + 1) * 10} min`;
-    $("#modelContextState").textContent = `Illustrative step ${contextExample + 1}/12 · context for +${(contextExample + 2) * 10} min`;
+    $("#modelContextState").textContent = contextExample === 11 ? "Illustrative step 12/12 · final +120 min forecast" : `Illustrative step ${contextExample + 1}/12 · context for +${(contextExample + 2) * 10} min`;
     updateThumbnailAvailability();
   }
 
