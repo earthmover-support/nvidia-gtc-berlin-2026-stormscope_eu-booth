@@ -488,3 +488,17 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="mtg"] .composite-image { height: 132px; }
 [data-panel="nowcasting"] { gap: 5px; }
 [data-panel="compute"] { gap: 5px; }
+
+/* Scientific visual hierarchy: the model schematic is the central evidence. */
+[data-panel="nowcasting"] .model-key { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: #E8EDF2; }
+.model-key span { display: inline-flex; align-items: center; gap: 7px; }
+.model-key span::before { content: ""; display: inline-block; width: 12px; height: 12px; border: 2px solid; border-radius: 3px; }
+.model-key .key-observed::before { background: #263441; border-color: #8DA1B5; }
+.model-key .key-predicted::before { background: #174C32; border-color: #53B47B; }
+.model-meaning strong { color: #E8EDF2; }
+.publication-timeline { display: flex; align-items: center; gap: 0; min-height: 20px; color: #CBD5E1; font-size: 12px; padding: 0 12px; }
+.publication-event { position: relative; flex: 1; height: 3px; background: #3E718F; }
+.publication-event::after { content: ""; position: absolute; left: 0; top: 50%; transform: translate(-50%, -50%); height: 10px; width: 10px; border-radius: 50%; background: #75ACCB; border: 2px solid #11161B; }
+.publication-event:last-child { flex: 0 0 12px; }
+.publication-event.newest::after { background: #D0A568; height: 14px; width: 14px; box-shadow: 0 0 0 3px rgba(208,165,104,.15); }
+@media (prefers-reduced-motion: reduce) { .commit.new-publication { animation: none; } }
