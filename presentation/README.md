@@ -221,5 +221,4 @@ remains available through Inspect / Edit SQL; hosted read-only queries use Inspe
 The result header identifies the queried composite. The final panel uses a thin
 architecture ribbon and prioritizes the viewer QR over developer tiles.
 
-Redeployed 2026-10-14, after #76.
 
