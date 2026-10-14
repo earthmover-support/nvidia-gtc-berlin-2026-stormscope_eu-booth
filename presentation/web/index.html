@@ -114,12 +114,12 @@
         <div class="kicker"><span>02 · Earth Observations</span></div>
         <h2>Observing the Atmosphere from Space</h2>
         <p>Meteosat-12 observes Europe from geostationary orbit, approximately 36,000 km above Earth.</p>
-        <p>Its Flexible Combined Imager measures 16 spectral channels. Six observations, 10 minutes apart, provide the model's initial context.</p>
+        <p>Its Flexible Combined Imager measures 16 spectral channels. This demo shows two satellite composites, each formed by combining multiple spectral channels.</p>
         <div class="label">Select Satellite Composite</div>
         <div class="large-composite" aria-label="Selected Meteosat satellite composite"><img id="largeCompositeImage" alt="Selected satellite composite at forecast initialization" hidden><span id="largeCompositeEmpty">Satellite preview unavailable. At night, select Air Mass for an infrared view.</span></div>
         <div class="two variable-comparison" aria-label="Satellite composite options">
-          <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span class="variable-definition">Daylight RGB composite showing clouds and the surface in natural-looking colors.</span></button>
-          <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>Air Mass</b><span class="variable-definition">Infrared RGB composite highlighting moisture and air-mass structure, including at night.</span></button>
+          <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span class="variable-definition"><span class="variable-composition">Visible + near-infrared channels</span><span class="variable-explanation">Natural-looking daytime view of clouds and Earth’s surface.</span></span></button>
+          <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>Air Mass</b><span class="variable-definition"><span class="variable-composition">Infrared + water-vapor channels</span><span class="variable-explanation">Highlights atmospheric moisture and air-mass structure, including at night.</span></span></button>
         </div>
         
         <div class="label" id="compositeCaption" hidden>Observed +0 Frame</div>
