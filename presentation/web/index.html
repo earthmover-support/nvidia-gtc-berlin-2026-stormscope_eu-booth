@@ -210,12 +210,12 @@
       <article class="panel nv" data-panel="e2s">
         <div class="kicker"><span>04 · THE PIPELINE</span></div>
         <h2>Earth2Studio wires data, model and storage together</h2>
-        <p>Earth2Studio is NVIDIA's open-source Python toolkit for AI weather and climate. Swap data sources, models and outputs without rewriting the workflow.</p>
-        <ol class="pipeline-steps" aria-label="Earth2Studio forecasting and delivery pipeline">
-          <li><span class="pipeline-number">1</span><div><strong>Fetch</strong><span>Latest six Meteosat FCI frames from the EUMETSAT Data Store</span></div></li>
-          <li><span class="pipeline-number">2</span><div><strong>Predict</strong><span>StormScope-EU generates twelve 10-minute forecast steps on NVIDIA GPUs</span></div></li>
-          <li><span class="pipeline-number">3</span><div><strong>Write</strong><span>Upload predictions to Earthmover Arraylake while inference continues</span></div></li>
-          <li><span class="pipeline-number">4</span><div><strong>Serve</strong><span>Earthmover Compute serves published forecasts as map tiles</span></div></li>
+        <p>NVIDIA's open-source Python package for AI weather and climate. You can swap data sources, models and outputs without rewriting the pipeline.</p>
+        <ol class="steps">
+          <li><i>1</i><div><b>Fetch</b><span>Latest 6 FCI frames from the EUMETSAT Data Store</span></div></li>
+          <li><i>2</i><div><b>Predict</b><span>StormScope-EU rolls forward 12 × 10 min on the GPU</span></div></li>
+          <li class="split"><i>3</i><div><b>Write</b><span>Upload forecasts to Arraylake while GPU runs</span></div></li>
+          <li class="violet"><i>4</i><div><b>Serve</b><span>Map tiles served via Earthmover Compute</span></div></li>
         </ol>
       </article>
 
