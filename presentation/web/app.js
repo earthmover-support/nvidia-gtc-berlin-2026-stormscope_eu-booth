@@ -491,7 +491,7 @@
   function updateThumbnailAvailability() {
     const observed = [...document.querySelectorAll('[data-frame-group="initial"]')];
     const count = observed.filter((g) => g.classList.contains("has-image")).length;
-    $("#modelImageState").textContent = `${VAR_LABELS[S.variable]} · ${count}/6 observed context thumbnails · schematic rollout`;
+    $("#modelImageState").textContent = "";
   }
 
   function renderModelSequence() {
@@ -518,7 +518,7 @@
       setFrameImage(group, run ? thumbnailUrl(run, S.variable, lead) : null);
     }
     $("#modelNextLead").textContent = `+${(contextExample + 1) * 10} min`;
-    $("#modelContextState").textContent = contextExample === 11 ? "Illustrative final step · +120 min" : `Illustrative step ${contextExample + 1}/12 · observed frames gradually replaced`;
+    $("#modelContextState").textContent = "";
     updateThumbnailAvailability();
   }
 
@@ -738,7 +738,7 @@
     } else if (publication && latest) {
       $("#countdown").textContent = "Published";
       $("#ingestLabel").textContent =
-        `Latest published forecast · Init ${ymdhm(initDate(latest.init))} UTC · Published ${ymdhm(new Date(publication.written_at))} UTC`;
+        `Latest published forecast · Init ${ymdhm(initDate(latest.init))} ${tzName(initDate(latest.init))} · Published ${ymdhm(new Date(publication.written_at))} ${tzName(new Date(publication.written_at))}`;
     } else {
       $("#countdown").textContent = "Waiting";
       $("#ingestLabel").textContent = "Waiting for first published forecast";
@@ -830,23 +830,23 @@
     // Each node corresponds to a real published forecast snapshot. Gaps are not durations.
     const history = $("#publicationTimeline");
     history.replaceChildren();
-    forecasts.slice(0, 4).reverse().forEach((c, i, a) => {
+    forecasts.slice(0, 2).reverse().forEach((c, i, a) => {
       const node = el("span", "publication-event" + (i === a.length - 1 ? " newest" : ""));
-      node.title = `Published ${ymdhm(new Date(c.written_at))} UTC · snapshot ${c.id}`;
+      node.title = `Published ${ymdhm(new Date(c.written_at))} ${tzName(new Date(c.written_at))} · snapshot ${c.id}`;
       node.setAttribute("aria-label", node.title);
       history.append(node);
     });
     if (!forecasts.length) history.textContent = "No verified forecast publications";
     const columns = el("div", "commit-heading");
-    columns.append(el("span", null, "Init · UTC"), el("span", null, "Published · UTC"), el("span", null, "Snapshot"), el("span", null, "Status"), el("span", null, "Age"));
+    columns.append(el("span", null, `Init · ${tzName(new Date())}`), el("span", null, `Published · ${tzName(new Date())}`), el("span", null, "Snapshot"), el("span", null, "Status"), el("span", null, "Age"));
     box.append(columns);
     if (!forecasts.length) box.append(el("div", "commit", "No forecast publications available"));
-    forecasts.slice(0, 4).forEach((c, k) => {
+    forecasts.slice(0, 2).forEach((c, k) => {
       const row = el("div", "commit" + (k === 0 ? " fresh" : ""));
       if (k === 0 && isNew) row.classList.add("new-publication");
       row.title = c.id;
       row.append(
-        el("span", "init", (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1].replace("T", " ")),
+        el("span", "init", (() => { const init = (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1]; return init ? ymdhm(initDate(init)) : "—"; })()),
         el("span", "published-at", ymdhm(new Date(c.written_at))),
         el("span", "id", c.id.slice(0, 8)),
         el("span", "publication-status", "Published"),
