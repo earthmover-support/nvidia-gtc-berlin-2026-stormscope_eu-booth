@@ -132,14 +132,14 @@
 
       <article class="panel nv" data-panel="nowcasting">
         <div class="kicker"><span>03 · NVIDIA StormScope-EU</span></div>
-        <h2>Generative Diffusion and Autoregressive Forecasting</h2>
-        <p>StormScope-EU predicts the next satellite frame using generative diffusion. Each prediction replaces the oldest frame in the six-frame context window. Twelve steps produce a two-hour forecast.</p>
+        <h2>Predict. Shift. Repeat.</h2>
+        <p>Six satellite frames enter StormScope-EU. Diffusion predicts the next frame, which replaces the oldest input. Repeat twelve times to forecast two hours ahead.</p>
         <div class="model-key" aria-label="Diagram legend"><span class="key-observed">Observed input</span><span class="key-predicted">Model-generated frame</span></div>
 <svg class="science-diagram model-process" viewBox="0 0 544 288" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
           <title id="autoregressive-model-title">Autoregressive Model · Schematic</title><desc id="autoregressive-model-desc">Six satellite frames enter generative diffusion on GPU. Each new prediction joins the sliding six-frame context. Observed frames are progressively replaced by predicted frames. Illustrative sequence, not live GPU telemetry.</desc>
           <defs><marker id="autoregressive-model-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
           <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <text class="diagram-strong" x="272" y="18" text-anchor="middle" >Initial Input · Six Observed Frames</text>
+          <text class="diagram-strong" x="272" y="18" text-anchor="middle" >Six-Frame Input Context</text>
           <g class="model-frame" data-frame-group="initial" data-frame-index="0">
           <rect class="diagram-observed" x="16" y="30" width="76" height="38" rx="7" />
           
@@ -180,7 +180,7 @@
           
           <text class="diagram-strong" x="284" y="184" text-anchor="middle" id="modelNextLead">+10 min</text>
           <path class="diagram-edge " d="M210 179H9V236H14" marker-end="url(#autoregressive-model-arrow)"/>
-          <text class="diagram-label" x="272" y="213" text-anchor="middle" >Sliding Context · Updated After Each Prediction</text>
+          <text class="diagram-label" x="272" y="213" text-anchor="middle" >Updated Context · Observed + Predicted</text>
           <g class="model-frame" data-frame-group="rolling" data-frame-index="0">
           <rect class="diagram-predicted" x="16" y="220" width="76" height="32" rx="7" />
           
@@ -213,8 +213,7 @@
           <text class="frame-label" x="484.0" y="270" text-anchor="middle" >—</text></g>
           <path class="diagram-edge feedback-path" d="M524 236H534V122H434" marker-end="url(#autoregressive-model-arrow)"/>
           </svg>
-        <div class="model-sequence"><span>Six frames</span><b>→</b><span>Diffusion inference</span><b>→</b><span>Next frame</span><b>→</b><span>Shift context</span><b>→</b><span>Repeat</span></div>
-        <div class="lead-sequence" aria-label="Twelve 10-minute forecast steps">+10 · +20 · +30 · +40 · +50 · +60 · +70 · +80 · +90 · +100 · +110 · +120 min</div>
+        <div class="model-sequence" aria-label="Autoregressive forecast workflow"><span>Six-frame context</span><b>→</b><span>Predict next frame</span><b>→</b><span>Shift and repeat</span></div>
         <div class="model-detail" hidden><span id="modelImageState"></span><span id="modelContextState"></span></div>
         
       </article>
