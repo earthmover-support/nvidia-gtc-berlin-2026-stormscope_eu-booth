@@ -441,22 +441,6 @@
       img.onerror = () => { img.hidden = true; };
       img.src = src;
     }
-    const large = $("#largeCompositeImage"), empty = $("#largeCompositeEmpty");
-    if (run) {
-      const tile = S.cfg.qr_tile;
-      const source = tileTemplate(run, S.variable, 0, tile.size)
-        .replace("{z}", tile.z).replace("{x}", tile.x).replace("{y}", tile.y);
-      if (large.dataset.source !== source) {
-        large.dataset.source = source;
-        large.hidden = true; empty.hidden = false;
-        large.onload = () => { if (large.dataset.source === source) { large.hidden = false; empty.hidden = true; } };
-        large.onerror = () => { large.hidden = true; empty.hidden = false; };
-        large.src = source;
-      }
-      large.alt = `${VAR_LABELS[S.variable]} composite at initialization ${hhmm(run.init)} ${tzName(initDate(run.init))}`;
-    } else {
-      large.removeAttribute("src"); large.dataset.source = ""; large.hidden = true; empty.hidden = false;
-    }
     $("#compositeCaption").textContent = run
       ? `Observed +0 · ${hhmm(run.init)} ${tzName(initDate(run.init))} · Berlin Region`
       : "Observed +0 Frame · Waiting for Data";

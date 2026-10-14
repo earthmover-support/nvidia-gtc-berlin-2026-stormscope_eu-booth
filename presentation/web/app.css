@@ -550,9 +550,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .panel p.small { font-size: 17px; }
 .diagram-label, .frame-label, .frame-output-label { font-size: 16px; }
 .model-sequence span, .lead-sequence { font-size: 16px; }
-[data-panel="mtg"] .large-composite { position: relative; width: 100%; height: 245px; flex-shrink: 0; background: #09131B; border: 1px solid #516576; overflow: hidden; display: grid; place-items: center; color: #DDE8F0; }
-[data-panel="mtg"] .large-composite img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-[data-panel="mtg"] .large-composite span { font-size: 16px; }
 [data-panel="mtg"] .two { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
 [data-panel="mtg"] .composite-card { min-height: 58px; padding: 8px 10px; }
 [data-panel="mtg"] .composite-card .composite-image, [data-panel="mtg"] .composite-card > span { display: none; }
@@ -561,7 +558,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="mtg"] .stats { margin-top: auto; }
 /* Fixed viewer QR remains visible as the explanatory story rotates. */
 @media (max-height: 860px) {
- [data-panel="mtg"] .large-composite { height: 185px; }
 }
 
 /* Final exhibition pass: keep diagram primary and compact, but readable. */
@@ -572,12 +568,10 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="nowcasting"] .model-key { font-size: 15px; }
 [data-panel="nowcasting"] .model-detail { font-size: 14px; }
 [data-panel="mtg"] { gap: 9px; }
-[data-panel="mtg"] .large-composite { height: clamp(170px, 25vh, 245px); }
 [data-panel="mtg"] .stats { flex-shrink: 0; }
 [data-panel="e2s"] .science-diagram { max-height: 310px; }
 @media (max-width: 1500px), (max-height: 850px) {
   .panel p { font-size: 17px; }
-  [data-panel="mtg"] .large-composite { height: 175px; }
 }
 
 /* Booth simplification: separate compact verified status from optional technical details. */
@@ -600,11 +594,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .panel { padding-bottom: 120px; }
 .panel .science-diagram { max-height: min(33vh, 310px); }
 [data-panel="nowcasting"] .model-process { max-height: 270px; }
-[data-panel="mtg"] .large-composite { height: clamp(165px, 22vh, 215px); }
 [data-panel="compute"] .tile-preview { min-height: 120px; }
 @media (max-height: 860px) {
  .panel { padding-bottom: 116px; }
- [data-panel="mtg"] .large-composite { height: 160px; }
  .cycle-status { top: 95px; }
 }
 
@@ -615,8 +607,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="mtg"] .variable-comparison .composite-card .variable-definition { display: block; color: #D4DDE6; font-size: 15px; line-height: 1.35; }
 [data-panel="mtg"] .variable-comparison .composite-card.on { border-color: #76B900; box-shadow: inset 0 -3px #76B900; }
 [data-panel="mtg"] .variable-comparison .composite-card::after { display: none !important; content: none; }
-[data-panel="mtg"] .large-composite { border-radius: 0; }
-[data-panel="mtg"] .large-composite img { border-radius: 0; }
 @media (max-height: 850px) {
   [data-panel="mtg"] .variable-comparison .composite-card { min-height: 100px; padding: 9px 10px; gap: 5px; }
   [data-panel="mtg"] .variable-comparison .composite-card .variable-definition { font-size: 14px; }
