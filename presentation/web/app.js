@@ -703,7 +703,7 @@
     renderCycleStatus();
     $("#live").classList.toggle("stale", S.status === "error");
     const publication = S.commits.find(c =>
-      c.id && c.written_at && /stormscope-eu\\s+\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}/.test(c.message || "")
+      c.id && c.written_at && /stormscope-eu\s+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(c.message || "")
     );
     const latest = S.runs[0];
     $("#countdownLabel").textContent = "Forecast Status";
