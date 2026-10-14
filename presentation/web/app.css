@@ -72,7 +72,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 @keyframes pulse { 50% { opacity: .35; } }
 
 /* ---------------- main ---------------- */
-.main { display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: 20px; min-height: 0; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 520px; gap: 20px; min-height: 0; }
 
 .viz { position: relative; background: var(--viz); border: 1px solid var(--line); border-radius: 0; overflow: hidden; min-height: 0; }
 #globe { position: absolute; inset: 0; background: #05070A; }
@@ -293,7 +293,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(183, 228, 0, .9); } 100% { box-shadow: 0 0 0 14px rgba(183, 228, 0, 0); } }
 
 /* Exhibition narrative: readable copy, connected diagrams, and explicit live-data provenance. */
-.main { grid-template-columns: minmax(0, 1fr) 560px; }
+.main { grid-template-columns: minmax(0, 1fr) 520px; }
 .panel { gap: 14px; }
 .panel h2 { font-size: 30px; line-height: 1.1; }
 .panel p { font-size: 16px; line-height: 1.4; }
