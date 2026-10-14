@@ -74,6 +74,7 @@
         </div>
       </div>
 
+      <a class="persistent-viewer-qr" id="persistentViewerLink" target="_blank" rel="noopener" aria-label="Scan QR code or open the interactive forecast viewer"><span class="mini-qr" id="qrPersistent"></span><span>Explore forecast</span></a>
       <div class="notice" id="notice" hidden></div>
     </section>
 
@@ -102,14 +103,14 @@
         <div class="kicker"><span>02 · Earth Observations</span></div>
         <h2>Observing the Atmosphere from Space</h2>
         <p>Meteosat-12 observes Europe from geostationary orbit, about 36,000 km above Earth.</p>
-        <p>Its Flexible Combined Imager (FCI) measures reflected solar and emitted infrared radiation across 16 spectral channels. StormScope-EU uses six observations, taken 10 minutes apart, as the starting context for each forecast.</p>
-        <div class="label">Two Satellite Composites</div>
+        <p>Its Flexible Combined Imager (FCI) observes 16 spectral channels. Six observations, 10 minutes apart, start each StormScope-EU forecast.</p>
+        <div class="label">Select Satellite Composite</div>
         <div class="large-composite" aria-label="Selected Meteosat satellite composite"><img id="largeCompositeImage" alt="Selected satellite composite at forecast initialization" hidden><span id="largeCompositeEmpty">Satellite image unavailable</span></div>
         <div class="two">
           <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span>A natural-looking view of clouds and Earth's surface in daylight.</span></button>
           <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>Air Mass</b><span>An infrared view highlighting atmospheric moisture and air-mass structure.</span></button>
         </div>
-        <p class="small">Select a composite to change the map.</p>
+        <p class="small">Select a composite to update the large image and map.</p>
         <div class="label" id="compositeCaption">Observed +0 Frame · Matches Selected Initialization</div>
         <div class="stats">
           <div><b>16</b><span>spectral channels</span></div>
@@ -121,10 +122,10 @@
       <article class="panel nv" data-panel="nowcasting">
         <div class="kicker"><span>03 · NVIDIA StormScope-EU</span></div>
         <h2>Generative Diffusion and Autoregressive Forecasting</h2>
-        <p>StormScope-EU uses generative diffusion to predict the next 16-channel satellite frame from six earlier observations. The model predicts one frame, shifts the six-frame context, and repeats. Predicted frames gradually replace the original observations over twelve steps, reaching +120 minutes.</p>
+        <p>StormScope-EU uses generative diffusion to predict the next satellite frame from six input frames. Each prediction shifts the context window and becomes input for the next step. Twelve steps reach +120 minutes.</p>
         <div class="model-key" aria-label="Diagram legend"><span class="key-observed">Observed input</span><span class="key-predicted">Model-generated frame</span></div>
 <svg class="science-diagram model-process" viewBox="0 0 544 288" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
-          <title id="autoregressive-model-title">Autoregressive Model</title><desc id="autoregressive-model-desc">Six actual observation thumbnails condition one next-frame diffusion inference. Each prediction enters a shifting context window and returns to the model. Forecast thumbnails use published outputs. Context shifting is an illustration, not live GPU progress.</desc>
+          <title id="autoregressive-model-title">Autoregressive Model</title><desc id="autoregressive-model-desc">Six satellite frames enter generative diffusion on GPU. Each new prediction joins the sliding six-frame context. Observed frames are progressively replaced by predicted frames. Illustrative sequence, not live GPU telemetry.</desc>
           <defs><marker id="autoregressive-model-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
           <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
           <text class="diagram-strong" x="272" y="18" text-anchor="middle" >Initial Input · Six Observed Frames</text>
@@ -388,7 +389,7 @@
 
       </article>
 
-      <footer class="panel-foot"><a class="persistent-viewer-qr" id="persistentViewerLink" target="_blank" rel="noopener" aria-label="Scan QR code or open the interactive forecast viewer"><span class="mini-qr" id="qrPersistent"></span><span>Explore forecast</span></a>
+      <footer class="panel-foot">
         <nav class="progress" id="progress" aria-label="Story chapters"></nav>
         <div class="foot-row">
           <div class="keys" title="←/→ panels · Space pause panels · P playback · O loop · S speed · T/A layer · 1–9 initialization · C strip">←/→ Browse · Space Pause</div>
