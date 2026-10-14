@@ -131,91 +131,22 @@
       </article>
 
       <article class="panel nv" data-panel="nowcasting">
-        <div class="kicker"><span>03 · NVIDIA StormScope-EU</span></div>
-        <h2>Predict. Shift. Repeat.</h2>
-        <p>Six satellite frames enter StormScope-EU. Diffusion predicts the next frame, which replaces the oldest input. Repeat twelve times to forecast two hours ahead.</p>
-        <div class="model-key" aria-label="Diagram legend"><span class="key-observed">Observed input</span><span class="key-predicted">Model-generated frame</span></div>
-<svg class="science-diagram model-process" viewBox="0 0 544 288" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
-          <title id="autoregressive-model-title">Autoregressive Model · Schematic</title><desc id="autoregressive-model-desc">Six satellite frames enter generative diffusion on GPU. Each new prediction joins the sliding six-frame context. Observed frames are progressively replaced by predicted frames. Illustrative sequence, not live GPU telemetry.</desc>
-          <defs><marker id="autoregressive-model-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-          <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <text class="diagram-strong" x="272" y="18" text-anchor="middle" >Six-Frame Input Context</text>
-          <g class="model-frame" data-frame-group="initial" data-frame-index="0">
-          <rect class="diagram-observed" x="16" y="30" width="76" height="38" rx="7" />
-          
-          <image class="frame-image" x="18" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="54.0" y="86" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="initial" data-frame-index="1">
-          <rect class="diagram-observed" x="102" y="30" width="76" height="38" rx="7" />
-          
-          <image class="frame-image" x="104" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="140.0" y="86" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="initial" data-frame-index="2">
-          <rect class="diagram-observed" x="188" y="30" width="76" height="38" rx="7" />
-          
-          <image class="frame-image" x="190" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="226.0" y="86" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="initial" data-frame-index="3">
-          <rect class="diagram-observed" x="274" y="30" width="76" height="38" rx="7" />
-          
-          <image class="frame-image" x="276" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="312.0" y="86" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="initial" data-frame-index="4">
-          <rect class="diagram-observed" x="360" y="30" width="76" height="38" rx="7" />
-          
-          <image class="frame-image" x="362" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="398.0" y="86" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="initial" data-frame-index="5">
-          <rect class="diagram-observed" x="446" y="30" width="76" height="38" rx="7" />
-          
-          <image class="frame-image" x="448" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="484.0" y="86" text-anchor="middle" >—</text></g>
-          <path class="diagram-edge " d="M272 89V96" marker-end="url(#autoregressive-model-arrow)"/>
-          <rect class="diagram-engine" x="112" y="98" width="320" height="48" rx="7" />
-          
-          <text class="diagram-strong" x="284" y="119" text-anchor="middle" >StormScope-EU</text>
-          <text class="diagram-label diagram-ink" x="284" y="137" text-anchor="middle" >Generative diffusion · GPU</text>
-          <path class="diagram-edge " d="M272 146V158" marker-end="url(#autoregressive-model-arrow)"/>
-          <rect class="diagram-predicted" x="212" y="160" width="120" height="38" rx="7" />
-          
-          <text class="diagram-strong" x="284" y="184" text-anchor="middle" id="modelNextLead">+10 min</text>
-          <path class="diagram-edge " d="M210 179H9V236H14" marker-end="url(#autoregressive-model-arrow)"/>
-          <text class="diagram-label" x="272" y="213" text-anchor="middle" >Updated Context · Observed + Predicted</text>
-          <g class="model-frame" data-frame-group="rolling" data-frame-index="0">
-          <rect class="diagram-predicted" x="16" y="220" width="76" height="32" rx="7" />
-          
-          <image class="frame-image" x="18" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="54.0" y="270" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="rolling" data-frame-index="1">
-          <rect class="diagram-predicted" x="102" y="220" width="76" height="32" rx="7" />
-          
-          <image class="frame-image" x="104" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="140.0" y="270" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="rolling" data-frame-index="2">
-          <rect class="diagram-predicted" x="188" y="220" width="76" height="32" rx="7" />
-          
-          <image class="frame-image" x="190" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="226.0" y="270" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="rolling" data-frame-index="3">
-          <rect class="diagram-predicted" x="274" y="220" width="76" height="32" rx="7" />
-          
-          <image class="frame-image" x="276" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="312.0" y="270" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="rolling" data-frame-index="4">
-          <rect class="diagram-predicted" x="360" y="220" width="76" height="32" rx="7" />
-          
-          <image class="frame-image" x="362" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="398.0" y="270" text-anchor="middle" >—</text></g>
-          <g class="model-frame" data-frame-group="rolling" data-frame-index="5">
-          <rect class="diagram-predicted" x="446" y="220" width="76" height="32" rx="7" />
-          
-          <image class="frame-image" x="448" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
-          <text class="frame-label" x="484.0" y="270" text-anchor="middle" >—</text></g>
-          <path class="diagram-edge feedback-path" d="M524 236H534V122H434" marker-end="url(#autoregressive-model-arrow)"/>
-          </svg>
-        <div class="model-sequence" aria-label="Autoregressive forecast workflow"><span>Six-frame context</span><b>→</b><span>Predict next frame</span><b>→</b><span>Shift and repeat</span></div>
-        <div class="model-detail" hidden><span id="modelImageState"></span><span id="modelContextState"></span></div>
-        
+        <div class="kicker">03 · THE AI MODEL</div>
+        <h2>StormScope-EU predicts the next two hours of clouds</h2>
+        <p>A generative diffusion model from NVIDIA. It forecasts all 16 satellite channels directly in image space, learning how clouds move and grow instead of solving the physics.</p>
+        <div class="box flow">
+          <div class="label">INPUT · 6 OBSERVED FRAMES</div>
+          <div class="frames"><span>−50</span><span>−40</span><span>−30</span><span>−20</span><span>−10</span><span>0</span></div>
+          <div class="arrow">↓</div>
+          <div class="engine"><b>StormScope-EU on GPU</b><span>48 denoising steps · bf16</span></div>
+          <div class="arrow">↓</div>
+          <div class="out"><span class="pill">+10 min</span><span>The new frame is fed back in. 12 rollouts reach +120&nbsp;min.</span></div>
+        </div>
+        <ul class="facts">
+          <li>Conditioned on orography and land–sea mask</li>
+          <li>Ensemble-of-experts denoising across noise levels</li>
+          <li>NVIDIA H200 · ~<span id="stepSeconds">20</span> s per 10-minute step</li>
+        </ul>
       </article>
 
       <article class="panel nv" data-panel="e2s">
