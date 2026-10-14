@@ -677,5 +677,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 
 /* booth tweaks: larger chapter labels, stat numerals that fit on one line */
 .panels .panel .kicker { font-size: 20px; letter-spacing: .04em; }
-.panels .panel .stats b { font-size: 22px; white-space: nowrap; }
+.panels .panel .stats b { font-size: 18px; white-space: nowrap; }
+.panels .panel .stats span { font-size: 13px; }
 .stats div { padding: 10px 12px; }
