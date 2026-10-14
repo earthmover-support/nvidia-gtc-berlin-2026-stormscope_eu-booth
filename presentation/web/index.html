@@ -92,26 +92,29 @@
     <section class="panels" id="panels">
 
       <article class="panel nv" data-panel="definition">
-        <div class="kicker" role="heading" aria-level="2">01 · What Is Nowcasting?</div>
+        <div class="kicker" role="heading" aria-level="2"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#clock"/></svg><span>01 · What Is Nowcasting?</span></div>
         <p>Nowcasting predicts short-term atmospheric evolution, from minutes to a few hours, using recent observations and rapidly updated models.</p>
         <p>This demo shows an end-to-end AI nowcasting workflow that transforms Meteosat satellite observations into two-hour forecasts of multispectral satellite imagery using NVIDIA StormScope-EU.</p>
         <p>In this demo, we use the NVIDIA StormScope-EU model to generate the predictions, Earth2Studio connects the scientific workflow, and Earthmover enables low-latency forecast publication and interactive data access.</p>
         <p class="small">A forecast starts from an initial condition derived from recent observations.</p>
-        <div class="intro-workflow" role="img" aria-label="Observe, predict, publish, explore">
-          <span>Observe</span><i>→</i><span>Predict</span><i>→</i><span>Publish</span><i>→</i><span>Explore</span>
+        <div class="observation-timeline" role="img" aria-label="Six recent observations lead to initialization at +0, followed by twelve predicted frames through +120 minutes. The timeline is relative to initialization, not the current clock.">
+          <div class="timeline-head"><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg> Observed</span><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg> AI Forecast</span></div>
+          <div class="timeline-track"><div class="observed-track"></div><div class="predicted-track"></div></div>
+          <div class="timeline-times"><span>−50 min</span><b>Init +0</b><span>+120 min</span></div>
         </div>
+        <div class="diagram-note">Observe → Predict → Publish → Explore</div>
         <div class="diagram-note">10-minute forecast steps · 2-hour horizon · GPU-accelerated AI</div>
       </article>
 
       <article class="panel nv" data-panel="mtg">
-        <div class="kicker">02 · Earth Observations</div>
+        <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg><span>02 · Earth Observations</span></div>
         <h2>Observing the Atmosphere from Space</h2>
         <p>Approximately 36,000 km above Earth, EUMETSAT’s Meteosat-12 observes Europe and surrounding regions.</p>
         <p>Its Flexible Combined Imager (FCI) measures reflected solar and emitted thermal radiation across 16 spectral channels. Six consecutive observations provide the initial condition for StormScope-EU.</p>
         <div class="label">Two Views of the Atmosphere</div>
         <div class="two">
-          <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span>A natural-looking daylight composite of clouds and Earth's surface.</span></button>
-          <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>Air Mass</b><span>An infrared composite highlighting water vapor and large-scale atmospheric structure.</span></button>
+          <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#sun"/></svg>True Color</b><span>A natural-looking daylight composite of clouds and Earth's surface.</span></button>
+          <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#layers"/></svg>Air Mass</b><span>An infrared composite highlighting water vapor and large-scale atmospheric structure.</span></button>
         </div>
         <p class="small">Select a composite to change the map.</p>
         <div class="label" id="compositeCaption">Observed +0 Frame · Matches Selected Initialization</div>
@@ -123,114 +126,225 @@
       </article>
 
       <article class="panel nv" data-panel="nowcasting">
-        <div class="kicker">03 · NVIDIA StormScope-EU</div>
+        <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg><span>03 · NVIDIA StormScope-EU</span></div>
         <h2>Predicting the Next Satellite Observation</h2>
         <p>StormScope-EU learns spatiotemporal relationships across 16 satellite channels. Conditioned on six consecutive observations, it generates the next multispectral frame through iterative diffusion sampling.</p>
         <p>Each prediction replaces the oldest frame in the sliding context window. Repeating this process produces twelve successive 10-minute predictions, extending the forecast to +120 minutes.</p>
-        <svg class="science-diagram" viewBox="0 0 544 366" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
-          <title id="autoregressive-model-title">Autoregressive Model</title><desc id="autoregressive-model-desc">Six observed frames enter diffusion inference. The +10 minute prediction replaces the oldest frame in the six-frame context. A directed feedback loop returns the updated context to inference, producing twelve frames through +120 minutes.</desc>
-          <defs><marker id="autoregressive-model-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<svg class="science-diagram" viewBox="0 0 544 362" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
+          <title id="autoregressive-model-title">Autoregressive Model</title><desc id="autoregressive-model-desc">Six actual observation thumbnails condition one next-frame diffusion inference. Each prediction enters a shifting context window and returns to the model. Forecast thumbnails use published outputs. Context shifting is an illustration, not live GPU progress.</desc>
+          <defs><marker id="autoregressive-model-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
           <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <text class="diagram-label" x="272" y="18" text-anchor="middle">Six Observed Frames · Minutes Relative to Initialization</text>
-          <rect class="diagram-observed" x="50" y="28" width="66" height="30"/>
-          <text class="diagram-text" x="83" y="49" text-anchor="middle">−50</text>
-          <rect class="diagram-observed" x="124" y="28" width="66" height="30"/>
-          <text class="diagram-text" x="157" y="49" text-anchor="middle">−40</text>
-          <rect class="diagram-observed" x="198" y="28" width="66" height="30"/>
-          <text class="diagram-text" x="231" y="49" text-anchor="middle">−30</text>
-          <rect class="diagram-observed" x="272" y="28" width="66" height="30"/>
-          <text class="diagram-text" x="305" y="49" text-anchor="middle">−20</text>
-          <rect class="diagram-observed" x="346" y="28" width="66" height="30"/>
-          <text class="diagram-text" x="379" y="49" text-anchor="middle">−10</text>
-          <rect class="diagram-observed" x="420" y="28" width="66" height="30"/>
-          <text class="diagram-text" x="453" y="49" text-anchor="middle">0</text>
-          <path class="diagram-edge " d="M272 58V76" marker-end="url(#autoregressive-model-arrow)"/>
-          <rect class="diagram-engine" x="80" y="78" width="384" height="52"/>
-          <text class="diagram-strong" x="272" y="100" text-anchor="middle">StormScope-EU · Generative Diffusion</text>
-          <text class="diagram-label diagram-ink" x="272" y="119" text-anchor="middle">Next-frame inference on NVIDIA GPU</text>
-          <path class="diagram-edge " d="M272 130V150" marker-end="url(#autoregressive-model-arrow)"/>
-          <rect class="diagram-predicted" x="132" y="152" width="280" height="42"/>
-          <text class="diagram-strong" x="272" y="178" text-anchor="middle">Predicted Frame · +10 min</text>
-          <path class="diagram-edge " d="M272 221V232" marker-end="url(#autoregressive-model-arrow)"/>
-          <text class="diagram-label" x="272" y="218" text-anchor="middle">Shift the Six-Frame Context</text>
-          <rect class="diagram-observed" x="50" y="234" width="66" height="30"/>
-          <text class="diagram-text" x="83" y="255" text-anchor="middle">−40</text>
-          <rect class="diagram-observed" x="124" y="234" width="66" height="30"/>
-          <text class="diagram-text" x="157" y="255" text-anchor="middle">−30</text>
-          <rect class="diagram-observed" x="198" y="234" width="66" height="30"/>
-          <text class="diagram-text" x="231" y="255" text-anchor="middle">−20</text>
-          <rect class="diagram-observed" x="272" y="234" width="66" height="30"/>
-          <text class="diagram-text" x="305" y="255" text-anchor="middle">−10</text>
-          <rect class="diagram-observed" x="346" y="234" width="66" height="30"/>
-          <text class="diagram-text" x="379" y="255" text-anchor="middle">0</text>
-          <rect class="diagram-predicted" x="420" y="234" width="66" height="30"/>
-          <text class="diagram-text" x="453" y="255" text-anchor="middle">+10</text>
-          <path class="diagram-edge feedback-path" d="M486 249H528V104H466" marker-end="url(#autoregressive-model-arrow)"/>
-          <text class="diagram-label" x="272" y="286" text-anchor="middle">Feedback → Repeat Inference Through +120 min</text>
-          <rect class="diagram-predicted" x="50" y="300" width="66" height="28"/>
-          <text class="diagram-small" x="83" y="320" text-anchor="middle">+10</text>
-          <rect class="diagram-predicted" x="124" y="300" width="66" height="28"/>
-          <text class="diagram-small" x="157" y="320" text-anchor="middle">+20</text>
-          <rect class="diagram-predicted" x="198" y="300" width="66" height="28"/>
-          <text class="diagram-small" x="231" y="320" text-anchor="middle">+30</text>
-          <rect class="diagram-predicted" x="272" y="300" width="66" height="28"/>
-          <text class="diagram-small" x="305" y="320" text-anchor="middle">+40</text>
-          <rect class="diagram-predicted" x="346" y="300" width="66" height="28"/>
-          <text class="diagram-small" x="379" y="320" text-anchor="middle">+50</text>
-          <rect class="diagram-predicted" x="420" y="300" width="66" height="28"/>
-          <text class="diagram-small" x="453" y="320" text-anchor="middle">+60</text>
-          <rect class="diagram-predicted" x="50" y="334" width="66" height="28"/>
-          <text class="diagram-small" x="83" y="354" text-anchor="middle">+70</text>
-          <rect class="diagram-predicted" x="124" y="334" width="66" height="28"/>
-          <text class="diagram-small" x="157" y="354" text-anchor="middle">+80</text>
-          <rect class="diagram-predicted" x="198" y="334" width="66" height="28"/>
-          <text class="diagram-small" x="231" y="354" text-anchor="middle">+90</text>
-          <rect class="diagram-predicted" x="272" y="334" width="66" height="28"/>
-          <text class="diagram-small" x="305" y="354" text-anchor="middle">+100</text>
-          <rect class="diagram-predicted" x="346" y="334" width="66" height="28"/>
-          <text class="diagram-small" x="379" y="354" text-anchor="middle">+110</text>
-          <rect class="diagram-predicted" x="420" y="334" width="66" height="28"/>
-          <text class="diagram-small" x="453" y="354" text-anchor="middle">+120</text>
+          <text class="diagram-strong" x="272" y="18" text-anchor="middle" >Initial Context · Six Observed Frames</text>
+          <g class="model-frame" data-frame-group="initial" data-frame-index="0">
+          <rect class="diagram-observed" x="16" y="30" width="76" height="38" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="44.0" y="39.0" width="20" height="20"/>
+          <image class="frame-image" x="18" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="54.0" y="86" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="initial" data-frame-index="1">
+          <rect class="diagram-observed" x="102" y="30" width="76" height="38" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="130.0" y="39.0" width="20" height="20"/>
+          <image class="frame-image" x="104" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="140.0" y="86" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="initial" data-frame-index="2">
+          <rect class="diagram-observed" x="188" y="30" width="76" height="38" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="216.0" y="39.0" width="20" height="20"/>
+          <image class="frame-image" x="190" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="226.0" y="86" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="initial" data-frame-index="3">
+          <rect class="diagram-observed" x="274" y="30" width="76" height="38" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="302.0" y="39.0" width="20" height="20"/>
+          <image class="frame-image" x="276" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="312.0" y="86" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="initial" data-frame-index="4">
+          <rect class="diagram-observed" x="360" y="30" width="76" height="38" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="388.0" y="39.0" width="20" height="20"/>
+          <image class="frame-image" x="362" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="398.0" y="86" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="initial" data-frame-index="5">
+          <rect class="diagram-observed" x="446" y="30" width="76" height="38" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="474.0" y="39.0" width="20" height="20"/>
+          <image class="frame-image" x="448" y="32" width="72" height="34" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="484.0" y="86" text-anchor="middle" >—</text></g>
+          <path class="diagram-edge " d="M272 89V96" marker-end="url(#autoregressive-model-arrow)"/>
+          <rect class="diagram-engine" x="112" y="98" width="320" height="48" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#chip" x="125" y="111" width="22" height="22"/>
+          <text class="diagram-strong" x="284" y="119" text-anchor="middle" >StormScope-EU</text>
+          <text class="diagram-label diagram-ink" x="284" y="137" text-anchor="middle" >Generative diffusion · GPU</text>
+          <path class="diagram-edge " d="M272 146V158" marker-end="url(#autoregressive-model-arrow)"/>
+          <rect class="diagram-predicted" x="212" y="160" width="120" height="38" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#cloud" x="224" y="170" width="18" height="18"/>
+          <text class="diagram-strong" x="284" y="184" text-anchor="middle" id="modelNextLead">+10 min</text>
+          <path class="diagram-edge " d="M210 179H9V236H14" marker-end="url(#autoregressive-model-arrow)"/>
+          <text class="diagram-label" x="272" y="213" text-anchor="middle" >Context for the Next Inference</text>
+          <g class="model-frame" data-frame-group="rolling" data-frame-index="0">
+          <rect class="diagram-predicted" x="16" y="220" width="76" height="32" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#cloud" x="44.0" y="254.0" width="20" height="20"/>
+          <image class="frame-image" x="18" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="54.0" y="270" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="rolling" data-frame-index="1">
+          <rect class="diagram-predicted" x="102" y="220" width="76" height="32" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#cloud" x="130.0" y="254.0" width="20" height="20"/>
+          <image class="frame-image" x="104" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="140.0" y="270" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="rolling" data-frame-index="2">
+          <rect class="diagram-predicted" x="188" y="220" width="76" height="32" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#cloud" x="216.0" y="254.0" width="20" height="20"/>
+          <image class="frame-image" x="190" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="226.0" y="270" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="rolling" data-frame-index="3">
+          <rect class="diagram-predicted" x="274" y="220" width="76" height="32" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#cloud" x="302.0" y="254.0" width="20" height="20"/>
+          <image class="frame-image" x="276" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="312.0" y="270" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="rolling" data-frame-index="4">
+          <rect class="diagram-predicted" x="360" y="220" width="76" height="32" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#cloud" x="388.0" y="254.0" width="20" height="20"/>
+          <image class="frame-image" x="362" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="398.0" y="270" text-anchor="middle" >—</text></g>
+          <g class="model-frame" data-frame-group="rolling" data-frame-index="5">
+          <rect class="diagram-predicted" x="446" y="220" width="76" height="32" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#cloud" x="474.0" y="254.0" width="20" height="20"/>
+          <image class="frame-image" x="448" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-label" x="484.0" y="270" text-anchor="middle" >—</text></g>
+          <path class="diagram-edge feedback-path" d="M524 236H534V122H434" marker-end="url(#autoregressive-model-arrow)"/>
+          <text class="diagram-label" x="272" y="294" text-anchor="middle" >Twelve Predicted Frames · Minutes from Initialization</text>
+          <g class="forecast-frame" data-output-index="0">
+          <rect class="diagram-predicted" x="16" y="306" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="18" y="307" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="54" y="322" text-anchor="middle" >+10</text></g>
+          <g class="forecast-frame" data-output-index="1">
+          <rect class="diagram-predicted" x="102" y="306" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="104" y="307" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="140" y="322" text-anchor="middle" >+20</text></g>
+          <g class="forecast-frame" data-output-index="2">
+          <rect class="diagram-predicted" x="188" y="306" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="190" y="307" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="226" y="322" text-anchor="middle" >+30</text></g>
+          <g class="forecast-frame" data-output-index="3">
+          <rect class="diagram-predicted" x="274" y="306" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="276" y="307" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="312" y="322" text-anchor="middle" >+40</text></g>
+          <g class="forecast-frame" data-output-index="4">
+          <rect class="diagram-predicted" x="360" y="306" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="362" y="307" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="398" y="322" text-anchor="middle" >+50</text></g>
+          <g class="forecast-frame" data-output-index="5">
+          <rect class="diagram-predicted" x="446" y="306" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="448" y="307" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="484" y="322" text-anchor="middle" >+60</text></g>
+          <g class="forecast-frame" data-output-index="6">
+          <rect class="diagram-predicted" x="16" y="330" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="18" y="331" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="54" y="346" text-anchor="middle" >+70</text></g>
+          <g class="forecast-frame" data-output-index="7">
+          <rect class="diagram-predicted" x="102" y="330" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="104" y="331" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="140" y="346" text-anchor="middle" >+80</text></g>
+          <g class="forecast-frame" data-output-index="8">
+          <rect class="diagram-predicted" x="188" y="330" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="190" y="331" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="226" y="346" text-anchor="middle" >+90</text></g>
+          <g class="forecast-frame" data-output-index="9">
+          <rect class="diagram-predicted" x="274" y="330" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="276" y="331" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="312" y="346" text-anchor="middle" >+100</text></g>
+          <g class="forecast-frame" data-output-index="10">
+          <rect class="diagram-predicted" x="360" y="330" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="362" y="331" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="398" y="346" text-anchor="middle" >+110</text></g>
+          <g class="forecast-frame" data-output-index="11">
+          <rect class="diagram-predicted" x="446" y="330" width="76" height="21" rx="7" />
+          <image class="frame-image output-image" x="448" y="331" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
+          <text class="frame-output-label" x="484" y="346" text-anchor="middle" >+120</text></g>
         </svg>
+        <div class="diagram-note">Six Observations → Diffusion Inference → Next Frame → Updated Context</div>
+        <div class="model-detail"><span id="modelImageState">Thumbnails load when this panel is shown.</span><span id="modelContextState">Illustrative context shift</span></div>
         <div class="diagram-note">Predicted frames progressively enter the context during autoregressive rollout.</div>
       </article>
 
       <article class="panel nv" data-panel="e2s">
-        <div class="kicker">04 · NVIDIA Earth2Studio</div>
+        <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#refresh"/></svg><span>04 · NVIDIA Earth2Studio</span></div>
         <h2>New Observations. New Forecast Cycles.</h2>
         <p>Earth2Studio provides reusable components for retrieving observations, preparing model inputs, executing StormScope-EU on NVIDIA GPUs, and writing forecast outputs.</p>
         <p>When a newer complete observation window becomes available, the workflow initializes another forecast. Each cycle incorporates updated observations and streams predictions to Arraylake during inference.</p>
-        <div class="label">The Forecast Cycle</div>
-        <svg class="science-diagram" viewBox="0 0 544 316" role="img" aria-labelledby="forecast-cycle-title forecast-cycle-desc">
-          <title id="forecast-cycle-title">Forecast Cycle</title><desc id="forecast-cycle-desc">Clockwise directed cycle: ingest observations, initialize the model, infer twelve predictions, and stream outputs to Arraylake. Earth2Studio orchestrates the workflow; a new observation window starts another cycle.</desc>
-          <defs><marker id="forecast-cycle-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <div class="diagram-note">Ingest → Initialize → Predict → Output → Repeat</div>
+<svg class="science-diagram" viewBox="0 0 544 265" role="img" aria-labelledby="successive-initializations-title successive-initializations-desc">
+          <title id="successive-initializations-title">Successive Initializations</title><desc id="successive-initializations-desc">Three distinct published forecasts show their six-frame observation windows, initialization times, two-hour horizons, and publication times. These are separate runs, not predictions fed back within one run.</desc>
+          <defs><marker id="successive-initializations-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
           <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <rect class="diagram-node" x="20" y="26" width="210" height="76"/>
-          <text class="diagram-strong" x="125" y="54" text-anchor="middle">01 · Ingest</text>
-          <text class="diagram-label" x="125" y="80" text-anchor="middle">Six FCI observations</text>
-          <rect class="diagram-node" x="314" y="26" width="210" height="76"/>
-          <text class="diagram-strong" x="419" y="54" text-anchor="middle">02 · Initialize</text>
-          <text class="diagram-label" x="419" y="80" text-anchor="middle">Set reference time</text>
-          <rect class="diagram-node" x="314" y="190" width="210" height="76"/>
-          <text class="diagram-strong" x="419" y="218" text-anchor="middle">03 · Predict</text>
-          <text class="diagram-label" x="419" y="244" text-anchor="middle">12 autoregressive steps</text>
-          <rect class="diagram-node" x="20" y="190" width="210" height="76"/>
-          <text class="diagram-strong" x="125" y="218" text-anchor="middle">04 · Output</text>
-          <text class="diagram-label" x="125" y="244" text-anchor="middle">Stream to Arraylake</text>
-          <path class="diagram-edge " d="M232 64H312" marker-end="url(#forecast-cycle-arrow)"/>
-          <path class="diagram-edge " d="M419 104V188" marker-end="url(#forecast-cycle-arrow)"/>
-          <path class="diagram-edge " d="M312 228H232" marker-end="url(#forecast-cycle-arrow)"/>
-          <path class="diagram-edge " d="M125 188V104" marker-end="url(#forecast-cycle-arrow)"/>
-          <text class="diagram-strong" x="272" y="139" text-anchor="middle">Earth2Studio</text>
-          <text class="diagram-label" x="272" y="161" text-anchor="middle">Coordinates the cycle</text>
-          <text class="diagram-label" x="272" y="297" text-anchor="middle">Repeat When a New Observation Window Is Available</text>
+          <text class="diagram-strong" x="272" y="19" text-anchor="middle" id="cycleHistoryCaption">Published Forecast Cycles · UTC</text>
+          <text class="diagram-label" x="100" y="45" text-anchor="middle" >Observation Window</text>
+          <text class="diagram-label" x="258" y="45" text-anchor="middle" >Init</text>
+          <text class="diagram-label" x="364" y="45" text-anchor="middle" >Forecast</text>
+          <text class="diagram-label" x="472" y="45" text-anchor="middle" >Published</text>
+          <g data-cycle-row="0">
+          <rect class="diagram-observed" x="16" y="59" width="172" height="45" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="26" y="71" width="20" height="20"/>
+          <text class="diagram-label" x="116" y="76" text-anchor="middle" data-cycle-window="">—</text>
+          <rect class="diagram-observed" x="61" y="84" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="80" y="84" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="99" y="84" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="118" y="84" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="137" y="84" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="156" y="84" width="14" height="12" rx="7" />
+          <path class="diagram-edge " d="M190 81H212" marker-end="url(#successive-initializations-arrow)"/>
+          <rect class="diagram-engine" x="215" y="59" width="86" height="45" rx="7" />
+          <text class="diagram-strong" x="258" y="87" text-anchor="middle" data-cycle-init="">—</text>
+          <path class="diagram-edge " d="M303 81H319" marker-end="url(#successive-initializations-arrow)"/>
+          <rect class="diagram-predicted" x="322" y="59" width="84" height="45" rx="7" />
+          <text class="diagram-label" x="364" y="76" text-anchor="middle" >+120 min</text>
+          <text class="diagram-label" x="364" y="95" text-anchor="middle" data-cycle-horizon="">—</text>
+          <path class="diagram-edge " d="M408 81H425" marker-end="url(#successive-initializations-arrow)"/>
+          <rect class="diagram-publication" x="428" y="59" width="99" height="45" rx="7" />
+          <text class="diagram-label" x="478" y="87" text-anchor="middle" data-cycle-publication="">—</text></g>
+          <g data-cycle-row="1">
+          <rect class="diagram-observed" x="16" y="117" width="172" height="45" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="26" y="129" width="20" height="20"/>
+          <text class="diagram-label" x="116" y="134" text-anchor="middle" data-cycle-window="">—</text>
+          <rect class="diagram-observed" x="61" y="142" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="80" y="142" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="99" y="142" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="118" y="142" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="137" y="142" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="156" y="142" width="14" height="12" rx="7" />
+          <path class="diagram-edge " d="M190 139H212" marker-end="url(#successive-initializations-arrow)"/>
+          <rect class="diagram-engine" x="215" y="117" width="86" height="45" rx="7" />
+          <text class="diagram-strong" x="258" y="145" text-anchor="middle" data-cycle-init="">—</text>
+          <path class="diagram-edge " d="M303 139H319" marker-end="url(#successive-initializations-arrow)"/>
+          <rect class="diagram-predicted" x="322" y="117" width="84" height="45" rx="7" />
+          <text class="diagram-label" x="364" y="134" text-anchor="middle" >+120 min</text>
+          <text class="diagram-label" x="364" y="153" text-anchor="middle" data-cycle-horizon="">—</text>
+          <path class="diagram-edge " d="M408 139H425" marker-end="url(#successive-initializations-arrow)"/>
+          <rect class="diagram-publication" x="428" y="117" width="99" height="45" rx="7" />
+          <text class="diagram-label" x="478" y="145" text-anchor="middle" data-cycle-publication="">—</text></g>
+          <g data-cycle-row="2">
+          <rect class="diagram-observed" x="16" y="175" width="172" height="45" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="26" y="187" width="20" height="20"/>
+          <text class="diagram-label" x="116" y="192" text-anchor="middle" data-cycle-window="">—</text>
+          <rect class="diagram-observed" x="61" y="200" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="80" y="200" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="99" y="200" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="118" y="200" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="137" y="200" width="14" height="12" rx="7" />
+          <rect class="diagram-observed" x="156" y="200" width="14" height="12" rx="7" />
+          <path class="diagram-edge " d="M190 197H212" marker-end="url(#successive-initializations-arrow)"/>
+          <rect class="diagram-engine" x="215" y="175" width="86" height="45" rx="7" />
+          <text class="diagram-strong" x="258" y="203" text-anchor="middle" data-cycle-init="">—</text>
+          <path class="diagram-edge " d="M303 197H319" marker-end="url(#successive-initializations-arrow)"/>
+          <rect class="diagram-predicted" x="322" y="175" width="84" height="45" rx="7" />
+          <text class="diagram-label" x="364" y="192" text-anchor="middle" >+120 min</text>
+          <text class="diagram-label" x="364" y="211" text-anchor="middle" data-cycle-horizon="">—</text>
+          <path class="diagram-edge " d="M408 197H425" marker-end="url(#successive-initializations-arrow)"/>
+          <rect class="diagram-publication" x="428" y="175" width="99" height="45" rx="7" />
+          <text class="diagram-label" x="478" y="203" text-anchor="middle" data-cycle-publication="">—</text></g>
+          <text class="diagram-label" x="272" y="247" text-anchor="middle" >New Observations → New Initialization → Separate Forecast</text>
         </svg>
         <div class="diagram-note">New observation windows enable new initializations; scan cadence and publication cadence are distinct.</div>
 
       </article>
 
       <article class="panel em" data-panel="arraylake">
-        <div class="kicker">05 · Earthmover Arraylake + Icechunk</div>
+        <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#database"/></svg><span>05 · Earthmover Arraylake + Icechunk</span></div>
         <h2>Upload While Computing. Publish Atomically.</h2>
         <p>Forecast outputs move to Arraylake while the GPU computes subsequent predictions, overlapping data transfer with inference.</p>
         <p>After every write finishes, one atomic Icechunk commit publishes the complete forecast as a consistent, versioned snapshot. Earlier snapshots remain available for reproducible analysis.</p>
@@ -241,105 +355,86 @@
           <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
           <text class="diagram-label" x="272" y="18" text-anchor="middle">Execution Time · Schematic</text>
           <path class="diagram-edge " d="M94 27H476" marker-end="url(#overlapped-publication-arrow)"/>
-          <text class="diagram-strong" x="15" y="58" text-anchor="start">GPU</text>
-          <text class="diagram-strong" x="15" y="106" text-anchor="start">Upload</text>
-          <rect class="diagram-gpu" x="94" y="36" width="70" height="30"/>
+          <use class="diagram-symbol" href="img/fontawesome.svg#chip" x="8" y="37" width="20" height="20"/>
+          <text class="diagram-strong" x="34" y="58" text-anchor="start">GPU</text>
+          <use class="diagram-symbol" href="img/fontawesome.svg#upload" x="8" y="84" width="20" height="20"/>
+          <text class="diagram-strong" x="34" y="106" text-anchor="start">I/O</text>
+          <rect class="diagram-gpu" x="94" y="36" width="70" height="30" rx="5"/>
           <text class="diagram-dark" x="129" y="58" text-anchor="middle">+10</text>
-          <rect class="diagram-upload" x="166" y="84" width="70" height="30"/>
+          <rect class="diagram-upload" x="166" y="84" width="70" height="30" rx="5"/>
           <text class="diagram-dark" x="201" y="106" text-anchor="middle">+10</text>
-          <rect class="diagram-gpu" x="172" y="36" width="70" height="30"/>
+          <rect class="diagram-gpu" x="172" y="36" width="70" height="30" rx="5"/>
           <text class="diagram-dark" x="207" y="58" text-anchor="middle">+20</text>
-          <rect class="diagram-upload" x="244" y="84" width="70" height="30"/>
+          <rect class="diagram-upload" x="244" y="84" width="70" height="30" rx="5"/>
           <text class="diagram-dark" x="279" y="106" text-anchor="middle">+20</text>
-          <rect class="diagram-gpu" x="250" y="36" width="70" height="30"/>
+          <rect class="diagram-gpu" x="250" y="36" width="70" height="30" rx="5"/>
           <text class="diagram-dark" x="285" y="58" text-anchor="middle">…</text>
-          <rect class="diagram-upload" x="322" y="84" width="70" height="30"/>
+          <rect class="diagram-upload" x="322" y="84" width="70" height="30" rx="5"/>
           <text class="diagram-dark" x="357" y="106" text-anchor="middle">…</text>
-          <rect class="diagram-gpu" x="328" y="36" width="70" height="30"/>
+          <rect class="diagram-gpu" x="328" y="36" width="70" height="30" rx="5"/>
           <text class="diagram-dark" x="363" y="58" text-anchor="middle">+120</text>
-          <rect class="diagram-upload" x="400" y="84" width="70" height="30"/>
+          <rect class="diagram-upload" x="400" y="84" width="70" height="30" rx="5"/>
           <text class="diagram-dark" x="435" y="106" text-anchor="middle">+120</text>
           <path class="completion-barrier" d="M476 30V126"/>
           <text class="diagram-label" x="502" y="57" text-anchor="middle">All</text>
           <text class="diagram-label" x="502" y="76" text-anchor="middle">writes</text>
           <text class="diagram-label" x="502" y="95" text-anchor="middle">finish</text>
           <path class="diagram-edge " d="M476 126V140H272V150" marker-end="url(#overlapped-publication-arrow)"/>
-          <rect class="diagram-predicted" x="94" y="152" width="386" height="34"/>
+          <rect class="diagram-publication" x="94" y="152" width="386" height="34" rx="7"/>
           <text class="diagram-strong" x="287" y="175" text-anchor="middle">One Atomic Icechunk Commit</text>
         </svg>
-        <div class="label">Live Forecast History</div>
+        <div class="history-title"><span>Live Forecast History</span><span id="historyFeedState">—</span></div>
         <div class="commits" id="commitList"></div>
       </article>
 
       <article class="panel em" data-panel="compute">
-        <div class="kicker">06 · Earthmover Compute</div>
+        <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chart"/></svg><span>06 · Earthmover Compute</span></div>
         <h2>From Scientific Arrays to Interactive Maps</h2>
         <p>Earthmover Compute generates geospatial tiles and supports SQL queries directly against Arraylake datasets. Applications request selected regions, composites, and forecast lead times without downloading the entire forecast.</p>
-        <svg class="science-diagram" viewBox="0 0 544 174" role="img" aria-labelledby="forecast-delivery-title forecast-delivery-desc">
-          <title id="forecast-delivery-title">Forecast Delivery</title>
-          <desc id="forecast-delivery-desc">A versioned Arraylake forecast passes through Earthmover Compute to visualization, SQL analysis, and cloud-native data access.</desc>
-          <defs><marker id="forecast-delivery-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <rect class="diagram-predicted" x="10" y="8" width="524" height="36"/>
-          <text class="diagram-strong" x="272" y="35" text-anchor="middle">Arraylake Forecast → Earthmover Compute</text>
-          <path class="diagram-edge" d="M272 44V56H92M272 56H452"/>
-          <path class="diagram-edge" d="M92 56V74M272 56V74M452 56V74" marker-end="url(#forecast-delivery-arrow)"/>
-          <rect class="diagram-node" x="10" y="78" width="164" height="86"/>
-          <text class="diagram-strong" x="92" y="102" text-anchor="middle">Visualize</text>
-          <text class="diagram-label" x="92" y="126" text-anchor="middle">Render forecast map</text>
-          <text class="diagram-label" x="92" y="146" text-anchor="middle">tiles on demand.</text>
-          <rect class="diagram-node" x="190" y="78" width="164" height="86"/>
-          <text class="diagram-strong" x="272" y="102" text-anchor="middle">Query</text>
-          <text class="diagram-label" x="272" y="121" text-anchor="middle">Analyze regions and</text>
-          <text class="diagram-label" x="272" y="139" text-anchor="middle">forecast lead times</text>
-          <text class="diagram-label" x="272" y="157" text-anchor="middle">through SQL.</text>
-          <rect class="diagram-node" x="370" y="78" width="164" height="86"/>
-          <text class="diagram-strong" x="452" y="100" text-anchor="middle">Integrate</text>
-          <text class="diagram-label" x="452" y="121" text-anchor="middle">Access scientific data</text>
-          <text class="diagram-label" x="452" y="139" text-anchor="middle">through cloud-native</text>
-          <text class="diagram-label" x="452" y="157" text-anchor="middle">services.</text>
+<svg class="science-diagram" viewBox="0 0 544 132" role="img" aria-labelledby="forecast-delivery-title forecast-delivery-desc">
+          <title id="forecast-delivery-title">Forecast Delivery</title><desc id="forecast-delivery-desc">A published Arraylake snapshot passes through Earthmover Compute to a real map tile preview and live SQL query results.</desc>
+          <defs><marker id="forecast-delivery-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+          <rect class="diagram-storage" x="74" y="8" width="396" height="34" rx="7" />
+          <use class="diagram-symbol" href="img/fontawesome.svg#database" x="91" y="17" width="20" height="20"/>
+          <text class="diagram-strong" x="284" y="33" text-anchor="middle" >Arraylake Forecast Snapshot</text>
+          <path class="diagram-edge " d="M272 42V52" marker-end="url(#forecast-delivery-arrow)"/>
+          <rect class="diagram-node" x="158" y="54" width="228" height="28" rx="7" />
+          <text class="diagram-strong" x="272" y="74" text-anchor="middle" >Earthmover Compute</text>
+          <path class="diagram-edge" d="M272 82V96H132M272 96H412"/>
+          <path class="diagram-edge " d="M132 96V102" marker-end="url(#forecast-delivery-arrow)"/>
+          <path class="diagram-edge " d="M412 96V102" marker-end="url(#forecast-delivery-arrow)"/>
+          <use class="diagram-symbol" href="img/fontawesome.svg#map" x="93" y="104" width="20" height="20"/>
+          <text class="diagram-strong" x="161" y="122" text-anchor="middle" >Map Tiles</text>
+          <use class="diagram-symbol" href="img/fontawesome.svg#chart" x="360" y="104" width="20" height="20"/>
+          <text class="diagram-strong" x="440" y="122" text-anchor="middle" >SQL Query</text>
         </svg>
+        <div class="interface-captions"><span><b>Visualize</b> — Render forecast tiles on demand.</span><span><b>Query</b> — Analyze regions and lead times through SQL.</span></div>
+        <div class="diagram-note">Integrate — Access scientific data through cloud-native services.</div>
         <div class="diagram-note">The live SQL example shows mean composite intensity across forecast lead times.</div>
+        <div class="compute-evidence">
+          <div class="tile-evidence"><div class="label">Map Tile · Berlin Region</div><div class="tile-preview"><img id="computeTile" alt="Published forecast map tile over the Berlin region" hidden><span>Tile unavailable</span></div><span id="computeTileCaption">Waiting for forecast metadata</span></div>
         <div class="sql">
-          <div class="sql-head"><b>Live data exploration · SQL</b><span id="sqlStatus">…</span></div>
+          <div class="sql-head"><b id="sqlMetric">SQL Result</b><span id="sqlStatus">…</span></div>
           <div class="sql-run">
             <div class="sql-places" id="sqlPlaces"></div>
             <button type="button" id="sqlReset">Reset</button>
           </div>
-          <textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="6" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea>
-          <div class="bars" id="sqlBars"></div>
+          <details class="sql-editor" id="sqlEditor"><summary>Inspect / Edit SQL</summary><div class="sql-editor-popover"><button type="button" id="sqlEditorClose">Close</button><textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="6" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea></div></details>
+          <div class="bars" id="sqlBars" role="img" aria-label="Mean composite intensity by forecast lead time"></div><div class="bars-axis"><span>+0</span><span>+60</span><span>+120 min</span></div>
           <div class="sql-foot" id="sqlFoot">Mean composite intensity over Berlin · 0–2 h from init · PostgreSQL wire protocol</div>
+        </div>
         </div>
       </article>
 
       <article class="panel em" data-panel="access">
-        <div class="kicker">07 · Explore StormScope-EU</div>
+        <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#viewer"/></svg><span>07 · Explore StormScope-EU</span></div>
         <h2>Take the Forecast With You</h2>
         <p>Scan the viewer to explore Europe, compare True Color and Air Mass composites, and animate AI-generated satellite imagery through two hours from initialization.</p>
         <p>The same versioned forecast supports the interactive map, scientific queries, and downstream applications.</p>
-        <svg class="science-diagram" viewBox="0 0 544 146" role="img" aria-labelledby="space-to-screen-title space-to-screen-desc">
-          <title id="space-to-screen-title">Space To Screen</title><desc id="space-to-screen-desc">EUMETSAT observations enter StormScope-EU prediction and Arraylake/Icechunk publication, then Earthmover Compute serves them to the browser. Earth2Studio connects observations, model execution, and output.</desc>
-          <defs><marker id="space-to-screen-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <rect class="diagram-observed" x="8" y="8" width="156" height="58"/>
-          <text class="diagram-strong" x="86" y="32" text-anchor="middle">Observe</text>
-          <text class="diagram-label" x="86" y="53" text-anchor="middle">EUMETSAT</text>
-          <rect class="diagram-node" x="194" y="8" width="156" height="58"/>
-          <text class="diagram-strong" x="272" y="32" text-anchor="middle">Predict</text>
-          <text class="diagram-label" x="272" y="53" text-anchor="middle">StormScope-EU</text>
-          <rect class="diagram-predicted" x="380" y="8" width="156" height="58"/>
-          <text class="diagram-strong" x="458" y="32" text-anchor="middle">Publish</text>
-          <text class="diagram-label" x="458" y="53" text-anchor="middle">Arraylake + Icechunk</text>
-          <path class="diagram-edge " d="M166 37H192" marker-end="url(#space-to-screen-arrow)"/>
-          <path class="diagram-edge " d="M352 37H378" marker-end="url(#space-to-screen-arrow)"/>
-          <path class="diagram-edge " d="M458 66V96H354" marker-end="url(#space-to-screen-arrow)"/>
-          <rect class="diagram-predicted" x="194" y="80" width="158" height="58"/>
-          <text class="diagram-strong" x="273" y="105" text-anchor="middle">Serve</text>
-          <text class="diagram-label" x="273" y="126" text-anchor="middle">Earthmover Compute</text>
-          <path class="diagram-edge " d="M192 109H166" marker-end="url(#space-to-screen-arrow)"/>
-          <rect class="diagram-observed" x="8" y="80" width="156" height="58"/>
-          <text class="diagram-strong" x="86" y="105" text-anchor="middle">Explore</text>
-          <text class="diagram-label" x="86" y="126" text-anchor="middle">Your browser</text>
-        </svg>
+        <div class="architecture-ribbon" role="img" aria-label="Meteosat observations pass through NVIDIA AI and Earthmover to the viewer">
+          <span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg>Meteosat</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg>NVIDIA AI</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#database"/></svg>Earthmover</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#viewer"/></svg>Viewer</span>
+        </div>
         <div class="label">Open the Viewer · Explore the Data</div>
         <div class="two qr">
           <a class="qrcard" id="viewerLink" href="https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/" target="_blank" rel="noopener"><div class="qrbox" id="qrViewer"></div><b>Open the Viewer</b></a>

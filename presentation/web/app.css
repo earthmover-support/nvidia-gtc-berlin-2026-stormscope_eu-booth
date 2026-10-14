@@ -393,3 +393,85 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 /* Keep playback controls visible when the narrower globe contains a full run history. */
 .inits { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
 .inits button { flex-shrink: 0; }
+
+/* Shared-reference palette: observations slate, prediction green, I/O blue,
+   publication amber. Font Awesome symbols are local and work offline. */
+:root { --observed: #64748B; --predicted: #237B48; --cloud-io: #3E718F; --publication: #8A5C1C; }
+.fa-symbol { width: 20px; height: 20px; flex-shrink: 0; fill: currentColor; vertical-align: -.15em; }
+.kicker { display: flex; align-items: center; gap: 10px; }
+.kicker .fa-symbol { width: 25px; height: 25px; }
+.composite-card b { display: flex; align-items: center; gap: 7px; }
+.composite-card { border-radius: 10px; overflow: hidden; }
+.science-diagram, .em .science-diagram { border-radius: 12px; background: #11161B; border-color: #354451; color: #A5B4C3; }
+.diagram-symbol { fill: currentColor; stroke: none; color: #E8EDF2; }
+.diagram-observed { fill: #263441; stroke: #8DA1B5; }
+.diagram-predicted, .em .diagram-predicted { fill: #174C32; stroke: #53B47B; }
+.diagram-engine { fill: #237B48; stroke: #53B47B; }
+.diagram-engine + .diagram-strong, .diagram-ink { fill: #FFFFFF; }
+.diagram-storage, .em .diagram-storage { fill: #294F67; stroke: #75ACCB; }
+.diagram-node, .em .diagram-node { fill: #1F2E38; stroke: #7392A8; }
+.diagram-publication { fill: #5C411F; stroke: #D0A568; }
+.diagram-gpu { fill: #237B48; }
+.diagram-upload { fill: #3E718F; }
+.diagram-dark { fill: #FFFFFF; }
+.completion-barrier { stroke: #D0A568; }
+.diagram-text, .diagram-strong, .diagram-label { fill: #E8EDF2; }
+.observation-timeline { padding: 16px 18px; border: 1px solid #354451; border-radius: 12px; background: #11161B; }
+.timeline-head { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; font-size: 17px; font-weight: 700; margin-bottom: 12px; }
+.timeline-head span { display: flex; align-items: center; gap: 8px; }
+.timeline-track { display: flex; height: 22px; border-radius: 6px; overflow: hidden; }
+.observed-track { flex: 1; background: var(--observed); }
+.predicted-track { flex: 2; background: var(--predicted); }
+.timeline-times { display: grid; grid-template-columns: 1fr 2fr; position: relative; margin-top: 8px; font-size: 14px; color: #CBD5E1; }
+.timeline-times b { position: absolute; left: 33.333%; transform: translateX(-50%); font-weight: 500; }
+.timeline-times span:last-child { text-align: right; }
+.model-detail { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: #B9C7D3; }
+.model-frame.has-image .diagram-symbol { visibility: hidden; }
+.frame-image { opacity: .9; }
+.frame-label { fill: #E8EDF2; font-size: 15px; }
+.frame-output-label { fill: #FFFFFF; font-size: 14px; paint-order: stroke; stroke: #101820; stroke-width: 3px; stroke-linejoin: round; }
+.history-title { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: #CBD5E1; }
+#historyFeedState { color: #D0A568; font-size: 12px; }
+.commit-heading, .commit { grid-template-columns: 1.6fr 1.6fr 1.05fr .75fr .8fr; gap: 8px; }
+.commit .init, .commit .published-at { font-size: 13px; font-variant-numeric: tabular-nums; }
+.commit .publication-status { font-size: 12px; color: #EDD2AE; }
+.commit .id { font-size: 13px; }
+.commit .ago { font-size: 12px; }
+.commit { border-radius: 6px; }
+.commit.fresh { outline-color: #D0A568; }
+.commit.new-publication { animation: publication-arrives 1.2s ease-out; }
+@keyframes publication-arrives { from { opacity: .35; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.interface-captions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 14px; color: #CBD5E1; }
+.compute-evidence { display: grid; grid-template-columns: 1fr 1.25fr; gap: 14px; align-items: stretch; }
+.tile-evidence, .compute-evidence .sql { padding: 12px; border-radius: 10px; border: 1px solid #354451; background: #11161B; min-width: 0; }
+.tile-evidence { display: flex; flex-direction: column; gap: 8px; }
+.tile-preview { height: 150px; position: relative; border-radius: 6px; overflow: hidden; background: #0A1015; }
+.tile-preview img { position: relative; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+.tile-preview > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: #A5B4C3; }
+#computeTileCaption { font-size: 12px; color: #CBD5E1; }
+.compute-evidence .sql-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+.compute-evidence .sql-head span { text-align: left; font-size: 11px; }
+.compute-evidence .sql-run { flex-wrap: wrap; }
+.compute-evidence .sql-places button { font-size: 11px; padding: 4px 7px; }
+.compute-evidence .bars { height: 80px; margin-top: 4px; }
+.compute-evidence .bars div { border-radius: 3px 3px 0 0; background: #75ACCB; }
+.bars-axis { display: flex; justify-content: space-between; font-size: 11px; color: #CBD5E1; }
+.compute-evidence .sql-foot { font-size: 11px; }
+.sql-editor summary { cursor: pointer; font-size: 12px; color: #B8CCE0; }
+.sql-editor summary:focus-visible { outline: 2px solid #E8EDF2; outline-offset: 3px; }
+.sql-editor-popover { position: absolute; left: 28px; right: 28px; bottom: 112px; z-index: 5; padding: 14px; border-radius: 10px; border: 1px solid #75ACCB; background: #0C141C; box-shadow: 0 10px 30px #0009; }
+.sql-editor-popover #sqlEditorClose { float: right; margin-bottom: 8px; padding: 5px 10px; border: 1px solid #7392A8; background: #1F2E38; color: #FFFFFF; font-family: inherit; cursor: pointer; }
+.sql-editor-popover textarea { display: block; width: 100%; height: 180px; clear: both; }
+.architecture-ribbon { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border: 1px solid #354451; border-radius: 10px; background: #11161B; }
+.architecture-ribbon > span { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.architecture-ribbon > .fa-symbol { width: 12px; height: 12px; color: #A5B4C3; }
+[data-panel="access"] .qr { grid-template-columns: 1.8fr 1fr; }
+[data-panel="access"] #qrViewer { width: 250px; }
+[data-panel="access"] #qrTiles { width: 140px; }
+[data-panel="access"] .qrcard { border-radius: 12px; padding: 16px; }
+[data-panel="access"] .qrcard b { font-size: 17px; }
+
+[data-panel="nowcasting"] { gap: 10px; }
+.compute-evidence .bars { height: 68px; }
+/* Long service errors remain available through the status tooltip without pushing the chart into navigation. */
+.compute-evidence .sql-foot { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }

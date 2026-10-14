@@ -52,3 +52,24 @@ and the publication/delivery diagrams are compacted without reducing their label
 All four publication-history rows remain visible. The initialization selector scrolls when
 needed so the narrower globe's playback controls remain visible with a full run history.
 All seven panels and the playback row fit the three previously tested viewport sizes.
+
+
+## Latest shared-chat visual recommendations
+
+The requested reference introduces two different loops: within-run autoregressive
+prediction and reinitialization from newer observed windows. The circular cycle is
+therefore replaced by three metadata-bound initialization rows. Font Awesome symbols,
+rounded nodes, and slate/green/blue/amber treatments reproduce the reference's visual
+language without changing the approved panel paragraphs or 24 px bold titles.
+
+Model thumbnail provenance and forecast lead bindings are verified independently:
+observed slots request only the matching historical run's +0 output; twelve forecast
+slots request the displayed run's API-provided lead values. Missing-image availability
+is explicit. Compute adds an actual tile request alongside the SQL result and retains
+the editor as an on-demand inspection view. The final architecture becomes a thin
+ribbon, and the viewer QR is enlarged.
+
+Browser checks cover provenance, cycles, SQL editor opening/closing, offline symbol
+loading, and the three established viewport sizes, with zero JavaScript page errors.
+The test server and tile responses are deterministic rehearsal fixtures, so these
+checks do not establish availability of the live cloud services or verify GPU runtime.

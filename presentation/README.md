@@ -196,3 +196,29 @@ is the newest input frame of the displayed published run, which defines its init
 Incoming uncommitted satellite scans are not reported by the dashboard API. The valid
 and lead fields follow playback and scrubbing, while the snapshot follows run selection.
 Publication history explicitly labels each committed snapshot Published.
+
+
+## Shared-reference visual refresh
+
+Font Awesome Free 6.7.2 symbols are served as `web/img/fontawesome.svg`; no icon CDN
+or icon font is needed. `npm run icons` regenerates the selected SVG symbols and
+copies the package license. `npm run vendor` also performs this step for hosted builds.
+Rounded diagrams consistently distinguish observations (slate), model predictions
+(green), Arraylake I/O (blue), and atomic publication (amber), with text labels.
+
+The model panel loads actual snapshot-pinned +0 thumbnails from published runs whose
+initialization matches each required observed timestamp, and forecast thumbnails from
+the displayed run's published lead array. Missing observations are never substituted
+with predictions; availability counts remain visible. Thumbnails load when their panel
+is active. The shifting context is an illustration, paused with panel rotation and
+suppressed when reduced motion is requested, rather than GPU progress telemetry.
+
+The Earth2Studio panel shows three separate published runs with observation-window,
+initialization, horizon, and publication times. It does not infer exact scheduling
+cadence from satellite scan frequency. Publication history adds absolute publication
+UTC alongside status, snapshot, and age, and highlights genuinely new commit IDs.
+
+Compute shows a snapshot-pinned map tile beside live SQL results. The editable query
+remains available through Inspect / Edit SQL; hosted read-only queries use Inspect SQL.
+The result header identifies the queried composite. The final panel uses a thin
+architecture ribbon and prioritizes the viewer QR over developer tiles.

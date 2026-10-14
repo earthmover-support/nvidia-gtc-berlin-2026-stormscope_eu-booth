@@ -433,6 +433,119 @@
       : "Observed +0 Frame · Waiting for Data";
   }
 
+  // Matched, snapshot-pinned thumbnails; never substitute a forecast for an observation.
+  const publicationForRun = (run) => run && S.commits.find((c) => c.id === run.ref && (c.message || "").includes(run.init));
+  const thumbnailUrl = (run, variable, lead) => {
+    const q = S.cfg.qr_tile;
+    return tileTemplate(run, variable, lead, 128).replace("{z}", q.z).replace("{x}", q.x).replace("{y}", q.y);
+  };
+  let contextExample = 0;
+
+  function setFrameImage(group, source) {
+    const img = group.querySelector("image");
+    if (img.dataset.source === (source || "")) return;
+    img.dataset.source = source || "";
+    img.setAttribute("visibility", "hidden");
+    img.removeAttribute("href");
+    group.classList.remove("has-image");
+    if (!source) return;
+    const loader = new Image();
+    loader.onload = () => {
+      if (img.dataset.source !== source) return;
+      img.setAttribute("href", source);
+      img.setAttribute("visibility", "visible");
+      group.classList.add("has-image");
+      updateThumbnailAvailability();
+    };
+    loader.onerror = () => { if (img.dataset.source === source) updateThumbnailAvailability(); };
+    loader.src = source;
+  }
+
+  function updateThumbnailAvailability() {
+    const observed = [...document.querySelectorAll('[data-frame-group="initial"]')];
+    const count = observed.filter((g) => g.classList.contains("has-image")).length;
+    const predicted = document.querySelectorAll("[data-output-index].has-image").length;
+    $("#modelImageState").textContent = `${VAR_LABELS[S.variable]} · ${count}/6 observed · ${predicted}/12 forecast thumbnails`;
+  }
+
+  function renderModelSequence() {
+    if (panels()[S.panel]?.dataset.panel !== "nowcasting") return;
+    const run = shown?.run || selectedRun();
+    const getSource = (offset) => {
+      if (!run) return null;
+      if (offset > 0) return thumbnailUrl(run, S.variable, offset);
+      const time = initDate(run.init).getTime() + offset * 60000;
+      const observation = S.runs.find((r) => initDate(r.init).getTime() === time);
+      return observation ? thumbnailUrl(observation, S.variable, 0) : null;
+    };
+    for (const group of document.querySelectorAll("[data-frame-group]")) {
+      const rolling = group.dataset.frameGroup === "rolling";
+      const offset = (rolling ? -40 + contextExample * 10 : -50) + Number(group.dataset.frameIndex) * 10;
+      const generated = offset > 0;
+      group.classList.toggle("generated", generated);
+      group.querySelector("rect").setAttribute("class", generated ? "diagram-predicted" : "diagram-observed");
+      group.querySelector(".frame-label").textContent = offset < 0 ? `−${-offset}` : offset > 0 ? `+${offset}` : "0";
+      setFrameImage(group, getSource(offset));
+    }
+    for (const group of document.querySelectorAll("[data-output-index]")) {
+      const lead = S.cfg.leads[Number(group.dataset.outputIndex) + 1];
+      setFrameImage(group, run ? thumbnailUrl(run, S.variable, lead) : null);
+    }
+    $("#modelNextLead").textContent = `+${(contextExample + 1) * 10} min`;
+    $("#modelContextState").textContent = `Illustrative shift · context for +${(contextExample + 2) * 10} min`;
+    updateThumbnailAvailability();
+  }
+
+  function renderPublishedCycles() {
+    const rows = [...document.querySelectorAll("[data-cycle-row]")];
+    const runs = S.runs.slice(0, 3).reverse();
+    $("#cycleHistoryCaption").textContent = {
+      demo: "Simulated Forecast Cycles · UTC", offline: "Replay Forecast Cycles · UTC",
+      error: "Last Known Published Cycles · UTC",
+    }[S.status] || "Published Forecast Cycles · UTC";
+    rows.forEach((row, index) => {
+      const run = runs[index];
+      const fields = ["window", "init", "horizon", "publication"];
+      if (!run) { for (const f of fields) row.querySelector(`[data-cycle-${f}]`).textContent = "—"; return; }
+      const init = initDate(run.init);
+      row.querySelector("[data-cycle-window]").textContent = `${HM.format(new Date(init.getTime() - 50 * 60000))}–${HM.format(init)}`;
+      row.querySelector("[data-cycle-init]").textContent = HM.format(init);
+      row.querySelector("[data-cycle-horizon]").textContent = HM.format(new Date(init.getTime() + S.cfg.leads.at(-1) * 60000));
+      const pub = publicationForRun(run);
+      row.querySelector("[data-cycle-publication]").textContent = pub ? HM.format(new Date(pub.written_at)) : "Unknown";
+      row.setAttribute("aria-label", `Forecast initialized ${ymdhm(init)} UTC, published ${pub ? ymdhm(new Date(pub.written_at)) + " UTC" : "time unavailable"}`);
+    });
+  }
+
+  function renderComputeTile() {
+    if (panels()[S.panel]?.dataset.panel !== "compute") return;
+    const run = shown?.run || selectedRun();
+    const img = $("#computeTile");
+    if (!run) { img.hidden = true; $("#computeTileCaption").textContent = "Waiting for forecast metadata"; return; }
+    const lead = S.cfg.leads[S.frame] ?? 0;
+    const source = thumbnailUrl(run, S.variable, lead);
+    $("#computeTileCaption").textContent = `${VAR_LABELS[S.variable]} · +${lead} min · Init ${hhmm(run.init)} UTC`;
+    if (img.dataset.source === source) return;
+    img.dataset.source = source;
+    img.hidden = true;
+    img.onload = () => { if (img.dataset.source === source) img.hidden = false; };
+    img.onerror = () => { img.hidden = true; };
+    img.src = source;
+  }
+
+  function initVisuals() {
+    const editor = $("#sqlEditor");
+    editor.addEventListener("toggle", () => { if (editor.open) holdPanel(); });
+    $("#sqlEditorClose").addEventListener("click", () => { editor.open = false; });
+    $("#sqlQuery").addEventListener("keydown", (e) => { if (e.key === "Escape") editor.open = false; });
+    if (!S.cfg.sql_editable) editor.querySelector("summary").textContent = "Inspect SQL";
+    setInterval(() => {
+      if (document.hidden || S.rotatePaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches || panels()[S.panel]?.dataset.panel !== "nowcasting") return;
+      contextExample = (contextExample + 1) % 3;
+      renderModelSequence();
+    }, 5000);
+  }
+
   // Only publication is reported by the API; inference progress is not telemetry.
   function renderCycleStatus() {
     const run = shown?.run || selectedRun();
@@ -552,6 +665,8 @@
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
     renderCompositePreviews();
     renderCycleStatus();
+    renderModelSequence();
+    renderComputeTile();
   }
 
   function showNotice(text) {
@@ -735,21 +850,32 @@
       }
     });
     schedulePanelRotation();
+    renderModelSequence();
+    renderPublishedCycles();
+    renderComputeTile();
   }
 
+  let lastPublicationId = null;
   function renderCommits() {
     const box = $("#commitList");
     box.replaceChildren();
+    $("#historyFeedState").textContent = { demo: "Demo", offline: "Replay", error: "Disconnected · last known" }[S.status] || "Live";
+    const head = S.commits[0]?.id;
+    const isNew = !!(lastPublicationId && head && head !== lastPublicationId);
+    lastPublicationId = head || lastPublicationId;
     const columns = el("div", "commit-heading");
-    columns.append(el("span", null, "Init · UTC"), el("span", null, "Forecast"), el("span", null, "Snapshot"), el("span", null, "Published Age"));
+    columns.append(el("span", null, "Init · UTC"), el("span", null, "Published · UTC"), el("span", null, "Snapshot"), el("span", null, "Status"), el("span", null, "Age"));
     box.append(columns);
     if (!S.commits.length) box.append(el("div", "commit", "Waiting for publication history…"));
     S.commits.slice(0, 4).forEach((c, k) => {
       const row = el("div", "commit" + (k === 0 ? " fresh" : ""));
+      if (k === 0 && isNew) row.classList.add("new-publication");
+      row.title = c.id;
       row.append(
         el("span", "init", (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1].replace("T", " ") || "Other commit"),
-        el("span", "publication-status", "Published"),
+        el("span", "published-at", ymdhm(new Date(c.written_at))),
         el("span", "id", c.id.slice(0, 8)),
+        el("span", "publication-status", "Published"),
         el("span", "ago", `${ago(c.written_at)} ago`)
       );
       box.append(row);
@@ -992,6 +1118,8 @@
     const status = $("#sqlStatus");
     const bars = $("#sqlBars");
     const box = sqlBox();
+    const metric = /AVG\(\s*(true_color|airmass)\s*\)/i.exec(r?.query || box.value);
+    $("#sqlMetric").textContent = metric ? `${VAR_LABELS[metric[1].toLowerCase()]} · SQL` : "SQL Result";
     const running = r && r.status === "running";
     status.classList.remove("err");
     status.title = "";
@@ -1082,6 +1210,9 @@
     showFrame();
     renderCommits();
     renderCompositePreviews();
+    renderModelSequence();
+    renderPublishedCycles();
+    renderComputeTile();
     renderQRs();
     renderStrip();
   }
@@ -1187,6 +1318,7 @@
     document.addEventListener("click", (e) => e.target.closest?.("button")?.blur());
     initGlobe();
     initPanels();
+    initVisuals();
     for (const card of document.querySelectorAll(".card[data-var]")) {
       card.addEventListener("click", () => setVariable(card.dataset.var));
     }
