@@ -470,60 +470,6 @@
   };
   let contextExample = 0;
 
-  function setFrameImage(group, source) {
-    const img = group.querySelector("image");
-    if (img.dataset.source === (source || "")) return;
-    img.dataset.source = source || "";
-    img.setAttribute("visibility", "hidden");
-    img.removeAttribute("href");
-    group.classList.remove("has-image");
-    if (!source) return;
-    const loader = new Image();
-    loader.onload = () => {
-      if (img.dataset.source !== source) return;
-      img.setAttribute("href", source);
-      img.setAttribute("visibility", "visible");
-      group.classList.add("has-image");
-      updateThumbnailAvailability();
-    };
-    loader.onerror = () => { if (img.dataset.source === source) updateThumbnailAvailability(); };
-    loader.src = source;
-  }
-
-  function updateThumbnailAvailability() {
-    const observed = [...document.querySelectorAll('[data-frame-group="initial"]')];
-    const count = observed.filter((g) => g.classList.contains("has-image")).length;
-    $("#modelImageState").textContent = "";
-  }
-
-  function renderModelSequence() {
-    if (panels()[S.panel]?.dataset.panel !== "nowcasting") return;
-    const run = shown?.run || selectedRun();
-    const getSource = (offset) => {
-      if (!run) return null;
-      if (offset > 0) return thumbnailUrl(run, S.variable, offset);
-      const time = initDate(run.init).getTime() + offset * 60000;
-      const observation = S.runs.find((r) => initDate(r.init).getTime() === time);
-      return observation ? thumbnailUrl(observation, S.variable, 0) : null;
-    };
-    for (const group of document.querySelectorAll("[data-frame-group]")) {
-      const rolling = group.dataset.frameGroup === "rolling";
-      const offset = (rolling ? -40 + contextExample * 10 : -50) + Number(group.dataset.frameIndex) * 10;
-      const generated = offset > 0;
-      group.classList.toggle("generated", generated);
-      group.querySelector("rect").setAttribute("class", generated ? "diagram-predicted" : "diagram-observed");
-      group.querySelector(".frame-label").textContent = offset < 0 ? `−${-offset}` : offset > 0 ? `+${offset}` : "0";
-      setFrameImage(group, getSource(offset));
-    }
-    for (const group of document.querySelectorAll("[data-output-index]")) {
-      const lead = S.cfg.leads[Number(group.dataset.outputIndex) + 1];
-      setFrameImage(group, run ? thumbnailUrl(run, S.variable, lead) : null);
-    }
-    $("#modelNextLead").textContent = `+${(contextExample + 1) * 10} min`;
-    $("#modelContextState").textContent = "";
-    updateThumbnailAvailability();
-  }
-
   function renderComputeTile() {
     if (panels()[S.panel]?.dataset.panel !== "compute") return;
     const run = shown?.run || selectedRun();
@@ -546,11 +492,7 @@
     $("#sqlEditorClose").addEventListener("click", () => { editor.open = false; });
     $("#sqlQuery").addEventListener("keydown", (e) => { if (e.key === "Escape") editor.open = false; });
     if (!S.cfg.sql_editable) editor.querySelector("summary").textContent = "Inspect SQL";
-    setInterval(() => {
-      if (document.hidden || S.rotatePaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches || panels()[S.panel]?.dataset.panel !== "nowcasting") return;
-      contextExample = [0, 1, 5, 11][([0, 1, 5, 11].indexOf(contextExample) + 1) % 4];
-      renderModelSequence();
-    }, 5000);
+
   }
 
   // Only publication is reported by the API; inference progress is not telemetry.
@@ -674,7 +616,7 @@
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
     renderCompositePreviews();
     renderCycleStatus();
-    renderModelSequence();
+
     renderComputeTile();
   }
 
@@ -794,7 +736,6 @@
       }
     });
     schedulePanelRotation();
-    renderModelSequence();
 
     renderComputeTile();
   }
@@ -1165,7 +1106,6 @@
     showFrame();
     renderCommits();
     renderCompositePreviews();
-    renderModelSequence();
 
     renderComputeTile();
     renderQRs();
