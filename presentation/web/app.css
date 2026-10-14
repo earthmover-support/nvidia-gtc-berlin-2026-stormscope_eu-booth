@@ -732,3 +732,11 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
   .panels [data-panel="access"] .qrcard .qrbox { width: min(100%, 138px); }
   .panels [data-panel="access"] .sql { padding: 9px 12px; gap: 5px; }
 }
+
+/* Slide 03 adopts the main-branch AI-model flow dimensions. */
+.panels [data-panel="nowcasting"] .box.flow { padding: 18px; border: 1px solid #333; border-radius: 0; display: flex; flex-direction: column; gap: 12px; }
+.panels [data-panel="nowcasting"] .flow .frames span { height: 44px; }
+.panels [data-panel="nowcasting"] .flow .engine { padding: 14px; border-radius: 0; }
+.panels [data-panel="nowcasting"] .flow .out { gap: 10px; }
+.panels [data-panel="nowcasting"] .flow .pill { border-radius: 0; }
+.panels [data-panel="nowcasting"] .facts { gap: 6px; font-size: 16px; }

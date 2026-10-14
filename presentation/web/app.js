@@ -491,9 +491,11 @@
     $("#sqlEditorClose").addEventListener("click", () => { editor.open = false; });
     $("#sqlQuery").addEventListener("keydown", (e) => { if (e.key === "Escape") editor.open = false; });
     if (!S.cfg.sql_editable) editor.querySelector("summary").textContent = "Inspect SQL";
+
   }
 
-  function renderVarToggle() {
+  // Only publication is reported by the API; inference progress is not telemetry.
+   function renderVarToggle() {
     const box = $("#varToggle");
     box.replaceChildren();
     for (const name of Object.keys(S.cfg.variables)) {
@@ -585,6 +587,7 @@
     $("#validEyebrow").textContent = (lead ? `Forecast · +${lead} min` : "Observed · Satellite") + suffix;
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
     renderCompositePreviews();
+
     renderComputeTile();
   }
 
