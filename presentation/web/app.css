@@ -589,3 +589,21 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .viz > .persistent-viewer-qr .mini-qr svg { display: block; width: 100%; height: 100%; }
 .viz > .persistent-viewer-qr .mini-qr img { display: none; }
 @media (max-height: 860px) { .viz > .persistent-viewer-qr { bottom: 143px; padding: 7px; font-size: 13px; } .viz > .persistent-viewer-qr .mini-qr { width: 94px; height: 94px; } }
+
+/* Final exhibition pass: keep diagram primary and compact, but readable. */
+[data-panel="nowcasting"] { gap: 9px; }
+[data-panel="nowcasting"] .model-process { max-height: 310px; }
+[data-panel="nowcasting"] .model-sequence { justify-content: center; gap: 7px; }
+[data-panel="nowcasting"] .model-sequence span { font-size: 16px; }
+[data-panel="nowcasting"] .model-key { font-size: 15px; }
+[data-panel="nowcasting"] .model-detail { font-size: 14px; }
+[data-panel="mtg"] { gap: 9px; }
+[data-panel="mtg"] .large-composite { height: clamp(170px, 25vh, 245px); }
+[data-panel="mtg"] .stats { flex-shrink: 0; }
+[data-panel="e2s"] .science-diagram { max-height: 310px; }
+@media (max-width: 1500px), (max-height: 850px) {
+  .panel p { font-size: 17px; }
+  [data-panel="mtg"] .large-composite { height: 175px; }
+  .viz > .persistent-viewer-qr { right: 12px; bottom: 133px; font-size: 13px; }
+  .viz > .persistent-viewer-qr .mini-qr { width: 84px; height: 84px; }
+}
