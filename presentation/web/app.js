@@ -4,7 +4,7 @@
  *   /api/config  -> static settings (config.json)
  *   /api/state   -> recent Icechunk commits grouped into runs (polled every 4 s)
  *   /api/sql     -> latest Zax-SQL result (polled every 10 s, 1 s while a query runs)
- *                   POST {query} runs what is in the panel 07 editor; chips and
+ *                   POST {query} runs what is in the panel 06 editor; chips and
  *                   ⌘/Ctrl+Enter send it (there is no Run button)
  *                   (the server also runs the Berlin query once for each new init)
  *                   Hosted page (`sql_editable: false`): the editor is read-only and Run
@@ -52,12 +52,11 @@
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
   const initDate = (init) => new Date(init + ":00Z"); // inits are stored in UTC
-  // Every time on screen is in one zone, config.json `timezone` (the booth's); the viewer's
-  // own zone is only a fallback for a missing or unknown value. Set in boot() once the
-  // config has loaded.
-  let TZ = "Europe/Berlin", HM, YMD;
+  // All screen timestamps use config.json `timezone`, with UTC as the fallback.
+  // Set in boot() once the config has loaded.
+  let TZ = "UTC", HM, YMD;
   function setTimezone(zone) {
-    for (const z of [zone, Intl.DateTimeFormat().resolvedOptions().timeZone, "Europe/Berlin"]) {
+    for (const z of [zone, "UTC"]) {
       try {
         if (!z) continue;
         new Intl.DateTimeFormat("en", { timeZone: z }); // throws on a zone it doesn't know
@@ -405,19 +404,67 @@
   // ------------------------------------------------------------------ viz chrome
   // display names for the variable keys in config.json
   const VAR_LABELS = { true_color: "True Color", airmass: "Air Mass" };
-
-  // panel 02's two cards highlight the variable on the globe
-  function renderVarCards() {
-    for (const c of document.querySelectorAll(".card[data-var]")) c.classList.toggle("on", c.dataset.var === S.variable);
+  const VAR_DEFINITIONS = {
+    true_color: "True Color: an RGB composite showing clouds and Earth’s surface in daylight. A rendered satellite view, not a direct cloud-cover measurement.",
+    airmass: "Air Mass: an infrared RGB composite highlighting atmospheric moisture and air-mass structure. Colors represent combined infrared signals, not measured temperature alone.",
+  };
+  function setVariableHelp(button, name) {
+    const definition = VAR_DEFINITIONS[name] || name.replaceAll("_", " ");
+    button.dataset.tooltip = definition;
+    button.title = definition; // Native fallback, including browsers without custom tooltip support.
+    button.setAttribute("aria-description", definition);
   }
 
-  function renderVarToggle() {
+  // Observation cards highlight the variable on the globe
+  function renderVarCards() {
+    for (const c of document.querySelectorAll(".card[data-var]")) {
+      c.classList.toggle("on", c.dataset.var === S.variable);
+      c.setAttribute("aria-pressed", String(c.dataset.var === S.variable));
+      c.removeAttribute("data-tooltip");
+      c.removeAttribute("title");
+      c.removeAttribute("aria-description"); // Panel 02 definitions are visible beside each variable.
+    }
+  }
+
+  // Real +0 composite tiles, never invented observed-history thumbnails.
+  function renderCompositePreviews() {
+    const run = shown?.run || selectedRun();
+    for (const img of document.querySelectorAll("[data-composite]")) {
+      if (!run) { img.hidden = true; continue; }
+      const tile = S.cfg.qr_tile;
+      const src = tileTemplate(run, img.dataset.composite, 0, tile.size)
+        .replace("{z}", tile.z).replace("{x}", tile.x).replace("{y}", tile.y);
+      if (img.dataset.source === src) continue;
+      img.dataset.source = src;
+      img.hidden = true;
+      img.onload = () => { img.hidden = false; };
+      img.onerror = () => { img.hidden = true; };
+      img.src = src;
+    }
+    $("#compositeCaption").textContent = run
+      ? `Observed +0 · ${hhmm(run.init)} ${tzName(initDate(run.init))} · Berlin Region`
+      : "Observed +0 Frame · Waiting for Data";
+  }
+
+  // Matched, snapshot-pinned thumbnails; never substitute a forecast for an observation.
+  const publicationForRun = (run) => run && S.commits.find((c) => c.id === run.ref && (c.message || "").includes(run.init));
+  const thumbnailUrl = (run, variable, lead) => {
+    const q = S.cfg.qr_tile;
+    return tileTemplate(run, variable, lead, 128).replace("{z}", q.z).replace("{x}", q.x).replace("{y}", q.y);
+  };
+
+  function initVisuals() {
+  }
+
+  // Only publication is reported by the API; inference progress is not telemetry.
+   function renderVarToggle() {
     const box = $("#varToggle");
     box.replaceChildren();
     for (const name of Object.keys(S.cfg.variables)) {
       const b = el("button", null, VAR_LABELS[name] ?? name);
       b.type = "button";
       b.setAttribute("aria-pressed", String(name === S.variable));
+      setVariableHelp(b, name);
       b.addEventListener("click", () => setVariable(name));
       box.append(b);
     }
@@ -428,23 +475,33 @@
     S.variable = name;
     renderVarToggle();
     renderVarCards();
+    renderCompositePreviews();
     syncLayers(true);
     showFrame();
   }
 
   function renderInits() {
     const box = $("#inits");
-    box.replaceChildren();
     const runs = selectableRuns();
     const on = shown?.run || selectedRun(); // a newer run loading in the background isn't on screen yet
-    runs.forEach((run, k) => {
+    let sel = box.querySelector("select");
+    if (!sel) {
+      sel = el("select");
+      sel.id = "initSelect";
+      sel.setAttribute("aria-label", "Forecast initialisation");
+      sel.addEventListener("change", () => selectInit(Number(sel.value)));
+      box.replaceChildren(sel);
+    }
+    const labels = runs.map((run, k) => {
       const loading = pending?.run.init === run.init ? ` · ${pending.loaded.size}/${S.cfg.leads.length}` : "";
-      const b = el("button", null, `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${loading}`);
-      b.type = "button";
-      b.setAttribute("aria-pressed", String(on && run.init === on.init));
-      b.addEventListener("click", () => selectInit(k));
-      box.append(b);
+      return `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${loading}`;
     });
+    if (labels.join("|") !== sel.dataset.labels) { // rebuild only when the list changes, so an open menu stays open
+      sel.dataset.labels = labels.join("|");
+      sel.replaceChildren(...labels.map((text, k) => { const o = el("option", null, text); o.value = String(k); return o; }));
+    }
+    const k = on ? runs.findIndex((r) => r.init === on.init) : -1;
+    if (k >= 0 && sel.value !== String(k)) sel.value = String(k);
     const leads = S.cfg.leads;
     $("#loopLabel span").textContent = on
       ? `+${leads[0]}→+${leads.at(-1)} · ${S.loop ? "loop" : "once"}`
@@ -493,13 +550,15 @@
   // top left: the valid time of the frame on screen, big; the init line below is renderInits'
   function renderValid(run, lead, suffix) {
     if (!run || lead == null) {
-      $("#validEyebrow").textContent = "FORECAST";
+      $("#validEyebrow").textContent = "Forecast";
       $("#validTitle").textContent = "waiting for the first frame…";
       return;
     }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
-    $("#validEyebrow").textContent = (lead ? `FORECAST · +${lead} MIN` : "OBSERVED · SATELLITE") + suffix.toUpperCase();
+    $("#validEyebrow").textContent = (lead ? `Forecast · +${lead} min` : "Observed · Satellite") + suffix;
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
+    renderCompositePreviews();
+
   }
 
   function showNotice(text) {
@@ -509,21 +568,15 @@
   }
 
   // ------------------------------------------------------------------ strip
-  // header pill: the valid time of the frame on screen, not the wall clock
+  // Header pill: wall clock, separate from the map’s forecast valid time.
   function renderClock() {
-    const lead = shown ? S.cfg.leads[S.frame] : null;
-    const valid = shown && lead != null ? new Date(initDate(shown.run.init).getTime() + lead * 60000) : null;
-    const tag = { demo: "DEMO", offline: "REPLAY" }[S.status] ?? "LIVE";
-    $("#clock").textContent = valid
-      ? `${tag} · ${HM.format(valid)} ${tzName(valid)} · ${lead ? `+${lead} min` : "satellite"}`
-      : `${tag} · --:--`;
+    const now = new Date();
+    const tag = { demo: "Demo", offline: "Replay", error: "Disconnected" }[S.status] ?? "Connected";
+    $("#clock").textContent = `${tag} · Now ${HM.format(now)} ${tzName(now)}`;
   }
 
   const mmss = (s) => `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}`;
 
-  // A run's phases as the strip draws them, each with its estimated length (config
-  // `run_phases_s`). The pipeline only commits once per init, so nothing reports
-  // progress while it runs: the strip times these phases from the last commit instead.
   function runPhases() {
     const p = S.cfg.run_phases_s;
     return [
@@ -610,59 +663,115 @@
   // ------------------------------------------------------------------ panels
   const panels = () => [...document.querySelectorAll(".panel")];
 
+  let panelTimer = null;
+  function schedulePanelRotation() {
+    clearTimeout(panelTimer);
+    if (S.rotatePaused) return;
+    const wait = Math.max(S.cfg.panel_seconds * 1000, S.manualUntil - Date.now());
+    panelTimer = setTimeout(() => showPanel(S.panel + 1), wait);
+  }
+
+  function togglePanelPause() {
+    S.rotatePaused = !S.rotatePaused;
+    if (!S.rotatePaused) S.manualUntil = 0;
+    showPanel(S.panel);
+  }
+
   function initPanels() {
     $("#stepSeconds").textContent = S.cfg.run_phases_s.step; // same estimate the strip uses
     const prog = $("#progress");
-    prog.replaceChildren(...panels().map(() => el("span")));
-    showPanel(0);
-    // buttons behave like the arrow keys: manual for 60 s, then the rotation resumes
+    prog.replaceChildren(...panels().map((panel, index) => {
+      const button = el("button");
+      button.type = "button";
+      button.setAttribute("aria-label", `Go to ${panel.querySelector(".kicker").textContent}`);
+      button.title = panel.querySelector(".kicker").textContent;
+      button.addEventListener("click", () => {
+        S.manualUntil = Date.now() + 60000;
+        showPanel(index);
+      });
+      return button;
+    }));
+    $("#panelPause").addEventListener("click", togglePanelPause);
     const step = (d) => { S.manualUntil = Date.now() + 60000; showPanel(S.panel + d); };
     $("#panelPrev").addEventListener("click", () => step(-1));
     $("#panelNext").addEventListener("click", () => step(1));
-    setInterval(() => {
-      if (S.rotatePaused || Date.now() < S.manualUntil) return;
-      showPanel(S.panel + 1);
-    }, S.cfg.panel_seconds * 1000);
+    showPanel(0);
   }
 
   function showPanel(i) {
     const ps = panels();
     S.panel = (i + ps.length) % ps.length;
-    ps.forEach((p, k) => p.classList.toggle("active", k === S.panel));
+    ps.forEach((p, k) => {
+      const active = k === S.panel;
+      p.classList.toggle("active", active);
+      p.inert = !active;
+      p.setAttribute("aria-hidden", String(!active));
+    });
     $("#panels").classList.toggle("em-theme", ps[S.panel].classList.contains("em"));
     $("#panelCount").textContent = `${S.panel + 1} / ${ps.length}`;
+    $("#panelPause").textContent = S.rotatePaused ? "Resume" : "Pause";
+    $("#panelPause").setAttribute("aria-pressed", String(S.rotatePaused));
+    $("#panelPause").title = S.rotatePaused ? "Resume panel rotation" : "Pause panel rotation";
+    $("#panelPause").setAttribute("aria-label", S.rotatePaused ? "Resume panel rotation" : "Pause panel rotation");
     [...$("#progress").children].forEach((s, k) => {
       s.className = k === S.panel ? "on" : "";
+      if (k === S.panel) s.setAttribute("aria-current", "step");
+      else s.removeAttribute("aria-current");
       s.replaceChildren();
       if (k === S.panel) {
         const bar = el("i");
         s.append(bar);
-        const dur = S.rotatePaused ? 0 : S.cfg.panel_seconds;
+        const dur = S.rotatePaused ? 0 : Math.max(S.cfg.panel_seconds, (S.manualUntil - Date.now()) / 1000);
         requestAnimationFrame(() => {
           bar.style.transition = dur ? `width ${dur}s linear` : "none";
           bar.style.width = "100%";
         });
       }
     });
+    schedulePanelRotation();
+
   }
 
+  let lastPublicationId = null;
   function renderCommits() {
     const box = $("#commitList");
     box.replaceChildren();
-    S.commits.slice(0, 4).forEach((c, k) => {
+    $("#historyFeedState").textContent = { demo: "Demo", offline: "Replay", error: "Disconnected · last known" }[S.status] || "Live";
+    const forecasts = S.commits.filter(c => /stormscope-eu\s+\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(c.message || "") && c.id && c.written_at);
+    const head = forecasts[0]?.id;
+    const isNew = !!(lastPublicationId && head && head !== lastPublicationId);
+    lastPublicationId = head || lastPublicationId;
+    // Each node corresponds to a real published forecast snapshot. Gaps are not durations.
+    const history = $("#publicationTimeline");
+    history.replaceChildren();
+    forecasts.slice(0, 2).reverse().forEach((c, i, a) => {
+      const node = el("span", "publication-event" + (i === a.length - 1 ? " newest" : ""));
+      node.title = `Published ${ymdhm(new Date(c.written_at))} ${tzName(new Date(c.written_at))} · snapshot ${c.id}`;
+      node.setAttribute("aria-label", node.title);
+      history.append(node);
+    });
+    if (!forecasts.length) history.textContent = "No verified forecast publications";
+    const columns = el("div", "commit-heading");
+    columns.append(el("span", null, `Init · ${tzName(new Date())}`), el("span", null, `Published · ${tzName(new Date())}`), el("span", null, "Snapshot"), el("span", null, "Status"), el("span", null, "Age"));
+    box.append(columns);
+    if (!forecasts.length) box.append(el("div", "commit", "No forecast publications available"));
+    forecasts.slice(0, 2).forEach((c, k) => {
       const row = el("div", "commit" + (k === 0 ? " fresh" : ""));
+      if (k === 0 && isNew) row.classList.add("new-publication");
+      row.title = c.id;
       row.append(
+        el("span", "init", (() => { const init = (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1]; return init ? ymdhm(initDate(init)) : "—"; })()),
+        el("span", "published-at", ymdhm(new Date(c.written_at))),
         el("span", "id", c.id.slice(0, 8)),
-        el("span", "msg", (c.message || "").replace(/(\d{4}-\d{2}-\d{2})T/, "")),
-        el("span", "ago", ago(c.written_at))
+        el("span", "publication-status", "Published"),
+        el("span", "ago", `${ago(c.written_at)} ago`)
       );
       box.append(row);
     });
   }
 
   // ------------------------------------------------------------------ QR codes
-  // Level H leaves room for the logo; the viewer QR borrows the tile QR's version so both
-  // codes have the same grid.
+  // Level H leaves room for the logo. Each URL uses its smallest QR grid.
   const qrCache = {};
   function setQR(id, text, type = 0) {
     const box = document.getElementById(id);
@@ -672,7 +781,7 @@
     const qr = qrcode(type, "H");
     qr.addData(text);
     qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) +
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 16, scalable: true }) +
       '<img src="img/earthmover-mark.svg" alt="">';
     qrCache[id] = { key, type: (qr.getModuleCount() - 17) / 4 };
     return qrCache[id].type;
@@ -681,19 +790,21 @@
   function renderQRs() {
     const c = S.cfg;
     const latest = latestShown();
-    let type = 0;
     if (latest) {
       const q = c.qr_tile;
       const url = tileTemplate(latest, "true_color", c.leads[1], q.size) // leads[0] is the observed frame
         .replace("{z}", q.z).replace("{y}", q.y).replace("{x}", q.x);
-      type = setQR("qrTiles", url);
+      setQR("qrTiles", url);
     }
-    setQR("qrViewer", c.viewer_url, type);
+    setQR("qrViewer", c.viewer_url);
   }
 
   // ------------------------------------------------------------------ SQL
   const sqlBox = () => $("#sqlQuery");
-  const holdPanel = () => { S.manualUntil = Math.max(S.manualUntil, Date.now() + 120000); };
+  const holdPanel = () => {
+    S.manualUntil = Math.max(S.manualUntil, Date.now() + 120000);
+    showPanel(S.panel);
+  };
 
   // server-filled query per city chip, {init} left in; the first one is the default
   const sqlFor = (name) => S.cfg.sql_places[name];
@@ -894,6 +1005,7 @@
     const status = $("#sqlStatus");
     const bars = $("#sqlBars");
     const box = sqlBox();
+    const metric = /AVG\(\s*(true_color|airmass)\s*\)/i.exec(r?.query || box.value);
     const running = r && r.status === "running";
     status.classList.remove("err");
     status.title = "";
@@ -983,6 +1095,8 @@
     syncLayers();
     showFrame();
     renderCommits();
+    renderCompositePreviews();
+
     renderQRs();
     renderStrip();
   }
@@ -1040,7 +1154,7 @@
       const k = e.key.toLowerCase();
       if (k === "arrowright" || k === "pagedown") { S.manualUntil = Date.now() + 60000; showPanel(S.panel + 1); }
       else if (k === "arrowleft" || k === "pageup") { S.manualUntil = Date.now() + 60000; showPanel(S.panel - 1); }
-      else if (k === " ") { S.rotatePaused = !S.rotatePaused; showPanel(S.panel); e.preventDefault(); }
+      else if (k === " ") { togglePanelPause(); e.preventDefault(); }
       else if (k === "p") togglePlay();
       else if (k === "o") toggleLoop();
       else if (k === "s") { const names = Object.keys(SPEEDS); setSpeed(names[(names.indexOf(S.speed) + 1) % names.length]); }
@@ -1088,6 +1202,10 @@
     document.addEventListener("click", (e) => e.target.closest?.("button")?.blur());
     initGlobe();
     initPanels();
+    initVisuals();
+    for (const card of document.querySelectorAll(".card[data-var]")) {
+      card.addEventListener("click", () => setVariable(card.dataset.var));
+    }
     initStrip();
     initKeys();
     initAttractReset();

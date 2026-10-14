@@ -76,7 +76,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
    `config.json` (`sql.host`) or `.env` (`ARRAYLAKE_SQL_HOST=...`, wins). The service
    scales to zero: the first query after a sleep takes ~50 s, later ones ~20 s (each
    lead reads a full 1120 × 2432 frame; 8–16 s measured warm on 2026-10-07). Fire one query before visitors arrive.
-   Panel 07 is a live editor: click a city chip (`sql.places`) or type any single
+   Panel 05 is a live editor: click a city chip (`sql.places`) or type any single
    `SELECT`/`WITH` statement and press ⌘/Ctrl+Enter; Esc leaves the box.
    A city chip fills the editor and runs at once; Reset only fills it. The server runs the
    query (with the token; the browser never sees it), and once by itself for each new init: it
@@ -88,8 +88,8 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
 5. **Run length**: the strip and scrubber show the observed +0 frame plus 12 steps,
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
-6. `viewer_url` in `config.json` drives the second QR code on the "access" panel (slide 7).
-7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
+6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 7).
+7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `UTC`),
    whatever the booth machine or a hosted viewer's browser is set to.
 8. **Offline backup**: with tiles and SQL up, save a fallback in case the venue has no
    internet:
@@ -150,4 +150,76 @@ mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"fr
 
 Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
 
-Redeployed 2026-10-13.
+
+## Seven-panel scientific narrative
+
+The seven panels introduce the scientific definition of nowcasting, then explain
+FCI observations, generative autoregressive prediction,
+recurring Earth2Studio cycles, overlapped uploads and atomic Icechunk publication,
+Compute tiles and SQL, and the complete workflow. Observation cards show real +0
+composite tiles over the configured Berlin tile and switch the globe layer when
+clicked; unavailable previews retain an explicit fallback.
+
+All booth timestamps default to UTC. The persistent map status shows the displayed
+run's observation/initialization time, matching snapshot publication time, observation
+age, and forecast horizon **from initialization**. The API reports publications, not
+GPU progress: the bottom strip's countdown and phase activity are labeled estimates.
+A publication more than two configured run intervals old is marked overdue; this does
+not diagnose the pipeline. Demo and offline replay clearly identify simulated timing.
+SQL reports mean composite intensity, not cloud fraction.
+
+The model feedback, recurring-cycle, upload, delivery, and architecture diagrams are
+schematics, not live measurements. Viewer and raw-tile QR codes use independent grid
+sizes and a four-module quiet zone to improve scanning of the shorter viewer URL.
+
+The opening panel introduces observation-based nowcasting and the end-to-end demo.
+The approved seven-panel wording is implemented with minor typo corrections and an
+initial-condition sentence completed from its unfinished draft. Headings retain readable
+Title Case and 24 px bold numbered titles; scientific acronyms keep established casing.
+The panel column retains its original 560 px width at the 1080p booth size.
+Visual spacing is compacted to fit the approved copy and diagrams.
+
+
+Panel navigation includes Pause/Resume and seven directly selectable chapter markers.
+Manual navigation holds a chapter for 60 s; focusing or using the SQL editor extends
+that hold to 120 s. The visible progress marker follows the same timing as rotation.
+Hidden panels are inert so their buttons, links, and editor stay out of keyboard navigation.
+The header labels the current wall clock; forecast valid time stays on the globe.
+Body copy uses 16 px text at the 1080p booth size, with 15–18 px diagram labels.
+
+
+The persistent forecast-cycle status includes separate UTC observation, initialization,
+valid, and publication times; displayed forecast lead; and snapshot ID. The observation
+is the newest input frame of the displayed published run, which defines its initialization.
+Incoming uncommitted satellite scans are not reported by the dashboard API. The valid
+and lead fields follow playback and scrubbing, while the snapshot follows run selection.
+Publication history explicitly labels each committed snapshot Published.
+
+
+## Shared-reference visual refresh
+
+Font Awesome Free 6.7.2 symbols are served as `web/img/fontawesome.svg`; no icon CDN
+or icon font is needed. `npm run icons` regenerates the selected SVG symbols and
+copies the package license. `npm run vendor` also performs this step for hosted builds.
+Rounded diagrams consistently distinguish observations (slate), model predictions
+(green), Arraylake I/O (blue), and atomic publication (amber), with text labels.
+
+The model panel loads actual snapshot-pinned +0 thumbnails from published runs whose
+initialization matches each required observed timestamp, and forecast thumbnails from
+the displayed run's published lead array. Missing observations are never substituted
+with predictions; availability counts remain visible. Thumbnails load when their panel
+is active. The shifting context is an illustration, paused with panel rotation and
+suppressed when reduced motion is requested, rather than GPU progress telemetry.
+
+The Earth2Studio panel shows three separate published runs with observation-window,
+initialization, horizon, and publication times. It does not infer exact scheduling
+cadence from satellite scan frequency. Publication history adds absolute publication
+UTC alongside status, snapshot, and age, and highlights genuinely new commit IDs.
+
+Compute shows a snapshot-pinned map tile beside live SQL results. The editable query
+remains available through Inspect / Edit SQL; hosted read-only queries use Inspect SQL.
+The result header identifies the queried composite. The final panel uses a thin
+architecture ribbon and prioritizes the viewer QR over developer tiles.
+
+Redeployed 2026-10-14.
+

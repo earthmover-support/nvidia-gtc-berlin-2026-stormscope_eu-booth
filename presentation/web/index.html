@@ -22,16 +22,17 @@
       <span class="x">×</span>
       <img src="img/earthmover.svg" alt="Earthmover" class="em-logo">
     </div>
-    <div class="headline">StormScope-EU · a live AI nowcast of Europe, from orbit to your phone</div>
+    <div class="headline">AI weather nowcasting · from satellite observations to interactive forecasts</div>
     <div class="links">
       <a href="https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth" title="Code on GitHub" target="_blank" rel="noopener">
-        <svg viewBox="0 0 16 16" fill="currentColor" aria-label="GitHub"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-label="GitHub">
+          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
       </a>
       <a href="https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region" title="Dataset on Arraylake" target="_blank" rel="noopener">
         <img src="img/arraylake.svg" alt="Arraylake">
       </a>
     </div>
-    <div class="live" id="live"><span class="dot"></span><span id="clock">LIVE · --:--</span></div>
+    <div class="live" id="live"><span class="dot"></span><span id="clock">Live · --:--</span></div>
   </header>
 
   <main class="main">
@@ -42,19 +43,24 @@
 
       <div class="viz-top">
         <div class="init-block">
-          <div class="eyebrow" id="validEyebrow">FORECAST</div>
+          <div class="eyebrow" id="validEyebrow">Forecast</div>
           <div class="init-title" id="validTitle">--:--</div>
           <div class="valid">Forecast initialised <span id="initTitle">--:--</span> · Meteosat-12 FCI</div>
         </div>
         <div class="seg" id="varToggle" role="group" aria-label="Variable"></div>
       </div>
 
+
       <div class="viz-bottom">
         <div class="init-row">
-          <span class="eyebrow">INIT</span>
+          <span class="eyebrow">Init</span>
           <div class="inits" id="inits"></div>
           <button type="button" class="loop" id="loopLabel" aria-pressed="true" title="Loop / play once">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 2l4 4-4 4"/>
+          <path d="M3 11v-1a4 4 0 0 1 4-4h14"/>
+          <path d="M7 22l-4-4 4-4"/>
+          <path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
             <span></span>
           </button>
           <div class="playback">
@@ -68,50 +74,51 @@
         </div>
       </div>
 
+      
       <div class="notice" id="notice" hidden></div>
     </section>
 
     <!-- ============ rotating panels ============ -->
     <section class="panels" id="panels">
 
-      <article class="panel nv" data-panel="nowcasting">
-        <div class="kicker">01 · NOWCASTING</div>
-        <h2>The weather of the next two hours</h2>
-        <p>Classic weather models take hours to run and struggle to say where a storm cell will pop up this afternoon. Nowcasting starts from what satellites see right now and projects it forward, fast enough to act on.</p>
-        <div class="box">
-          <div class="label">HOW FAR AHEAD</div>
-          <div class="range">
-            <div class="r now"><b>0–2 h</b><span>nowcasting</span></div>
-            <div class="r mid"><b>hours–10 days</b><span>weather forecast</span></div>
-            <div class="r far"><b>weeks +</b><span>climate</span></div>
-          </div>
+      <article class="panel nv" data-panel="definition">
+        <div class="kicker"><span>01 · AI Weather Nowcasting</span></div>
+        <h2>From Satellite Observations to AI Forecasts</h2>
+        <p>Nowcasting uses recent observations to predict weather over the next minutes to hours.</p>
+        
+        <p>StormScope-EU uses six Meteosat-12 observations to predict twelve future satellite frames at 10-minute intervals, covering the next two hours.</p>
+        
+        <div class="observation-timeline" role="img" aria-label="Six recent observations lead to initialization at +0, followed by twelve predicted frames through +120 minutes. The timeline is relative to initialization, not the current clock.">
+          <div class="timeline-head"><span> Observed</span><span> AI Forecast</span></div>
+          <div class="timeline-track"><div class="observed-track"></div><div class="predicted-track"></div></div>
+          <div class="timeline-times"><span>−50 min</span><b>Init +0</b><span>+120 min</span></div>
         </div>
-        <div class="label">WHO NEEDS IT</div>
-        <div class="chips">
-          <span>Severe-storm warnings</span><span>Solar power ramps</span><span>Aviation</span><span>Outdoor events</span>
+        <div class="architecture-ribbon" role="img" aria-label="Meteosat observations pass through NVIDIA AI and Earthmover to the viewer">
+          <span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg>Meteosat</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg>NVIDIA AI</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#database"/></svg>Earthmover</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#viewer"/></svg>Viewer</span>
         </div>
-        <div class="label">WHAT'S NEW</div>
-        <p class="small">A generative AI model that paints the next satellite image, every 10 minutes, on a single GPU.</p>
       </article>
 
       <article class="panel nv" data-panel="mtg">
-        <div class="kicker">02 · THE EYE IN ORBIT</div>
-        <h2>Meteosat-12 sees Europe every 10 minutes</h2>
-        <p>The first imager of EUMETSAT's Meteosat Third Generation. It sits 36,000 km above the Gulf of Guinea at 0° longitude and has been Europe's prime geostationary weather satellite since 2025.</p>
-        <div class="stats">
-          <div><b>16</b><span>spectral channels (FCI)</span></div>
-          <div><b>10 min</b><span>full-disk repeat cycle</span></div>
-          <div><b>1–2 km</b><span>pixels, visible and infrared</span></div>
-          <div><b>Dec 2022</b><span>launched on Ariane 5</span></div>
+        <div class="kicker"><span>02 · Earth Observations</span></div>
+        <h2>Observing the Atmosphere from Space</h2>
+        <p>Meteosat-12 observes Europe from geostationary orbit, approximately 36,000 km above Earth.</p>
+        <p>Its Flexible Combined Imager measures 16 spectral channels.</p>
+        <p>This demo shows two satellite composites, each formed by combining multiple spectral channels.</p>
+        <div class="label">Two Satellite Composites</div>
+        <div class="two variable-comparison" aria-label="Satellite composite options">
+          <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span class="variable-definition"><span class="variable-composition">Visible + near-infrared channels</span><span class="variable-explanation">Natural-looking daytime view of clouds and Earth’s surface.</span></span></button>
+          <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>Air Mass</b><span class="variable-definition"><span class="variable-composition">Infrared + water-vapor channels</span><span class="variable-explanation">Highlights atmospheric moisture and air-mass structure, including at night.</span></span></button>
         </div>
-        <div class="label">ON THE GLOBE</div>
-        <div class="two">
-          <div class="card" data-var="true_color"><b>True Color</b><span>What your eye would see: red, green and blue light combined</span></div>
-          <div class="card" data-var="airmass"><b>Air Mass</b><span>Infrared water-vapour and ozone channels: red dry sinking air, green warm tropical air, blue cold polar air, white thick high cloud</span></div>
+        
+        <div class="label" id="compositeCaption" hidden>Observed +0 Frame</div>
+        <div class="stats">
+          <div><b>16</b><span>spectral channels</span></div>
+          <div><b>10 min</b><span>scan cadence</span></div>
+          <div><b>1–2 km</b><span>pixels, visible and infrared</span></div>
         </div>
       </article>
 
-      <article class="panel nv" data-panel="model">
+      <article class="panel nv" data-panel="nowcasting">
         <div class="kicker">03 · THE AI MODEL</div>
         <h2>StormScope-EU predicts the next two hours of clouds</h2>
         <p>A generative diffusion model from NVIDIA. It forecasts all 16 satellite channels directly in image space, learning how clouds move and grow instead of solving the physics.</p>
@@ -131,7 +138,7 @@
       </article>
 
       <article class="panel nv" data-panel="e2s">
-        <div class="kicker">04 · THE PIPELINE</div>
+        <div class="kicker"><span>04 · THE PIPELINE</span></div>
         <h2>Earth2Studio wires data, model and storage together</h2>
         <p>NVIDIA's open-source Python package for AI weather and climate. You can swap data sources, models and outputs without rewriting the pipeline.</p>
         <ol class="steps">
@@ -142,26 +149,56 @@
         </ol>
       </article>
 
-      <article class="panel nv" data-panel="dataflow">
-        <div class="kicker">05 · DATA FLOW</div>
-        <h2>From satellite to screen in ~70 minutes (~20 with licence)</h2>
-        <ol class="hops">
-          <li class="eu"><div><b>Meteosat-12</b><span>Scans Europe from orbit</span></div><em>10 min</em></li>
-          <li class="eu"><div><b>EUMETSAT Data Store</b><span>Processes and publishes the scan</span></div><em>+5 min</em></li>
-          <li class="eu wait"><div><b>Data embargo</b><span>Free data is released 1 hour after the scan</span></div><em>+48 min</em></li>
-          <li><div><b>Download</b><span>Earth2Studio fetches the latest frames</span></div><em>~2 min</em></li>
-          <li class="split"><div><b>Inference on NVIDIA H200 GPU saving to Arraylake</b><span>Predicts 2 hours ahead</span></div><em>&lt;4 min</em></li>
-          <li class="em"><div><b>Earthmover Compute</b><span>Renders map tiles straight from the data</span></div><em>~2 s</em></li>
-          <li class="em"><div><b>Your browser</b><span>Loads all 13 frames and plays the loop</span></div><em>~25 s</em></li>
-        </ol>
-        <div class="legend"><span class="eu">EUMETSAT</span><span class="nv">NVIDIA</span><span class="em">Earthmover</span></div>
+      <article class="panel em" data-panel="arraylake">
+        <div class="kicker"><span>05 · Earthmover Arraylake + Icechunk</span></div>
+        <h2>Compute and Upload Together. Publish Once.</h2>
+        <p>Forecast data is uploaded to Earthmover Arraylake while StormScope-EU generates subsequent predictions on GPUs.</p>
+        <p>Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
+        <div class="diagram-note">Overlapped Uploads · Atomic Publication · Versioned History</div>
+        <svg class="science-diagram" viewBox="0 0 544 194" role="img" aria-labelledby="overlapped-publication-title overlapped-publication-desc">
+          <title id="overlapped-publication-title">Overlapped Publication</title><desc id="overlapped-publication-desc">Successive GPU prediction steps overlap delayed uploads. A completion barrier waits for every upload, then one atomic Icechunk commit exposes the complete forecast snapshot to readers. Widths illustrate overlap and are not measured durations.</desc>
+          <defs><marker id="overlapped-publication-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+          <text class="diagram-label" x="272" y="18" text-anchor="middle">Execution Time · Schematic</text>
+          <path class="diagram-edge " d="M94 27H476" marker-end="url(#overlapped-publication-arrow)"/>
+          
+          <text class="diagram-strong" x="34" y="58" text-anchor="start">GPU</text>
+          
+          <text class="diagram-strong" x="34" y="106" text-anchor="start">I/O</text>
+          <rect class="diagram-gpu" x="94" y="36" width="70" height="30" rx="5"/>
+          <text class="diagram-dark" x="129" y="58" text-anchor="middle">+10</text>
+          <rect class="diagram-upload" x="166" y="84" width="70" height="30" rx="5"/>
+          <text class="diagram-dark" x="201" y="106" text-anchor="middle">+10</text>
+          <rect class="diagram-gpu" x="172" y="36" width="70" height="30" rx="5"/>
+          <text class="diagram-dark" x="207" y="58" text-anchor="middle">+20</text>
+          <rect class="diagram-upload" x="244" y="84" width="70" height="30" rx="5"/>
+          <text class="diagram-dark" x="279" y="106" text-anchor="middle">+20</text>
+          <rect class="diagram-gpu" x="250" y="36" width="70" height="30" rx="5"/>
+          <text class="diagram-dark" x="285" y="58" text-anchor="middle">…</text>
+          <rect class="diagram-upload" x="322" y="84" width="70" height="30" rx="5"/>
+          <text class="diagram-dark" x="357" y="106" text-anchor="middle">…</text>
+          <rect class="diagram-gpu" x="328" y="36" width="70" height="30" rx="5"/>
+          <text class="diagram-dark" x="363" y="58" text-anchor="middle">+120</text>
+          <rect class="diagram-upload" x="400" y="84" width="70" height="30" rx="5"/>
+          <text class="diagram-dark" x="435" y="106" text-anchor="middle">+120</text>
+          <path class="completion-barrier" d="M476 30V126"/>
+          <text class="diagram-label" x="502" y="57" text-anchor="middle">All</text>
+          <text class="diagram-label" x="502" y="76" text-anchor="middle">writes</text>
+          <text class="diagram-label" x="502" y="95" text-anchor="middle">finish</text>
+          <path class="diagram-edge " d="M476 126V140H272V150" marker-end="url(#overlapped-publication-arrow)"/>
+          <rect class="diagram-publication" x="94" y="152" width="386" height="34" rx="7"/>
+          <text class="diagram-strong" x="287" y="175" text-anchor="middle">One Atomic Icechunk Commit</text>
+        </svg>
       </article>
 
-      <article class="panel em" data-panel="arraylake">
+      <article class="panel em" data-panel="compute">
         <div class="kicker">06 · THE DATA LAKE</div>
         <h2>Every forecast run is a commit</h2>
-        <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Readers never see a half-written forecast.</p>
+        <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
+        <details class="history-reveal" open><summary>Recent published forecasts</summary><div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
+        <div class="publication-timeline" id="publicationTimeline" aria-label="Recent forecast snapshots in publication order; spacing does not represent elapsed time"></div>
         <div class="commits" id="commitList"></div>
+        </details>
         <div class="two">
           <div class="card"><b>Transactional</b><span>Icechunk: open-source, cloud-native Zarr storage</span></div>
           <div class="card"><b>Time travel</b><span>Open any past forecast by its snapshot ID</span></div>
@@ -189,13 +226,16 @@
       </article>
 
       <footer class="panel-foot">
-        <div class="progress" id="progress"></div>
+        <nav class="progress" id="progress" aria-label="Story chapters"></nav>
         <div class="foot-row">
-          <div class="keys">←→ · space · P play · O once · S speed · T/A · 1–9 · C strip</div>
+          <div class="keys" title="←/→ panels · Space pause panels · P playback · O loop · S speed · T/A layer · 1–9 initialization · C strip">←/→ Browse · Space Pause</div>
           <div class="panel-nav">
-            <button type="button" id="panelPrev" aria-label="Previous panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button type="button" id="panelPause" aria-label="Pause panel rotation" aria-pressed="false">Pause</button>
+            <button type="button" id="panelPrev" aria-label="Previous panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 6l-6 6 6 6"/></svg></button>
             <span class="panel-count" id="panelCount">1 / 7</span>
-            <button type="button" id="panelNext" aria-label="Next panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+            <button type="button" id="panelNext" aria-label="Next panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 6l6 6-6 6"/></svg></button>
           </div>
         </div>
       </footer>
@@ -205,7 +245,8 @@
   <!-- ============ ingest strip ============ -->
   <footer class="strip">
     <button type="button" class="strip-toggle" id="stripToggle" aria-expanded="true" title="Collapse / expand (C)">
-      <svg width="16" height="16" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M1 3h10L6 9z"/></svg>
+      <svg width="16" height="16" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+          <path d="M1 3h10L6 9z"/></svg>
     </button>
     <div class="next"><div class="eyebrow" id="countdownLabel">NEXT RUN IN</div><div class="big mono" id="countdown">--:--</div></div>
     <div class="ingest">
