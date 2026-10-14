@@ -404,12 +404,23 @@
   // ------------------------------------------------------------------ viz chrome
   // display names for the variable keys in config.json
   const VAR_LABELS = { true_color: "True Color", airmass: "Air Mass" };
+  const VAR_DEFINITIONS = {
+    true_color: "True Color: an RGB composite showing clouds and Earth’s surface in daylight. A rendered satellite view, not a direct cloud-cover measurement.",
+    airmass: "Air Mass: an infrared RGB composite highlighting atmospheric moisture and air-mass structure. Colors represent combined infrared signals, not measured temperature alone.",
+  };
+  function setVariableHelp(button, name) {
+    const definition = VAR_DEFINITIONS[name] || name.replaceAll("_", " ");
+    button.dataset.tooltip = definition;
+    button.title = definition; // Native fallback, including browsers without custom tooltip support.
+    button.setAttribute("aria-description", definition);
+  }
 
   // Observation cards highlight the variable on the globe
   function renderVarCards() {
     for (const c of document.querySelectorAll(".card[data-var]")) {
       c.classList.toggle("on", c.dataset.var === S.variable);
       c.setAttribute("aria-pressed", String(c.dataset.var === S.variable));
+      setVariableHelp(c, c.dataset.var);
     }
   }
 
@@ -581,6 +592,7 @@
       const b = el("button", null, VAR_LABELS[name] ?? name);
       b.type = "button";
       b.setAttribute("aria-pressed", String(name === S.variable));
+      setVariableHelp(b, name);
       b.addEventListener("click", () => setVariable(name));
       box.append(b);
     }
@@ -679,107 +691,42 @@
   // Header pill: wall clock, separate from the map’s forecast valid time.
   function renderClock() {
     const now = new Date();
-    const tag = { demo: "Demo", offline: "Replay", error: "Disconnected" }[S.status] ?? "Live Feed";
+    const tag = { demo: "Demo", offline: "Replay", error: "Disconnected" }[S.status] ?? "Connected";
     $("#clock").textContent = `${tag} · Now ${HM.format(now)} ${tzName(now)}`;
   }
 
   const mmss = (s) => `${pad(Math.floor(s / 60))}:${pad(Math.floor(s % 60))}`;
 
-  // A run's phases as the strip draws them, each with its estimated length (config
-  // `run_phases_s`). The pipeline only commits once per init, so nothing reports
-  // progress while it runs: the strip times these phases from the last commit instead.
-  function runPhases() {
-    const p = S.cfg.run_phases_s;
-    return [
-      // +0 is the newest observed frame, part of the initial conditions, not an inference step
-      { label: "+0 · download satellite", busy: "downloading initial conditions (satellite −50…+0 min)", s: p.ic },
-      ...S.cfg.leads.slice(1).map((lead) => ({ label: `+${lead}`, busy: `inference +${lead} min`, s: p.step })),
-      { label: "commit", busy: "committing to Arraylake", s: p.commit, cls: "commit" },
-    ];
-  }
-
+  // Report committed forecasts only. The API does not expose live GPU or upload phases.
   function renderStrip() {
-    const c = S.cfg;
-    const now = new Date();
     renderClock();
     renderCycleStatus();
     $("#live").classList.toggle("stale", S.status === "error");
-
-    const head = S.commits[0];
-    $("#lastCommit").textContent = head ? `${head.id.slice(0, 8)} · ${ago(head.written_at)} ago` : "—";
-
-    const phases = runPhases();
-    const cells = $("#cells");
-    if (cells.children.length !== phases.length) {
-      cells.replaceChildren();
-      for (const ph of phases) {
-        const d = el("div", ph.cls || null);
-        d.style.flexGrow = ph.s; // width proportional to the phase's estimated length
-        d.append(el("i"), el("span", null, ph.label));
-        cells.append(d);
-      }
-    }
-
+    const publication = S.commits.find(c =>
+      c.id && c.written_at && /stormscope-eu\\s+\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}/.test(c.message || "")
+    );
     const latest = S.runs[0];
+    $("#countdownLabel").textContent = "Forecast Status";
+    $("#cells").replaceChildren();
+    $("#lastCommit").textContent = publication
+      ? `${publication.id.slice(0, 8)} · ${ago(publication.written_at)} ago` : "—";
     if (S.status === "error") {
-      $("#countdownLabel").textContent = "Cycle Unavailable";
-      $("#countdown").textContent = "--:--";
-      $("#ingestLabel").textContent = "Disconnected · last known publication retained";
-      for (const d of cells.children) {
-        d.classList.remove("past", "active", "done", "flash");
-        d.firstChild.style.width = "";
-      }
-      return;
-    }
-    if (!latest || !head) {
-      $("#countdownLabel").textContent = "Next Run · Estimate";
-      $("#countdown").textContent = "--:--";
-      $("#ingestLabel").textContent = "Waiting for Arraylake…";
-      return;
-    }
-    // One commit per init: a new init lands with every lead at once, so flash them together.
-    if (S.doneInit !== latest.init) {
-      S.doneInit = latest.init;
-      for (const d of cells.children) { d.classList.remove("flash"); void d.offsetWidth; d.classList.add("flash"); }
-    }
-
-    // Steady state: one commit per `run_interval_min`, so the next run is taken to end one
-    // interval after the last commit and to start one run-length before that.
-    const total = phases.reduce((sum, ph) => sum + ph.s, 0);
-    const start = new Date(head.written_at).getTime() + c.run_interval_min * 60000 - total * 1000;
-    const elapsed = (now.getTime() - start) / 1000;
-
-    if (elapsed < 0) {
-      // Between runs: the last committed run stays complete until the next one starts.
-      $("#countdownLabel").textContent = "Next Run · Estimate";
-      $("#countdown").textContent = mmss(-elapsed);
-      for (const d of cells.children) {
-        d.classList.remove("past", "active");
-        d.classList.add("done");
-        d.firstChild.style.width = "";
-      }
+      $("#countdown").textContent = "Offline";
+      $("#ingestLabel").textContent = "Disconnected · showing last known published forecast";
+    } else if (S.status === "demo") {
+      $("#countdown").textContent = "DEMO";
+      $("#ingestLabel").textContent = "Simulated forecast publication data";
+    } else if (S.status === "offline") {
+      $("#countdown").textContent = "REPLAY";
+      $("#ingestLabel").textContent = "Recorded forecast imagery";
+    } else if (publication && latest) {
+      $("#countdown").textContent = "Published";
       $("#ingestLabel").textContent =
-        `Run ${hhmm(latest.init)} · complete in Arraylake`;
-      return;
+        `Latest published forecast · Init ${ymdhm(initDate(latest.init))} UTC · Published ${ymdhm(new Date(publication.written_at))} UTC`;
+    } else {
+      $("#countdown").textContent = "Waiting";
+      $("#ingestLabel").textContent = "Waiting for first published forecast";
     }
-
-    // A run in progress, estimated. Past the estimate it holds on a pulsing commit cell
-    // until the real commit lands.
-    let end = 0;
-    const ends = phases.map((ph) => (end += ph.s));
-    const active = elapsed < total ? ends.findIndex((e) => elapsed < e) : phases.length - 1;
-    phases.forEach((ph, k) => {
-      const d = cells.children[k];
-      d.classList.remove("done", "flash");
-      d.classList.toggle("past", k < active);
-      d.classList.toggle("active", k === active);
-      const frac = Math.min(1, Math.max(0, (elapsed - ends[k] + ph.s) / ph.s));
-      d.firstChild.style.width = `${frac * 100}%`;
-    });
-    const next = new Date(start);
-    $("#countdownLabel").textContent = "Commit · Estimate";
-    $("#countdown").textContent = mmss(Math.max(0, total - elapsed));
-    $("#ingestLabel").textContent = `Estimated cycle start ${HM.format(next)} UTC · ${phases[active].busy} (not live telemetry)`;
   }
 
   // ------------------------------------------------------------------ panels
