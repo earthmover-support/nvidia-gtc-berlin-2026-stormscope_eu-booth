@@ -113,6 +113,7 @@
         <p>Meteosat-12 observes Europe from geostationary orbit, about 36,000 km above Earth.</p>
         <p>Its Flexible Combined Imager (FCI) measures reflected solar and emitted infrared radiation across 16 spectral channels. StormScope-EU uses six observations, taken 10 minutes apart, as the starting context for each forecast.</p>
         <div class="label">Two Satellite Composites</div>
+        <div class="large-composite" aria-label="Selected Meteosat satellite composite"><img id="largeCompositeImage" alt="Selected satellite composite at forecast initialization" hidden><span id="largeCompositeEmpty">Satellite image unavailable</span></div>
         <div class="two">
           <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span>A natural-looking view of clouds and Earth's surface in daylight.</span></button>
           <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>Air Mass</b><span>An infrared view highlighting atmospheric moisture and air-mass structure.</span></button>
@@ -399,7 +400,7 @@
 
       </article>
 
-      <footer class="panel-foot">
+      <footer class="panel-foot"><a class="persistent-viewer-qr" id="persistentViewerLink" target="_blank" rel="noopener" aria-label="Scan QR code or open the interactive forecast viewer"><span class="mini-qr" id="qrPersistent"></span><span>Explore forecast</span></a>
         <nav class="progress" id="progress" aria-label="Story chapters"></nav>
         <div class="foot-row">
           <div class="keys" title="←/→ panels · Space pause panels · P playback · O loop · S speed · T/A layer · 1–9 initialization · C strip">←/→ Browse · Space Pause</div>
