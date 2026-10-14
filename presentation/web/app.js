@@ -475,8 +475,7 @@
   function updateThumbnailAvailability() {
     const observed = [...document.querySelectorAll('[data-frame-group="initial"]')];
     const count = observed.filter((g) => g.classList.contains("has-image")).length;
-    const predicted = document.querySelectorAll("[data-output-index].has-image").length;
-    $("#modelImageState").textContent = `${VAR_LABELS[S.variable]} · ${count}/6 observed · ${predicted}/12 forecast thumbnails`;
+    $("#modelImageState").textContent = `${VAR_LABELS[S.variable]} · ${count}/6 observed context thumbnails · schematic rollout`;
   }
 
   function renderModelSequence() {

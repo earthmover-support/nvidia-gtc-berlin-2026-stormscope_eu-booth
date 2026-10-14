@@ -3,12 +3,10 @@
   "private": true,
   "description": "Vendored front-end libraries for the booth page (served offline by server.py, copied into web/vendor on Vercel)",
   "dependencies": {
-    "@fortawesome/free-solid-svg-icons": "6.7.2",
     "maplibre-gl": "5.9.0",
     "qrcode-generator": "2.0.4"
   },
   "scripts": {
-    "vendor": "rm -rf web/vendor && mkdir -p web/vendor && cp -R node_modules/maplibre-gl/dist web/vendor/maplibre && cp -R node_modules/qrcode-generator/dist web/vendor/qrcode && npm run icons",
-    "icons": "node build-icons.cjs"
+    "vendor": "rm -rf web/vendor && mkdir -p web/vendor && cp -R node_modules/maplibre-gl/dist web/vendor/maplibre && cp -R node_modules/qrcode-generator/dist web/vendor/qrcode"
   }
 }

@@ -538,3 +538,12 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 /* Let observation-card definition popovers extend past image card edges. */
 [data-panel="mtg"] .composite-card[data-var] { overflow: visible; }
 [data-panel="mtg"] .composite-card[data-var]:last-child::after { left: auto; right: 0; }
+
+/* Booth headings: regular-weight numbered titles, without decorative iconography. */
+.kicker { font-weight: 400; }
+[data-panel="definition"] h2 { font-weight: 400; }
+.model-process { width: 100%; }
+.model-sequence { display: flex; align-items: center; justify-content: space-between; gap: 3px; padding: 10px 6px; flex-wrap: wrap; border: 1px solid #354451; border-radius: 8px; }
+.model-sequence span { font-size: 14px; color: #E8EDF2; }
+.model-sequence b { font-size: 17px; color: #53B47B; font-weight: 400; }
+.lead-sequence { font-size: 14px; color: #D3E1E8; line-height: 1.4; text-align: center; }
