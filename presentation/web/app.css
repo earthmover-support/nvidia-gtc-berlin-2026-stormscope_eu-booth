@@ -379,9 +379,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .inits { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
 .inits button { flex-shrink: 0; }
 
-/* Shared-reference palette: observations slate, prediction green, I/O blue,
+/* Shared-reference palette: observations slate, prediction NVIDIA green, I/O blue,
    publication amber. Font Awesome symbols are local and work offline. */
-:root { --observed: #64748B; --predicted: #237B48; --cloud-io: #3E718F; --publication: #8A5C1C; }
+:root { --observed: #64748B; --predicted: #76B900; --cloud-io: #3E718F; --publication: #8A5C1C; }
 .fa-symbol { width: 20px; height: 20px; flex-shrink: 0; fill: currentColor; vertical-align: -.15em; }
 .kicker { display: flex; align-items: center; gap: 10px; }
 .kicker .fa-symbol { width: 25px; height: 25px; }
