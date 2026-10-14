@@ -674,3 +674,8 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .panels [data-panel="nowcasting"] .flow .out { gap: 10px; }
 .panels [data-panel="nowcasting"] .flow .pill { border-radius: 0; }
 .panels [data-panel="nowcasting"] .facts { gap: 6px; font-size: 16px; }
+
+/* booth tweaks: larger chapter labels, stat numerals that fit on one line */
+.panels .panel .kicker { font-size: 20px; letter-spacing: .04em; }
+.panels .panel .stats b { font-size: 22px; white-space: nowrap; }
+.stats div { padding: 10px 12px; }
