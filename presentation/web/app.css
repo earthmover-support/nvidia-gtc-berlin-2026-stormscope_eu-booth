@@ -642,3 +642,18 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
   [data-panel="mtg"] .variable-comparison .composite-card { padding: 9px; gap: 6px; }
   [data-panel="mtg"] .variable-composition, [data-panel="mtg"] .variable-explanation { font-size: 13px; }
 }
+
+/* Slide 04: restrained numbered pipeline, matching the reference's clean editorial rhythm. */
+[data-panel="e2s"] .pipeline-steps { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 12px; }
+[data-panel="e2s"] .pipeline-steps li { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; column-gap: 14px; min-height: 76px; padding: 9px 12px; border: 1px solid #36464F; border-radius: 0; background: #121B21; }
+[data-panel="e2s"] .pipeline-number { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid #76B900; border-radius: 0; color: #B8E283; font: 23px var(--mono); }
+[data-panel="e2s"] .pipeline-steps li > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+[data-panel="e2s"] .pipeline-steps strong { color: #F2F6F8; font-size: 20px; font-weight: 600; }
+[data-panel="e2s"] .pipeline-steps li > div > span { color: #C8D5DE; font-size: 16px; line-height: 1.3; }
+[data-panel="compute"] .compute-evidence { margin-top: 8px; }
+@media (max-height: 850px) {
+  [data-panel="e2s"] .pipeline-steps { gap: 7px; margin-top: 4px; }
+  [data-panel="e2s"] .pipeline-steps li { min-height: 64px; padding: 6px 10px; }
+  [data-panel="e2s"] .pipeline-steps strong { font-size: 18px; }
+  [data-panel="e2s"] .pipeline-steps li > div > span { font-size: 14px; }
+}
