@@ -55,8 +55,8 @@
         <details class="cycle-details"><summary>Forecast details</summary>
           <div class="cycle-secondary">
             <div>Latest input observation <b id="cycleObservation">—</b></div>
-            <div>Valid UTC <b id="cycleValid">—</b></div>
-            <div>Published UTC <b id="cyclePublished">—</b></div>
+            <div>Valid time <b id="cycleValid">—</b></div>
+            <div>Published time <b id="cyclePublished">—</b></div>
             <div>Snapshot <b id="cycleSnapshot">—</b></div>
             <div>Observation age <b id="cycleAge">—</b></div>
             <div>Horizon <b id="cycleHorizon">+120 min</b></div>
@@ -116,13 +116,13 @@
         <p>Meteosat-12 observes Europe from geostationary orbit, approximately 36,000 km above Earth.</p>
         <p>Its Flexible Combined Imager measures 16 spectral channels. Six observations, 10 minutes apart, provide the model's initial context.</p>
         <div class="label">Select Satellite Composite</div>
-        <div class="large-composite" aria-label="Selected Meteosat satellite composite"><img id="largeCompositeImage" alt="Selected satellite composite at forecast initialization" hidden><span id="largeCompositeEmpty">Satellite image unavailable</span></div>
+        <div class="large-composite" aria-label="Selected Meteosat satellite composite"><img id="largeCompositeImage" alt="Selected satellite composite at forecast initialization" hidden><span id="largeCompositeEmpty">Satellite preview unavailable. At night, select Air Mass for an infrared view.</span></div>
         <div class="two">
           <button type="button" class="card composite-card" data-var="true_color" aria-pressed="true"><div class="composite-image"><img data-composite="true_color" alt="True Color composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>True Color</b><span>A natural-looking view of clouds and Earth's surface in daylight.</span></button>
           <button type="button" class="card composite-card" data-var="airmass" aria-pressed="false"><div class="composite-image"><img data-composite="airmass" alt="Air Mass composite at forecast initialization" hidden><span>Imagery unavailable</span></div><b>Air Mass</b><span>An infrared view highlighting atmospheric moisture and air-mass structure.</span></button>
         </div>
-        <p class="small">Select a composite to update the large image and map.</p>
-        <div class="label" id="compositeCaption">Observed +0 Frame · Matches Selected Initialization</div>
+        
+        <div class="label" id="compositeCaption" hidden>Observed +0 Frame</div>
         <div class="stats">
           <div><b>16</b><span>spectral channels</span></div>
           <div><b>10 min</b><span>scan cadence</span></div>
@@ -136,7 +136,7 @@
         <p>StormScope-EU predicts the next satellite frame using generative diffusion. Each prediction replaces the oldest frame in the six-frame context window. Twelve steps produce a two-hour forecast.</p>
         <div class="model-key" aria-label="Diagram legend"><span class="key-observed">Observed input</span><span class="key-predicted">Model-generated frame</span></div>
 <svg class="science-diagram model-process" viewBox="0 0 544 288" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
-          <title id="autoregressive-model-title">Autoregressive Model</title><desc id="autoregressive-model-desc">Six satellite frames enter generative diffusion on GPU. Each new prediction joins the sliding six-frame context. Observed frames are progressively replaced by predicted frames. Illustrative sequence, not live GPU telemetry.</desc>
+          <title id="autoregressive-model-title">Autoregressive Model · Schematic</title><desc id="autoregressive-model-desc">Six satellite frames enter generative diffusion on GPU. Each new prediction joins the sliding six-frame context. Observed frames are progressively replaced by predicted frames. Illustrative sequence, not live GPU telemetry.</desc>
           <defs><marker id="autoregressive-model-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
           <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
           <text class="diagram-strong" x="272" y="18" text-anchor="middle" >Initial Input · Six Observed Frames</text>
@@ -215,8 +215,8 @@
           </svg>
         <div class="model-sequence"><span>Six frames</span><b>→</b><span>Diffusion inference</span><b>→</b><span>Next frame</span><b>→</b><span>Shift context</span><b>→</b><span>Repeat</span></div>
         <div class="lead-sequence" aria-label="Twelve 10-minute forecast steps">+10 · +20 · +30 · +40 · +50 · +60 · +70 · +80 · +90 · +100 · +110 · +120 min</div>
-        <div class="model-detail"><span id="modelImageState">Thumbnails load when this panel is shown.</span><span id="modelContextState">Illustrative context shift</span></div>
-        <div class="diagram-note model-meaning"><strong>Illustrative rolling context:</strong> Six observations start the forecast. Predicted frames progressively replace observations during the 12-step rollout.</div>
+        <div class="model-detail" hidden><span id="modelImageState"></span><span id="modelContextState"></span></div>
+        
       </article>
 
       <article class="panel nv" data-panel="e2s">
@@ -368,8 +368,8 @@
           <text class="diagram-strong" x="440" y="122" text-anchor="middle" >SQL Query</text>
         </svg>
         <div class="interface-captions"><span><b>Visualize</b> — Render forecast tiles on demand.</span><span><b>Query</b> — Analyze regions and lead times through SQL.</span></div>
-        <div class="diagram-note">Integrate — Access scientific data through cloud-native services.</div>
-        <div class="diagram-note">Live SQL: mean rendered-composite intensity by forecast lead, not cloud fraction.</div>
+        
+        
         <div class="compute-evidence">
           <div class="tile-evidence"><div class="label">Map Tile · Berlin Region</div><div class="tile-preview"><img id="computeTile" alt="Published forecast map tile over the Berlin region" hidden><span>Tile unavailable</span></div><span id="computeTileCaption">Waiting for forecast metadata</span></div>
         <details class="sql-reveal"><summary>Explore SQL queries</summary>
