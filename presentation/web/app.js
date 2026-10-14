@@ -451,12 +451,12 @@
         large.onerror = () => { large.hidden = true; empty.hidden = false; };
         large.src = source;
       }
-      large.alt = `${VAR_LABELS[S.variable]} composite at initialization ${hhmm(run.init)} UTC`;
+      large.alt = `${VAR_LABELS[S.variable]} composite at initialization ${hhmm(run.init)} ${tzName(initDate(run.init))}`;
     } else {
       large.removeAttribute("src"); large.dataset.source = ""; large.hidden = true; empty.hidden = false;
     }
     $("#compositeCaption").textContent = run
-      ? `Observed +0 · ${hhmm(run.init)} UTC · Berlin Region`
+      ? `Observed +0 · ${hhmm(run.init)} ${tzName(initDate(run.init))} · Berlin Region`
       : "Observed +0 Frame · Waiting for Data";
   }
 
@@ -491,7 +491,7 @@
   function updateThumbnailAvailability() {
     const observed = [...document.querySelectorAll('[data-frame-group="initial"]')];
     const count = observed.filter((g) => g.classList.contains("has-image")).length;
-    $("#modelImageState").textContent = `${VAR_LABELS[S.variable]} · ${count}/6 observed context thumbnails · schematic rollout`;
+    $("#modelImageState").textContent = "";
   }
 
   function renderModelSequence() {
@@ -518,7 +518,7 @@
       setFrameImage(group, run ? thumbnailUrl(run, S.variable, lead) : null);
     }
     $("#modelNextLead").textContent = `+${(contextExample + 1) * 10} min`;
-    $("#modelContextState").textContent = contextExample === 11 ? "Illustrative final step · +120 min" : `Illustrative step ${contextExample + 1}/12 · observed frames gradually replaced`;
+    $("#modelContextState").textContent = "";
     updateThumbnailAvailability();
   }
 
@@ -526,9 +526,9 @@
     const rows = [...document.querySelectorAll("[data-cycle-row]")];
     const runs = S.runs.slice(0, 3).reverse();
     $("#cycleHistoryCaption").textContent = {
-      demo: "Simulated Forecast Cycles · UTC", offline: "Replay Forecast Cycles · UTC",
-      error: "Last Known Published Cycles · UTC",
-    }[S.status] || "Published Forecast Cycles · UTC";
+      demo: "Simulated Forecast Cycles", offline: "Replay Forecast Cycles",
+      error: "Last Known Published Cycles",
+    }[S.status] || "Published Forecast Cycles";
     rows.forEach((row, index) => {
       const run = runs[index];
       const fields = ["window", "init", "horizon", "publication"];
@@ -539,7 +539,7 @@
       row.querySelector("[data-cycle-horizon]").textContent = HM.format(new Date(init.getTime() + S.cfg.leads.at(-1) * 60000));
       const pub = publicationForRun(run);
       row.querySelector("[data-cycle-publication]").textContent = pub ? HM.format(new Date(pub.written_at)) : "Unknown";
-      row.setAttribute("aria-label", `Forecast initialized ${ymdhm(init)} UTC, published ${pub ? ymdhm(new Date(pub.written_at)) + " UTC" : "time unavailable"}`);
+      row.setAttribute("aria-label", `Forecast initialized ${ymdhm(init)} ${tzName(init)}, published ${pub ? ymdhm(new Date(pub.written_at)) + " " + tzName(new Date(pub.written_at)) : "time unavailable"}`);
     });
   }
 
@@ -550,7 +550,7 @@
     if (!run) { img.hidden = true; $("#computeTileCaption").textContent = "Waiting for forecast metadata"; return; }
     const lead = S.cfg.leads[S.frame] ?? 0;
     const source = thumbnailUrl(run, S.variable, lead);
-    $("#computeTileCaption").textContent = `${VAR_LABELS[S.variable]} · +${lead} min · Init ${hhmm(run.init)} UTC`;
+    $("#computeTileCaption").textContent = `${VAR_LABELS[S.variable]} · +${lead} min · Init ${hhmm(run.init)} ${tzName(initDate(run.init))}`;
     if (img.dataset.source === source) return;
     img.dataset.source = source;
     img.hidden = true;
@@ -708,7 +708,7 @@
     } else if (publication && latest) {
       $("#countdown").textContent = "Published";
       $("#ingestLabel").textContent =
-        `Latest published forecast · Init ${ymdhm(initDate(latest.init))} UTC · Published ${ymdhm(new Date(publication.written_at))} UTC`;
+        `Latest published forecast · Init ${ymdhm(initDate(latest.init))} ${tzName(initDate(latest.init))} · Published ${ymdhm(new Date(publication.written_at))} ${tzName(new Date(publication.written_at))}`;
     } else {
       $("#countdown").textContent = "Waiting";
       $("#ingestLabel").textContent = "Waiting for first published forecast";
@@ -800,23 +800,23 @@
     // Each node corresponds to a real published forecast snapshot. Gaps are not durations.
     const history = $("#publicationTimeline");
     history.replaceChildren();
-    forecasts.slice(0, 4).reverse().forEach((c, i, a) => {
+    forecasts.slice(0, 2).reverse().forEach((c, i, a) => {
       const node = el("span", "publication-event" + (i === a.length - 1 ? " newest" : ""));
-      node.title = `Published ${ymdhm(new Date(c.written_at))} UTC · snapshot ${c.id}`;
+      node.title = `Published ${ymdhm(new Date(c.written_at))} ${tzName(new Date(c.written_at))} · snapshot ${c.id}`;
       node.setAttribute("aria-label", node.title);
       history.append(node);
     });
     if (!forecasts.length) history.textContent = "No verified forecast publications";
     const columns = el("div", "commit-heading");
-    columns.append(el("span", null, "Init · UTC"), el("span", null, "Published · UTC"), el("span", null, "Snapshot"), el("span", null, "Status"), el("span", null, "Age"));
+    columns.append(el("span", null, `Init · ${tzName(new Date())}`), el("span", null, `Published · ${tzName(new Date())}`), el("span", null, "Snapshot"), el("span", null, "Status"), el("span", null, "Age"));
     box.append(columns);
     if (!forecasts.length) box.append(el("div", "commit", "No forecast publications available"));
-    forecasts.slice(0, 4).forEach((c, k) => {
+    forecasts.slice(0, 2).forEach((c, k) => {
       const row = el("div", "commit" + (k === 0 ? " fresh" : ""));
       if (k === 0 && isNew) row.classList.add("new-publication");
       row.title = c.id;
       row.append(
-        el("span", "init", (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1].replace("T", " ")),
+        el("span", "init", (() => { const init = (c.message || "").match(/stormscope-eu\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)?.[1]; return init ? ymdhm(initDate(init)) : "—"; })()),
         el("span", "published-at", ymdhm(new Date(c.written_at))),
         el("span", "id", c.id.slice(0, 8)),
         el("span", "publication-status", "Published"),
@@ -854,8 +854,6 @@
     }
     setQR("qrViewer", c.viewer_url);
     $("#viewerLink").href = c.viewer_url;
-    $("#persistentViewerLink").href = c.viewer_url;
-    setQR("qrPersistent", c.viewer_url);
   }
 
   // ------------------------------------------------------------------ SQL

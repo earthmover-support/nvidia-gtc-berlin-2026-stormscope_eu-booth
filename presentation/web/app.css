@@ -563,23 +563,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="mtg"] .composite-card.on { border-color: #76B900; background: #263322; }
 [data-panel="mtg"] .stats { margin-top: auto; }
 /* Fixed viewer QR remains visible as the explanatory story rotates. */
-.panel-foot .persistent-viewer-qr { pointer-events: auto; position: absolute; right: 0; bottom: 55px; display: flex; gap: 8px; align-items: center; background: #FFFFFF; color: #111820; text-decoration: none; padding: 7px 10px; border: 2px solid #E5ECF1; border-radius: 5px; font-size: 14px; font-weight: 600; z-index: 10; }
-.persistent-viewer-qr .mini-qr { width: 92px; height: 92px; display: block; background: #fff; }
-.persistent-viewer-qr .mini-qr svg { display: block; width: 100%; height: 100%; }
-.persistent-viewer-qr .mini-qr img { display: none; }
-[data-panel="access"].active ~ .panel-foot .persistent-viewer-qr { display: none; }
 @media (max-height: 860px) {
- .panel-foot .persistent-viewer-qr { bottom: 45px; }
- .persistent-viewer-qr .mini-qr { width: 76px; height: 76px; }
  [data-panel="mtg"] .large-composite { height: 185px; }
 }
-
-/* Persistent scan target: positioned on the map without obscuring sidebar diagrams or navigation. */
-.viz > .persistent-viewer-qr { position: absolute; right: 22px; bottom: 176px; z-index: 12; display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #fff; color: #13212B; border: 2px solid #e8eef2; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600; box-shadow: 0 6px 20px #0009; }
-.viz > .persistent-viewer-qr .mini-qr { width: 112px; height: 112px; background: #fff; display: block; }
-.viz > .persistent-viewer-qr .mini-qr svg { display: block; width: 100%; height: 100%; }
-.viz > .persistent-viewer-qr .mini-qr img { display: none; }
-@media (max-height: 860px) { .viz > .persistent-viewer-qr { bottom: 143px; padding: 7px; font-size: 13px; } .viz > .persistent-viewer-qr .mini-qr { width: 94px; height: 94px; } }
 
 /* Final exhibition pass: keep diagram primary and compact, but readable. */
 [data-panel="nowcasting"] { gap: 9px; }
@@ -595,6 +581,32 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 @media (max-width: 1500px), (max-height: 850px) {
   .panel p { font-size: 17px; }
   [data-panel="mtg"] .large-composite { height: 175px; }
-  .viz > .persistent-viewer-qr { right: 12px; bottom: 133px; font-size: 13px; }
-  .viz > .persistent-viewer-qr .mini-qr { width: 84px; height: 84px; }
+}
+
+/* Booth simplification: separate compact verified status from optional technical details. */
+.cycle-status { top: 110px; left: 22px; right: auto; width: min(675px, calc(100% - 44px)); display: block; padding: 10px 14px; pointer-events: auto; }
+.cycle-status .cycle-primary { display: flex; align-items: center; flex-flow: row wrap; gap: 10px 18px; }
+.cycle-status .cycle-primary span { font-size: 15px; color: #E5EBF0; white-space: nowrap; }
+.cycle-status .cycle-primary b { font-size: 15px; }
+.cycle-status #cycleState { font-size: 14px; flex: 1 1 220px; white-space: normal; }
+.cycle-details { margin-top: 5px; color: #C8D4DF; font-size: 13px; }
+.cycle-details summary { cursor: pointer; padding: 4px 0; }
+.cycle-details .cycle-secondary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; margin-top: 8px; }
+.cycle-secondary > div { display: flex; flex-direction: column; }
+.cycle-secondary b { font-size: 13px; overflow-wrap: anywhere; }
+.history-reveal, .sql-reveal { min-height: 0; }
+.history-reveal summary, .sql-reveal summary { cursor: pointer; padding: 7px 0; font-size: 15px; color: #DFE7EF; }
+.history-reveal[open], .sql-reveal[open] { overflow: auto; max-height: min(36vh, 320px); }
+.history-reveal .history-title { margin-top: 6px; }
+[data-panel="arraylake"] .commits .commit { font-size: 12px; }
+[data-panel="nowcasting"] .model-detail[hidden], [data-panel="mtg"] #compositeCaption[hidden] { display: none; }
+.panel { padding-bottom: 120px; }
+.panel .science-diagram { max-height: min(33vh, 310px); }
+[data-panel="nowcasting"] .model-process { max-height: 270px; }
+[data-panel="mtg"] .large-composite { height: clamp(165px, 22vh, 215px); }
+[data-panel="compute"] .tile-preview { min-height: 120px; }
+@media (max-height: 860px) {
+ .panel { padding-bottom: 116px; }
+ [data-panel="mtg"] .large-composite { height: 160px; }
+ .cycle-status { top: 95px; }
 }
