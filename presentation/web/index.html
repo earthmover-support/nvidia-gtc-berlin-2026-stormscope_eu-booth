@@ -272,30 +272,19 @@
         </svg>
         <details class="history-reveal"><summary>Recent published forecasts</summary><div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
         <div class="publication-timeline" id="publicationTimeline" aria-label="Recent forecast snapshots in publication order; spacing does not represent elapsed time"></div>
-        <div class="commits" id="commitList"></div></details>
+        </details>
       </article>
 
       <article class="panel em" data-panel="compute">
-        <div class="kicker"><span>06 · Earthmover Compute</span></div>
-        <h2>From Forecast Data to Interactive Maps</h2>
-        <p>Earthmover Compute serves published forecasts as map tiles and SQL queries. Applications can access selected locations and forecast times without downloading the entire dataset.</p>
-
-        
-        
-        <div class="compute-evidence">
-          <div class="tile-evidence"><div class="tile-preview"><img id="computeTile" alt="Published forecast map tile over the Berlin region" hidden><span>Tile unavailable</span></div><span id="computeTileCaption">Waiting for forecast metadata</span></div>
-        <details class="sql-reveal"><summary>Explore SQL queries</summary>
-          <div class="sql">
-          <div class="sql-head"><b id="sqlMetric">SQL Result</b><span id="sqlStatus">…</span></div>
-          <div class="sql-run">
-            <div class="sql-places" id="sqlPlaces"></div>
-            <button type="button" id="sqlReset">Reset</button>
-          </div>
-          <details class="sql-editor" id="sqlEditor"><summary>Inspect / Edit SQL</summary><div class="sql-editor-popover"><button type="button" id="sqlEditorClose">Close</button><textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="6" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea></div></details>
-          <div class="bars" id="sqlBars" role="img" aria-label="Mean composite intensity by forecast lead time"></div><div class="bars-axis"><span>+0</span><span>+60</span><span>+120 min</span></div>
-          <div class="sql-foot" id="sqlFoot">Mean composite intensity over Berlin · 0–2 h from init · PostgreSQL wire protocol</div>
-          </div></details>
+        <div class="kicker">06 · THE DATA LAKE</div>
+        <h2>Every forecast run is a commit</h2>
+        <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Readers never see a half-written forecast.</p>
+        <div class="commits" id="commitList"></div>
+        <div class="two">
+          <div class="card"><b>Transactional</b><span>Icechunk: open-source, cloud-native Zarr storage</span></div>
+          <div class="card"><b>Time travel</b><span>Open any past forecast by its snapshot ID</span></div>
         </div>
+        <div class="callout">Each commit fires a webhook into Slack.</div>
       </article>
 
       <article class="panel em" data-panel="access">
@@ -312,6 +301,17 @@
           <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Developer Tiles</b></div>
         </div>
 
+        <div class="legacy-query" hidden aria-hidden="true"><div id="computeTileCaption"></div><img id="computeTile" hidden><details class="sql-reveal"><summary>Explore SQL queries</summary>
+          <div class="sql">
+          <div class="sql-head"><b id="sqlMetric">SQL Result</b><span id="sqlStatus">…</span></div>
+          <div class="sql-run">
+            <div class="sql-places" id="sqlPlaces"></div>
+            <button type="button" id="sqlReset">Reset</button>
+          </div>
+          <details class="sql-editor" id="sqlEditor"><summary>Inspect / Edit SQL</summary><div class="sql-editor-popover"><button type="button" id="sqlEditorClose">Close</button><textarea id="sqlQuery" spellcheck="false" autocomplete="off" rows="6" aria-label="SQL query" title="⌘/Ctrl + Enter to run · Esc leaves the editor"></textarea></div></details>
+          <div class="bars" id="sqlBars" role="img" aria-label="Mean composite intensity by forecast lead time"></div><div class="bars-axis"><span>+0</span><span>+60</span><span>+120 min</span></div>
+          <div class="sql-foot" id="sqlFoot">Mean composite intensity over Berlin · 0–2 h from init · PostgreSQL wire protocol</div>
+          </div></details></div>
         <div class="partner-credit">EUMETSAT × NVIDIA × Earthmover</div>
 
       </article>
