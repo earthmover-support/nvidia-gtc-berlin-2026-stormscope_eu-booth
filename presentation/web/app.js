@@ -524,27 +524,6 @@
     updateThumbnailAvailability();
   }
 
-  function renderPublishedCycles() {
-    const rows = [...document.querySelectorAll("[data-cycle-row]")];
-    const runs = S.runs.slice(0, 3).reverse();
-    $("#cycleHistoryCaption").textContent = {
-      demo: "Simulated Forecast Cycles", offline: "Replay Forecast Cycles",
-      error: "Last Known Published Cycles",
-    }[S.status] || "Published Forecast Cycles";
-    rows.forEach((row, index) => {
-      const run = runs[index];
-      const fields = ["window", "init", "horizon", "publication"];
-      if (!run) { for (const f of fields) row.querySelector(`[data-cycle-${f}]`).textContent = "—"; return; }
-      const init = initDate(run.init);
-      row.querySelector("[data-cycle-window]").textContent = `${HM.format(new Date(init.getTime() - 50 * 60000))}–${HM.format(init)}`;
-      row.querySelector("[data-cycle-init]").textContent = HM.format(init);
-      row.querySelector("[data-cycle-horizon]").textContent = HM.format(new Date(init.getTime() + S.cfg.leads.at(-1) * 60000));
-      const pub = publicationForRun(run);
-      row.querySelector("[data-cycle-publication]").textContent = pub ? HM.format(new Date(pub.written_at)) : "Unknown";
-      row.setAttribute("aria-label", `Forecast initialized ${ymdhm(init)} ${tzName(init)}, published ${pub ? ymdhm(new Date(pub.written_at)) + " " + tzName(new Date(pub.written_at)) : "time unavailable"}`);
-    });
-  }
-
   function renderComputeTile() {
     if (panels()[S.panel]?.dataset.panel !== "compute") return;
     const run = shown?.run || selectedRun();
@@ -816,7 +795,7 @@
     });
     schedulePanelRotation();
     renderModelSequence();
-    renderPublishedCycles();
+
     renderComputeTile();
   }
 
@@ -1187,7 +1166,7 @@
     renderCommits();
     renderCompositePreviews();
     renderModelSequence();
-    renderPublishedCycles();
+
     renderComputeTile();
     renderQRs();
     renderStrip();
