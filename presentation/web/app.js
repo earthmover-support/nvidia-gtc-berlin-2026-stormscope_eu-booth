@@ -439,6 +439,22 @@
       img.onerror = () => { img.hidden = true; };
       img.src = src;
     }
+    const large = $("#largeCompositeImage"), empty = $("#largeCompositeEmpty");
+    if (run) {
+      const tile = S.cfg.qr_tile;
+      const source = tileTemplate(run, S.variable, 0, tile.size)
+        .replace("{z}", tile.z).replace("{x}", tile.x).replace("{y}", tile.y);
+      if (large.dataset.source !== source) {
+        large.dataset.source = source;
+        large.hidden = true; empty.hidden = false;
+        large.onload = () => { if (large.dataset.source === source) { large.hidden = false; empty.hidden = true; } };
+        large.onerror = () => { large.hidden = true; empty.hidden = false; };
+        large.src = source;
+      }
+      large.alt = `${VAR_LABELS[S.variable]} composite at initialization ${hhmm(run.init)} UTC`;
+    } else {
+      large.removeAttribute("src"); large.dataset.source = ""; large.hidden = true; empty.hidden = false;
+    }
     $("#compositeCaption").textContent = run
       ? `Observed +0 · ${hhmm(run.init)} UTC · Berlin Region`
       : "Observed +0 Frame · Waiting for Data";
@@ -502,7 +518,7 @@
       setFrameImage(group, run ? thumbnailUrl(run, S.variable, lead) : null);
     }
     $("#modelNextLead").textContent = `+${(contextExample + 1) * 10} min`;
-    $("#modelContextState").textContent = contextExample === 11 ? "Illustrative step 12/12 · final +120 min forecast" : `Illustrative step ${contextExample + 1}/12 · context for +${(contextExample + 2) * 10} min`;
+    $("#modelContextState").textContent = contextExample === 11 ? "Illustrative final step · +120 min" : `Illustrative step ${contextExample + 1}/12 · observed frames gradually replaced`;
     updateThumbnailAvailability();
   }
 
@@ -551,7 +567,7 @@
     if (!S.cfg.sql_editable) editor.querySelector("summary").textContent = "Inspect SQL";
     setInterval(() => {
       if (document.hidden || S.rotatePaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches || panels()[S.panel]?.dataset.panel !== "nowcasting") return;
-      contextExample = (contextExample + 1) % 12;
+      contextExample = [0, 1, 5, 11][([0, 1, 5, 11].indexOf(contextExample) + 1) % 4];
       renderModelSequence();
     }, 5000);
   }
@@ -574,6 +590,7 @@
     S.variable = name;
     renderVarToggle();
     renderVarCards();
+    renderCompositePreviews();
     syncLayers(true);
     showFrame();
   }
@@ -837,6 +854,8 @@
     }
     setQR("qrViewer", c.viewer_url);
     $("#viewerLink").href = c.viewer_url;
+    $("#persistentViewerLink").href = c.viewer_url;
+    setQR("qrPersistent", c.viewer_url);
   }
 
   // ------------------------------------------------------------------ SQL
