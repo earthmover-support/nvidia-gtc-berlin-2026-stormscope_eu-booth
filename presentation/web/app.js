@@ -482,17 +482,26 @@
 
   function renderInits() {
     const box = $("#inits");
-    box.replaceChildren();
     const runs = selectableRuns();
     const on = shown?.run || selectedRun(); // a newer run loading in the background isn't on screen yet
-    runs.forEach((run, k) => {
+    let sel = box.querySelector("select");
+    if (!sel) {
+      sel = el("select");
+      sel.id = "initSelect";
+      sel.setAttribute("aria-label", "Forecast initialisation");
+      sel.addEventListener("change", () => selectInit(Number(sel.value)));
+      box.replaceChildren(sel);
+    }
+    const labels = runs.map((run, k) => {
       const loading = pending?.run.init === run.init ? ` · ${pending.loaded.size}/${S.cfg.leads.length}` : "";
-      const b = el("button", null, `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${loading}`);
-      b.type = "button";
-      b.setAttribute("aria-pressed", String(on && run.init === on.init));
-      b.addEventListener("click", () => selectInit(k));
-      box.append(b);
+      return `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${loading}`;
     });
+    if (labels.join("|") !== sel.dataset.labels) { // rebuild only when the list changes, so an open menu stays open
+      sel.dataset.labels = labels.join("|");
+      sel.replaceChildren(...labels.map((text, k) => { const o = el("option", null, text); o.value = String(k); return o; }));
+    }
+    const k = on ? runs.findIndex((r) => r.init === on.init) : -1;
+    if (k >= 0 && sel.value !== String(k)) sel.value = String(k);
     const leads = S.cfg.leads;
     $("#loopLabel span").textContent = on
       ? `+${leads[0]}→+${leads.at(-1)} · ${S.loop ? "loop" : "once"}`

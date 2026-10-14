@@ -678,3 +678,8 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .panels .panel .stats b { font-size: 18px; white-space: nowrap; }
 .panels .panel .stats span { font-size: 13px; }
 .stats div { padding: 10px 12px; }
+
+/* init picker: one dropdown instead of a row of buttons */
+.inits select { height: 34px; padding: 0 32px 0 10px; border: 1px solid #2A2F37; border-radius: 0; background: var(--ground, #0b0d10) url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 12 12%27%3E%3Cpath d=%27M1 3h10L6 9z%27 fill=%27%23cfd3d8%27/%3E%3C/svg%3E") no-repeat right 10px center; color: var(--text); font: 13px var(--mono); font-variant-numeric: tabular-nums; appearance: none; -webkit-appearance: none; cursor: pointer; min-width: 150px; }
+.inits select:focus-visible { outline: 2px solid var(--nv-green); outline-offset: 2px; }
+.inits select option { background: #0b0d10; color: #e6e8eb; }
