@@ -771,7 +771,8 @@
   }
 
   // ------------------------------------------------------------------ QR codes
-  // Level H leaves room for the logo. Each URL uses its smallest QR grid.
+  // Level H leaves room for the logo; the viewer QR borrows the tile QR's version so both
+  // codes have the same grid.
   const qrCache = {};
   function setQR(id, text, type = 0) {
     const box = document.getElementById(id);
@@ -781,7 +782,7 @@
     const qr = qrcode(type, "H");
     qr.addData(text);
     qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 16, scalable: true }) +
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) +
       '<img src="img/earthmover-mark.svg" alt="">';
     qrCache[id] = { key, type: (qr.getModuleCount() - 17) / 4 };
     return qrCache[id].type;
@@ -790,13 +791,14 @@
   function renderQRs() {
     const c = S.cfg;
     const latest = latestShown();
+    let type = 0;
     if (latest) {
       const q = c.qr_tile;
       const url = tileTemplate(latest, "true_color", c.leads[1], q.size) // leads[0] is the observed frame
         .replace("{z}", q.z).replace("{y}", q.y).replace("{x}", q.x);
-      setQR("qrTiles", url);
+      type = setQR("qrTiles", url);
     }
-    setQR("qrViewer", c.viewer_url);
+    setQR("qrViewer", c.viewer_url, type);
   }
 
   // ------------------------------------------------------------------ SQL

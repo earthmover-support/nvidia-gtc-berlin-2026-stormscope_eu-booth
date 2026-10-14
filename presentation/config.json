@@ -24,7 +24,7 @@
   "playback_speed": "slow",
   "hold_ms": 4000,
   "attract_reset_s": 180,
-  "timezone": "UTC",
+  "timezone": "Europe/Berlin",
 
   "station": { "name": "STATION Berlin", "lat": 52.4999581, "lon": 13.3757385 },
   "camera": { "lon": 12.0, "lat": 49.0, "zoom": 3.2, "pitch": 32, "sway_deg": 10, "sway_period_s": 120,
@@ -43,7 +43,7 @@
       "London":    [51.5072, -0.1276]
     },
     "query": [
-      "SELECT lead_time, AVG(true_color) AS brightness  -- composite intensity, not cloud fraction",
+      "SELECT lead_time, AVG(true_color) AS brightness  -- high means cloudy, low means sunny or dark",
       "FROM \"stormscope-eu_gtc_berlin_2026_EU_region\".\"root\"",
       "WHERE time = TIMESTAMP '{init}'  -- UTC",
       "  AND lat BETWEEN {lat} - {box} AND {lat} + {box}",

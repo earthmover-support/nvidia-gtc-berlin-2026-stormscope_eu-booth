@@ -87,7 +87,6 @@
         <p>Nowcasting uses recent observations to predict weather over the next minutes to hours.</p>
         
         <p>StormScope-EU uses six Meteosat-12 observations to predict twelve future satellite frames at 10-minute intervals, covering the next two hours.</p>
-        
         <div class="observation-timeline" role="img" aria-label="Six recent observations lead to initialization at +0, followed by twelve predicted frames through +120 minutes. The timeline is relative to initialization, not the current clock.">
           <div class="timeline-head"><span> Observed</span><span> AI Forecast</span></div>
           <div class="timeline-track"><div class="observed-track"></div><div class="predicted-track"></div></div>
@@ -95,6 +94,11 @@
         </div>
         <div class="architecture-ribbon" role="img" aria-label="Meteosat observations pass through NVIDIA AI and Earthmover to the viewer">
           <span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#satellite"/></svg>Meteosat</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg>NVIDIA AI</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#database"/></svg>Earthmover</span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#arrow"/></svg><span><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#viewer"/></svg>Viewer</span>
+        </div>
+        <p class="small">Numerical weather prediction models take hours to run; AI nowcasting starts from what satellites see right now, fast enough to act on.</p>
+        <div class="label">WHY IT MATTERS</div>
+        <div class="chips">
+          <span>Severe-storm warnings</span><span>Solar power ramps</span><span>Aviation</span><span>Outdoor events</span>
         </div>
       </article>
 

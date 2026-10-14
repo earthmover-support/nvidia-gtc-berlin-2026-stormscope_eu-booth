@@ -379,9 +379,9 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .inits { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
 .inits button { flex-shrink: 0; }
 
-/* Shared-reference palette: observations slate, prediction green, I/O blue,
+/* Shared-reference palette: observations slate, prediction NVIDIA green, I/O blue,
    publication amber. Font Awesome symbols are local and work offline. */
-:root { --observed: #64748B; --predicted: #237B48; --cloud-io: #3E718F; --publication: #8A5C1C; }
+:root { --observed: #64748B; --predicted: #76B900; --cloud-io: #3E718F; --publication: #8A5C1C; }
 .fa-symbol { width: 20px; height: 20px; flex-shrink: 0; fill: currentColor; vertical-align: -.15em; }
 .kicker { display: flex; align-items: center; gap: 10px; }
 .kicker .fa-symbol { width: 25px; height: 25px; }
@@ -400,6 +400,13 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .diagram-upload { fill: #3E718F; }
 .diagram-dark { fill: #FFFFFF; }
 .completion-barrier { stroke: #D0A568; }
+/* Slide 5 (Arraylake): GPU blocks use NVIDIA green, I/O + publication use Earthmover lavender. */
+[data-panel="arraylake"] .diagram-gpu { fill: var(--nv-green); }
+[data-panel="arraylake"] .diagram-gpu + .diagram-dark { fill: #101900; }
+[data-panel="arraylake"] .diagram-upload { fill: var(--em-lav); }
+[data-panel="arraylake"] .diagram-upload + .diagram-dark { fill: #15141E; }
+[data-panel="arraylake"] .diagram-publication { fill: #2A2939; stroke: var(--em-lav); }
+[data-panel="arraylake"] .completion-barrier { stroke: var(--em-lav); }
 .diagram-text, .diagram-strong, .diagram-label { fill: #E8EDF2; }
 .observation-timeline { padding: 16px 18px; border: 1px solid #354451; border-radius: 12px; background: #11161B; }
 .timeline-head { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; font-size: 17px; font-weight: 700; margin-bottom: 12px; }

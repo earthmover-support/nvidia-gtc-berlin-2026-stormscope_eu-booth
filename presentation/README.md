@@ -89,8 +89,9 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
 6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 7).
-7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `UTC`),
-   whatever the booth machine or a hosted viewer's browser is set to.
+7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
+   whatever the booth machine or a hosted viewer's browser is set to. Only the SQL
+   `WHERE time = TIMESTAMP '{init}'` stays in UTC.
 8. **Offline backup**: with tiles and SQL up, save a fallback in case the venue has no
    internet:
    ```bash
@@ -160,17 +161,17 @@ Compute tiles and SQL, and the complete workflow. Observation cards show real +0
 composite tiles over the configured Berlin tile and switch the globe layer when
 clicked; unavailable previews retain an explicit fallback.
 
-All booth timestamps default to UTC. The persistent map status shows the displayed
+All booth timestamps default to Europe/Berlin; only the SQL init stays UTC. The persistent map status shows the displayed
 run's observation/initialization time, matching snapshot publication time, observation
 age, and forecast horizon **from initialization**. The API reports publications, not
 GPU progress: the bottom strip's countdown and phase activity are labeled estimates.
 A publication more than two configured run intervals old is marked overdue; this does
 not diagnose the pipeline. Demo and offline replay clearly identify simulated timing.
-SQL reports mean composite intensity, not cloud fraction.
+SQL reports mean brightness -- high means cloudy, low means sunny or dark.
 
 The model feedback, recurring-cycle, upload, delivery, and architecture diagrams are
-schematics, not live measurements. Viewer and raw-tile QR codes use independent grid
-sizes and a four-module quiet zone to improve scanning of the shorter viewer URL.
+schematics, not live measurements. Viewer and raw-tile QR codes share one grid
+version and quiet-zone style so both scan the same way.
 
 The opening panel introduces observation-based nowcasting and the end-to-end demo.
 The approved seven-panel wording is implemented with minor typo corrections and an
@@ -188,8 +189,8 @@ The header labels the current wall clock; forecast valid time stays on the globe
 Body copy uses 16 px text at the 1080p booth size, with 15–18 px diagram labels.
 
 
-The persistent forecast-cycle status includes separate UTC observation, initialization,
-valid, and publication times; displayed forecast lead; and snapshot ID. The observation
+The persistent forecast-cycle status includes separate observation, initialization,
+valid, and publication times (shown in Europe/Berlin); displayed forecast lead; and snapshot ID. The observation
 is the newest input frame of the displayed published run, which defines its initialization.
 Incoming uncommitted satellite scans are not reported by the dashboard API. The valid
 and lead fields follow playback and scrubbing, while the snapshot follows run selection.
@@ -201,8 +202,8 @@ Publication history explicitly labels each committed snapshot Published.
 Font Awesome Free 6.7.2 symbols are served as `web/img/fontawesome.svg`; no icon CDN
 or icon font is needed. `npm run icons` regenerates the selected SVG symbols and
 copies the package license. `npm run vendor` also performs this step for hosted builds.
-Rounded diagrams consistently distinguish observations (slate), model predictions
-(green), Arraylake I/O (blue), and atomic publication (amber), with text labels.
+Rounded diagrams consistently distinguish observations (slate), NVIDIA compute
+(NVIDIA green), Arraylake I/O and atomic publication (Earthmover lavender), with text labels.
 
 The model panel loads actual snapshot-pinned +0 thumbnails from published runs whose
 initialization matches each required observed timestamp, and forecast thumbnails from
@@ -214,7 +215,7 @@ suppressed when reduced motion is requested, rather than GPU progress telemetry.
 The Earth2Studio panel shows three separate published runs with observation-window,
 initialization, horizon, and publication times. It does not infer exact scheduling
 cadence from satellite scan frequency. Publication history adds absolute publication
-UTC alongside status, snapshot, and age, and highlights genuinely new commit IDs.
+time (Europe/Berlin) alongside status, snapshot, and age, and highlights genuinely new commit IDs.
 
 Compute shows a snapshot-pinned map tile beside live SQL results. The editable query
 remains available through Inspect / Edit SQL; hosted read-only queries use Inspect SQL.
