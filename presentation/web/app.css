@@ -493,3 +493,48 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .publication-event:last-child { flex: 0 0 12px; }
 .publication-event.newest::after { background: #D0A568; height: 14px; width: 14px; box-shadow: 0 0 0 3px rgba(208,165,104,.15); }
 @media (prefers-reduced-motion: reduce) { .commit.new-publication { animation: none; } }
+
+
+/* Scientific composite definitions appear on hover and keyboard focus.
+   The controls still work without hover through their native title/accessible description. */
+#varToggle { position: relative; z-index: 6; }
+#varToggle button, .composite-card[data-var] { position: relative; }
+#varToggle button::after, .composite-card[data-var]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(340px, 76vw);
+  max-width: 340px;
+  padding: 12px 14px;
+  border: 1px solid #7392A8;
+  border-radius: 8px;
+  background: #111B26;
+  color: #F0F5FA;
+  font: 15px/1.45 var(--sans);
+  white-space: normal;
+  text-align: left;
+  box-shadow: 0 8px 22px rgba(0,0,0,.6);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+#varToggle button:hover::after, #varToggle button:focus-visible::after,
+.composite-card[data-var]:hover::after, .composite-card[data-var]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+.composite-card[data-var]::after { left: 0; right: auto; width: 290px; }
+@media (prefers-reduced-motion: reduce) {
+  #varToggle button::after, .composite-card[data-var]::after { transition: none; }
+}
+/* The new publication strip reports verified snapshot state, not estimated task progress. */
+.strip .next { width: 180px; }
+.strip .big { font-size: 24px; }
+.strip .ingest { justify-content: center; font-size: 16px; }
+
+/* Let observation-card definition popovers extend past image card edges. */
+[data-panel="mtg"] .composite-card[data-var] { overflow: visible; }
+[data-panel="mtg"] .composite-card[data-var]:last-child::after { left: auto; right: 0; }
