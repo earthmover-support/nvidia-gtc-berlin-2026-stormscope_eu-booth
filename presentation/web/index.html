@@ -248,9 +248,12 @@
       <svg width="16" height="16" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
           <path d="M1 3h10L6 9z"/></svg>
     </button>
-    <div class="next"><div class="eyebrow" id="countdownLabel">Forecast Status</div><div class="big mono" id="countdown">—</div></div>
-    <div class="ingest"><div class="muted" id="ingestLabel" role="status">Waiting for published forecast data</div><div class="cells" id="cells" hidden></div></div>
-    <div class="last"><div class="eyebrow">Last Published Snapshot</div><div class="mono lime" id="lastCommit">—</div></div>
+    <div class="next"><div class="eyebrow" id="countdownLabel">NEXT RUN IN</div><div class="big mono" id="countdown">--:--</div></div>
+    <div class="ingest">
+      <div class="muted" id="ingestLabel">Waiting for Arraylake…</div>
+      <div class="cells" id="cells"></div>
+    </div>
+    <div class="last"><div class="eyebrow">LAST COMMIT</div><div class="mono lime" id="lastCommit">—</div></div>
   </footer>
 </div>
 <script src="app.js"></script>

@@ -531,9 +531,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
   #varToggle button::after, .composite-card[data-var]::after { transition: none; }
 }
 /* The new publication strip reports verified snapshot state, not estimated task progress. */
-.strip .next { width: 180px; }
-.strip .big { font-size: 24px; }
-.strip .ingest { justify-content: center; font-size: 16px; }
 
 /* Let observation-card definition popovers extend past image card edges. */
 [data-panel="mtg"] .composite-card[data-var] { overflow: visible; }
