@@ -453,29 +453,7 @@
     return tileTemplate(run, variable, lead, 128).replace("{z}", q.z).replace("{x}", q.x).replace("{y}", q.y);
   };
 
-  function renderComputeTile() {
-    if (panels()[S.panel]?.dataset.panel !== "compute") return;
-    const run = shown?.run || selectedRun();
-    const img = $("#computeTile");
-    if (!run) { img.hidden = true; $("#computeTileCaption").textContent = "Waiting for forecast metadata"; return; }
-    const lead = S.cfg.leads[S.frame] ?? 0;
-    const source = thumbnailUrl(run, S.variable, lead);
-    $("#computeTileCaption").textContent = `${VAR_LABELS[S.variable]} · +${lead} min · Init ${hhmm(run.init)} ${tzName(initDate(run.init))}`;
-    if (img.dataset.source === source) return;
-    img.dataset.source = source;
-    img.hidden = true;
-    img.onload = () => { if (img.dataset.source === source) img.hidden = false; };
-    img.onerror = () => { img.hidden = true; };
-    img.src = source;
-  }
-
   function initVisuals() {
-    const editor = $("#sqlEditor");
-    editor.addEventListener("toggle", () => { if (editor.open) holdPanel(); });
-    $("#sqlEditorClose").addEventListener("click", () => { editor.open = false; });
-    $("#sqlQuery").addEventListener("keydown", (e) => { if (e.key === "Escape") editor.open = false; });
-    if (!S.cfg.sql_editable) editor.querySelector("summary").textContent = "Inspect SQL";
-
   }
 
   // Only publication is reported by the API; inference progress is not telemetry.
@@ -572,7 +550,6 @@
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
     renderCompositePreviews();
 
-    renderComputeTile();
   }
 
   function showNotice(text) {
@@ -744,7 +721,6 @@
     });
     schedulePanelRotation();
 
-    renderComputeTile();
   }
 
   let lastPublicationId = null;
@@ -812,7 +788,6 @@
       setQR("qrTiles", url);
     }
     setQR("qrViewer", c.viewer_url);
-    $("#viewerLink").href = c.viewer_url;
   }
 
   // ------------------------------------------------------------------ SQL
@@ -1022,7 +997,6 @@
     const bars = $("#sqlBars");
     const box = sqlBox();
     const metric = /AVG\(\s*(true_color|airmass)\s*\)/i.exec(r?.query || box.value);
-    $("#sqlMetric").textContent = metric ? `${VAR_LABELS[metric[1].toLowerCase()]} · SQL` : "SQL Result";
     const running = r && r.status === "running";
     status.classList.remove("err");
     status.title = "";
@@ -1114,7 +1088,6 @@
     renderCommits();
     renderCompositePreviews();
 
-    renderComputeTile();
     renderQRs();
     renderStrip();
   }

@@ -220,17 +220,17 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .callout { margin-top: auto; padding: 14px 18px; border-radius: 0; background: var(--em-purple); color: #fff; font-size: 16px; font-weight: 500; }
 
 .qr .qrcard { text-align: center; padding: 12px; background: #F5F5F5; border-radius: 0; display: flex; flex-direction: column; gap: 6px; color: var(--em-bg); }
-.qrbox { position: relative; width: 150px; align-self: center; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; font: 12px var(--mono); color: #4E4E4E; }
+.qrbox { position: relative; width: 168px; align-self: center; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; font: 12px var(--mono); color: #4E4E4E; }
 .qrbox svg { width: 100%; height: 100%; display: block; }
 .qrbox img { position: absolute; top: 50%; left: 50%; height: 22%; transform: translate(-50%, -50%); padding: 3px 5px; background: #fff; }
 .qrcard b { font-size: 15px; } .qrcard span { font-size: 12px; line-height: 1.35; color: #4E4E4E; }
 
-.sql { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: #15141E; border-radius: 0; }
+.sql { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: #15141E; border-radius: 0; }
 .sql-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .sql-head b { font-size: 15px; color: #F5F5F5; white-space: nowrap; }
 .sql-head span { font: 12px var(--mono); color: var(--lime); text-align: right; }
 .sql-head span.err { color: #FFB86B; }
-.sql textarea { margin: 0; padding: 8px 10px; resize: none; min-height: 7.5em; font: 12.5px/1.5 var(--mono); color: #E2DFF0; background: #0E0D16; border: 1px solid #2E2C40; border-radius: 0; outline: none; }
+.sql textarea { margin: 0; padding: 8px 10px; resize: none; min-height: 11.5em; font: 12.5px/1.5 var(--mono); color: #E2DFF0; background: #0E0D16; border: 1px solid #2E2C40; border-radius: 0; outline: none; }
 .sql textarea:focus { border-color: var(--em-lav); }
 .sql-places { display: flex; flex-wrap: wrap; gap: 6px; }
 .sql-places button, .sql-run button { font: 500 12px var(--mono); padding: 4px 10px; border-radius: 0; border: 1px solid #3A3852; background: transparent; color: #E2DFF0; cursor: pointer; }
@@ -346,8 +346,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .commits { gap: 6px; }
 .qrcard { text-decoration: none; }
 .qrcard:focus-visible { outline: 3px solid var(--em-lav); outline-offset: 3px; }
-[data-panel="access"] .qrbox { width: 184px; }
-[data-panel="access"] .qr .qrcard { padding: 10px; }
 .qrcard b { font-size: 17px; }
 .qrcard span { font-size: 14px; }
 .nowcast-scope { padding: 16px; border: 1px solid #2E3C20; background: #111; display: flex; flex-direction: column; gap: 12px; }
@@ -364,8 +362,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .progress { pointer-events: auto; }
 
 [data-panel="compute"] { gap: 12px; }
-[data-panel="access"] .qr { grid-template-columns: 1.15fr 1fr; }
-[data-panel="access"] #qrTiles { width: 160px; }
 
 .cycle-heading { grid-column: 1 / -1; font-size: 14px; }
 .cycle-context span { font-size: inherit; color: inherit; }
@@ -433,47 +429,22 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .commit.new-publication { animation: publication-arrives 1.2s ease-out; }
 @keyframes publication-arrives { from { opacity: .35; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 .interface-captions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 14px; color: #CBD5E1; }
-.compute-evidence { display: grid; grid-template-columns: 1fr 1.25fr; gap: 14px; align-items: stretch; }
 .tile-evidence, .compute-evidence .sql { padding: 12px; border-radius: 10px; border: 1px solid #354451; background: #11161B; min-width: 0; }
 .tile-evidence { display: flex; flex-direction: column; gap: 8px; }
 .tile-preview { height: 150px; position: relative; border-radius: 6px; overflow: hidden; background: #0A1015; }
 .tile-preview img { position: relative; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
 .tile-preview > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: #A5B4C3; }
 #computeTileCaption { font-size: 12px; color: #CBD5E1; }
-.compute-evidence .sql-head { flex-direction: column; align-items: flex-start; gap: 4px; }
-.compute-evidence .sql-head span { text-align: left; font-size: 11px; }
-.compute-evidence .sql-run { flex-wrap: wrap; }
-.compute-evidence .sql-places button { font-size: 11px; padding: 4px 7px; }
-.compute-evidence .bars { height: 80px; margin-top: 4px; }
-.compute-evidence .bars div { border-radius: 3px 3px 0 0; background: #75ACCB; }
-.bars-axis { display: flex; justify-content: space-between; font-size: 11px; color: #CBD5E1; }
-.compute-evidence .sql-foot { font-size: 11px; }
-.sql-editor summary { cursor: pointer; font-size: 12px; color: #B8CCE0; }
-.sql-editor summary:focus-visible { outline: 2px solid #E8EDF2; outline-offset: 3px; }
-.sql-editor-popover { position: absolute; left: 28px; right: 28px; bottom: 112px; z-index: 5; padding: 14px; border-radius: 10px; border: 1px solid #75ACCB; background: #0C141C; box-shadow: 0 10px 30px #0009; }
-.sql-editor-popover #sqlEditorClose { float: right; margin-bottom: 8px; padding: 5px 10px; border: 1px solid #7392A8; background: #1F2E38; color: #FFFFFF; font-family: inherit; cursor: pointer; }
-.sql-editor-popover textarea { display: block; width: 100%; height: 180px; clear: both; }
 .architecture-ribbon { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border: 1px solid #354451; border-radius: 10px; background: #11161B; }
 .architecture-ribbon > span { display: flex; align-items: center; gap: 6px; font-size: 15px; }
 .architecture-ribbon > .fa-symbol { width: 12px; height: 12px; color: #A5B4C3; }
-[data-panel="access"] .qr { grid-template-columns: 1.8fr 1fr; }
-[data-panel="access"] #qrViewer { width: 250px; }
-[data-panel="access"] #qrTiles { width: 140px; }
-[data-panel="access"] .qrcard { border-radius: 12px; padding: 16px; }
-[data-panel="access"] .qrcard b { font-size: 17px; }
 
 [data-panel="nowcasting"] { gap: 10px; }
-.compute-evidence .bars { height: 68px; }
 /* Long service errors remain available through the status tooltip without pushing the chart into navigation. */
-.compute-evidence .sql-foot { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 
 /* Restore the original panel width while retaining 24 px bold numbered titles. */
 .architecture-ribbon { padding: 10px; gap: 6px; }
 .architecture-ribbon > span { flex-direction: column; gap: 5px; font-size: 13px; }
-[data-panel="access"] .qr { grid-template-columns: 1.6fr 1fr; }
-[data-panel="access"] #qrViewer { width: 230px; }
-[data-panel="access"] #qrTiles { width: 130px; }
-[data-panel="access"] .qrcard { padding: 12px; }
 
 [data-panel="mtg"] { gap: 10px; }
 [data-panel="mtg"] .composite-image { height: 132px; }
@@ -693,31 +664,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 [data-panel="compute"] .callout { margin-top: auto; padding: 14px 18px; border-radius: 0; background: #6D0EDB; color: #fff; font-size: 16px; font-weight: 500; }
 
 /* Slide 07 mirrors the deployed main-branch Your Turn card and Live SQL palette. */
-.panels [data-panel="access"].panel.em { background: #201F2C; color: #D9D6E8; gap: 12px; }
-.panels [data-panel="access"] .kicker { color: #B7E400; }
-.panels [data-panel="access"] h2 { color: #F5F5F5; }
-.panels [data-panel="access"] .two.qr { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
-.panels [data-panel="access"] .qr .qrcard {
-  text-decoration: none; text-align: center; padding: 12px;
-  background: #F5F5F5; color: #201F2C; border: 0; border-radius: 0;
-  display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0;
-}
-.panels [data-panel="access"] .qrcard .qrbox { width: min(100%, 168px); aspect-ratio: 1; }
-.panels [data-panel="access"] .qrcard b { font-size: 15px; color: #201F2C; }
-.panels [data-panel="access"] .qrcard span { font-size: 12px; line-height: 1.35; color: #4E4E4E; }
-.panels [data-panel="access"] .sql {
-  display: flex; flex-direction: column; gap: 8px; min-width: 0;
-  padding: 12px 14px; background: #15141E; border: 0; border-radius: 0;
-}
-.panels [data-panel="access"] .sql-head b { font-size: 15px; color: #F5F5F5; }
-.panels [data-panel="access"] .sql-run { gap: 8px; }
-.panels [data-panel="access"] .sql .bars { height: 68px; }
-.panels [data-panel="access"] .sql-foot { font-size: 12px; line-height: 1.3; color: #A9A6BD; }
-.panels [data-panel="access"] .sql-editor summary { color: #D9D6E8; }
 @media (max-height: 850px) {
-  .panels [data-panel="access"].panel.em { gap: 8px; }
-  .panels [data-panel="access"] .qrcard .qrbox { width: min(100%, 138px); }
-  .panels [data-panel="access"] .sql { padding: 9px 12px; gap: 5px; }
 }
 
 /* Slide 03 adopts the main-branch AI-model flow dimensions. */
