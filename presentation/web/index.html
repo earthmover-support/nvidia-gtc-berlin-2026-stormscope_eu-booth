@@ -128,13 +128,13 @@
       <article class="panel nv" data-panel="nowcasting">
         <div class="kicker"><svg class="fa-symbol" aria-hidden="true" focusable="false"><use href="img/fontawesome.svg#chip"/></svg><span>03 · NVIDIA StormScope-EU</span></div>
         <h2>Predicting the Next Satellite Observation</h2>
-        <p>StormScope-EU is a generative diffusion model that predicts the next 16-channel Meteosat image from six consecutive satellite observations using iterative sampling.</p>
-        <p>Each predicted frame replaces the oldest frame in the sliding input window. Twelve autoregressive steps extend the forecast to +120 minutes from initialization.</p>
+        <p>Six observed Meteosat frames initialize StormScope-EU’s generative diffusion model. It predicts one 16-channel frame at a time; each prediction advances the six-frame context for the next step.</p>
+        <div class="model-key" aria-label="Diagram legend"><span class="key-observed">Observed input</span><span class="key-predicted">Model-generated frame</span></div>
 <svg class="science-diagram" viewBox="0 0 544 362" role="img" aria-labelledby="autoregressive-model-title autoregressive-model-desc">
           <title id="autoregressive-model-title">Autoregressive Model</title><desc id="autoregressive-model-desc">Six actual observation thumbnails condition one next-frame diffusion inference. Each prediction enters a shifting context window and returns to the model. Forecast thumbnails use published outputs. Context shifting is an illustration, not live GPU progress.</desc>
           <defs><marker id="autoregressive-model-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
           <path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-          <text class="diagram-strong" x="272" y="18" text-anchor="middle" >Initial Context · Six Observed Frames</text>
+          <text class="diagram-strong" x="272" y="18" text-anchor="middle" >Initial Input · Six Observed Frames</text>
           <g class="model-frame" data-frame-group="initial" data-frame-index="0">
           <rect class="diagram-observed" x="16" y="30" width="76" height="38" rx="7" />
           <use class="diagram-symbol" href="img/fontawesome.svg#satellite" x="44.0" y="39.0" width="20" height="20"/>
@@ -175,7 +175,7 @@
           <use class="diagram-symbol" href="img/fontawesome.svg#cloud" x="224" y="170" width="18" height="18"/>
           <text class="diagram-strong" x="284" y="184" text-anchor="middle" id="modelNextLead">+10 min</text>
           <path class="diagram-edge " d="M210 179H9V236H14" marker-end="url(#autoregressive-model-arrow)"/>
-          <text class="diagram-label" x="272" y="213" text-anchor="middle" >Context for the Next Inference</text>
+          <text class="diagram-label" x="272" y="213" text-anchor="middle" >Sliding Context · Updated After Each Prediction</text>
           <g class="model-frame" data-frame-group="rolling" data-frame-index="0">
           <rect class="diagram-predicted" x="16" y="220" width="76" height="32" rx="7" />
           <use class="diagram-symbol" href="img/fontawesome.svg#cloud" x="44.0" y="254.0" width="20" height="20"/>
@@ -207,7 +207,7 @@
           <image class="frame-image" x="448" y="222" width="72" height="28" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
           <text class="frame-label" x="484.0" y="270" text-anchor="middle" >—</text></g>
           <path class="diagram-edge feedback-path" d="M524 236H534V122H434" marker-end="url(#autoregressive-model-arrow)"/>
-          <text class="diagram-label" x="272" y="294" text-anchor="middle" >Twelve Predicted Frames · Minutes from Initialization</text>
+          <text class="diagram-label" x="272" y="294" text-anchor="middle" >12 Predicted Frames · Forecast Lead (min)</text>
           <g class="forecast-frame" data-output-index="0">
           <rect class="diagram-predicted" x="16" y="306" width="76" height="21" rx="7" />
           <image class="frame-image output-image" x="18" y="307" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
@@ -257,9 +257,8 @@
           <image class="frame-image output-image" x="448" y="331" width="72" height="19" preserveAspectRatio="xMidYMid slice" visibility="hidden"/>
           <text class="frame-output-label" x="484" y="346" text-anchor="middle" >+120</text></g>
         </svg>
-        <div class="diagram-note">Six Observations → Diffusion Inference → Next Frame → Updated Context</div>
         <div class="model-detail"><span id="modelImageState">Thumbnails load when this panel is shown.</span><span id="modelContextState">Illustrative context shift</span></div>
-        <div class="diagram-note">Predicted frames progressively enter the context during autoregressive rollout.</div>
+        <div class="diagram-note model-meaning"><strong>Illustrative rolling context:</strong> Six observations start the forecast. Predicted frames progressively replace observations during the 12-step rollout.</div>
       </article>
 
       <article class="panel nv" data-panel="e2s">
@@ -383,7 +382,8 @@
           <rect class="diagram-publication" x="94" y="152" width="386" height="34" rx="7"/>
           <text class="diagram-strong" x="287" y="175" text-anchor="middle">One Atomic Icechunk Commit</text>
         </svg>
-        <div class="history-title"><span>Live Forecast History</span><span id="historyFeedState">—</span></div>
+        <div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
+        <div class="publication-timeline" id="publicationTimeline" aria-label="Recent forecast snapshots in publication order; spacing does not represent elapsed time"></div>
         <div class="commits" id="commitList"></div>
       </article>
 
