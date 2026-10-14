@@ -884,8 +884,6 @@
     }
     setQR("qrViewer", c.viewer_url);
     $("#viewerLink").href = c.viewer_url;
-    $("#persistentViewerLink").href = c.viewer_url;
-    setQR("qrPersistent", c.viewer_url);
   }
 
   // ------------------------------------------------------------------ SQL
