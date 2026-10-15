@@ -40,3 +40,4 @@ so Vercel skips deploying commits that change nothing under `site/`. The tiles s
 `Access-Control-Allow-Origin: *`, so the page works from any domain. Only `main` deploys to
 production; pushes to other branches make preview deployments.
 
+Redeployed 2026-10-15.
