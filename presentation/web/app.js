@@ -124,7 +124,7 @@
   let pending = null; // a newer run loading in the background; replaces `shown` once complete
   let sets = 0;
   const LOAD_TIMEOUT_MS = 20000; // a stuck lead stops blocking the next one after this
-  const LEADS_IN_FLIGHT = 3; // leads loading at once: ~10 s to a full loop, ~15 s one at a time
+  const LEADS_IN_FLIGHT = 3; // leads loading at once: ~12 s to a full loop, ~17 s one at a time
 
   // Smallest zoom at which the whole panel, swayed and pitched, stays inside
   // camera.cover [west, south, east, north]: the part of Europe the forecast always fills.

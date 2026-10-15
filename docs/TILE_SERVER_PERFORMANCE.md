@@ -106,13 +106,16 @@ until every lead has loaded (or timed out), so it never shows a half-drawn frame
 loads behind the run on screen, which keeps looping until the new run is complete.
 
 **Leads in flight (2026-10-15, `presentation/`, eu-west-1, SKU S pinned to 8 warm replicas).**
-Local `server.py` in Chrome, 1512 × 749 px, about 20 z4 tiles per lead. Time from page load
-until the loop starts, each on an init no pod or browser had loaded before:
+Local `server.py` in full-screen Chrome (1920 × 907 px), about 20 z4 tiles per lead,
+`airmass` (`true_color` is black at night, which skews timings). Time from page load until
+the loop starts, each on an init no pod or browser had loaded before:
 
 | leads in flight | MapLibre parallel requests | until the loop starts |
 |---|---|---|
-| 1 (before) | 16 (default) | 13.7, 15.3, 17.5, 12.6 s (mean 14.8 s) |
-| 3 (now) | 64 | 9.0, 11.3, 10.9, 7.5 s (mean 9.7 s) |
+| 1 (before) | 16 (default) | 16.9, 17.5, 16.7, 17.0 s (mean 17.0 s) |
+| 3 (now) | 64 | 13.3, 12.1, 11.0, 12.9 s (mean 12.3 s) |
+
+A first series at 1512 × 749 px with `true_color`, partly on night inits, gave 14.8 → 9.7 s.
 
 One at a time, every lead waits for its slowest tile (~1.2 s per lead, so 13 leads ≈ 15 s).
 With 3 in flight those waits overlap. All 13 leads at once was no faster than 3 (9.5–13.2 s
@@ -122,8 +125,8 @@ service speaks HTTP/2, so Chrome's 6 connections per host don't limit this (Chro
 to 64 in flight).
 
 The phone viewer (`site/`) got the same change. Switching it to an unseen init (local copy,
-same Chrome window, same 8 replicas) until all 13 frames loaded: one at a time 7.3, 6.8,
-6.4, 11.5 s (mean 8.0 s); 3 in flight 4.1, 3.7, 3.7, 5.3 s (mean 4.2 s).
+same full-screen window, `airmass`, same 8 replicas) until all 13 frames loaded: one at a
+time 16.4, 17.7, 17.5, 15.8 s (mean 16.9 s); 3 in flight 11.4, 12.7, 11.8 s (mean 12.0 s).
 
 A just-committed run cost more: 13.8 s when loaded ~10 s after its commit, and 25.9 s
 when the page loaded it ~20 s after the commit. That load got 34 `504`s for the first 3
