@@ -113,8 +113,15 @@ docker compose logs -f
 ```
 
 `STORMSCOPE_PUBLISH_TARGET` and `ARRAYLAKE_REPO` can be overridden from the shell or a
-`.env` next to `compose.yaml`. Arguments after the service name replace the default
-command, e.g. a single pinned run:
+`.env` next to `compose.yaml`. If the EUMETSAT account holds the NRT licence (real-time data),
+set `STORMSCOPE_REALTIME=1` to run with `--min-lag 0`; the default `0` keeps the script's
+62-minute lag:
+
+```bash
+STORMSCOPE_REALTIME=1 docker compose up -d --build
+```
+
+Arguments after the service name replace the default command, e.g. a single pinned run:
 
 ```bash
 docker compose run --rm pipeline python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00
