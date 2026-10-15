@@ -155,6 +155,7 @@ uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arr
 | Flag | Default | Notes |
 |---|---|---|
 | `--start-time` | freshest downloadable slot | ISO 8601 UTC on a 10-min boundary. If the Data Store can't be searched, falls back to 2 h behind now. |
+| `--min-lag` | `62` | minutes a slot must be past its slot time to be considered; `0` with the EUMETSAT NRT licence (see `MIN_LAG` in the script) |
 | `--n-steps` | `12` | 10-min steps |
 | `--output-dir` | `outputs` | local Icechunk store |
 | `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` |
