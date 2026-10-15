@@ -30,12 +30,13 @@
 ## Improvements
 
 - `polygons/rgb` style
-- uint8 instead of float32 — 2x
+- uint8 instead of float32
 - One commit per init instead of per forecast step (earth2studio non-blocking ingest)
 - Reprojection fix
-- Co-location of input data / inference compute / storage / tiles compute / user request — 2x
-- Pending: HTTP/2 — unlimited requests from the client instead of 6 in-flight tiles with HTTP/1.1
-- Hard: measuring improvements with cold instances and caching
+- Co-location of input data / inference compute / storage / tiles compute / user request
+- HTTP/2 — unlimited requests from the client instead of 6 in-flight tiles with HTTP/1.1
+- Hard: measuring improvements with cold instances, caching and auto-scaling
+- animated 13 forecast steps autoplaying after ~200s -> 10s
 
 ## Feature recommendation
 
