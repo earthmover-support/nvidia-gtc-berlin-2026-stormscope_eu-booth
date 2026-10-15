@@ -4,27 +4,7 @@
   "rewrites": [
     {
       "source": "/flux/:path*",
-      "destination": "https://tiles-edf5beae0d2afdc4.eu-west-1.compute.arraylake.app/v1/services/tiles-eu/gtc-berlin/:path*"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/flux/(.*)/tiles/(.*)",
-      "headers": [
-        {
-          "key": "Vercel-CDN-Cache-Control",
-          "value": "max-age=86400"
-        }
-      ]
-    },
-    {
-      "source": "/flux/_meta/(.*)",
-      "headers": [
-        {
-          "key": "Vercel-CDN-Cache-Control",
-          "value": "max-age=30"
-        }
-      ]
+      "destination": "/api/flux?path=:path*"
     }
   ]
 }
