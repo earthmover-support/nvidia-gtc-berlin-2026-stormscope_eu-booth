@@ -6,5 +6,8 @@
       "source": "/flux/:path*",
       "destination": "/api/flux?path=:path*"
     }
+  ],
+  "regions": [
+    "dub1"
   ]
 }

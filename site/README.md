@@ -5,7 +5,7 @@ Earthmover Flux tiles service (`gtc-berlin`), branch `main`; on Vercel through a
 selector, a true colour / airmass toggle, and playback over lead times. Playback holds the
 first frame until all leads have loaded. Every minute it checks for a new init, loads it in
 the background, and switches to it once it is complete. No build step and no server:
-`index.html`, `sw.js`, three logo SVGs and one edge function.
+`index.html`, `sw.js`, three logo SVGs and one Vercel function.
 
 ## Tile cache
 
@@ -22,12 +22,24 @@ differently. To clear it in one browser: DevTools → Application → Storage �
 
 Flux keeps no cache of rendered tiles, so every visitor's browser would make it render the
 same ~260 tiles of a run again. On Vercel (any `https:` origin) the page asks for `/flux/...`
-instead, which `vercel.json` rewrites to `api/flux.js`. That edge function forwards the
-request to Flux and marks successful responses cacheable on Vercel's CDN (tiles a day, the
-`_meta` init list 30 s), so each tile is rendered once for everyone. Errors such as a `504`
-from a busy service are not cached. Measured 2026-10-15: a cold run took 28 s in the browser;
-the same 234 tiles from a second client were all `x-vercel-cache: HIT`, 49 ms p50. Locally
-(`http:`) the page goes straight to Flux.
+instead, which `vercel.json` rewrites to `api/flux.js`. That function (Node.js, pinned to
+`dub1` next to Flux in eu-west-1) forwards the request and marks successful responses
+cacheable on Vercel's CDN (tiles a day, the `_meta` init list 30 s), so a tile is rendered
+once and then served to everyone. Errors such as a `504` from a busy service are not cached.
+Locally (`http:`) the page goes straight to Flux.
+
+Vercel does not merge simultaneous requests for an uncached tile: 10 clients opening a new
+run together still made Flux render most tiles several times (1,427 misses for 234 tiles).
+So `scripts/warm_tiles.py` requests each new run's default-view tiles once through the proxy
+as soon as it is listed; keep it running while the page gets traffic:
+
+```bash
+uv run --no-project python scripts/warm_tiles.py https://<this site>.vercel.app
+```
+
+Measured 2026-10-15 on a test deployment: a new run takes the warmer ~35 s (598 tiles, both
+variables, z2-z4). A browser opening it afterwards got 117/117 tiles as `x-vercel-cache: HIT`
+and the animation started 6.8 s after page load, against 28 s for a cold run.
 
 ## Run locally
 
