@@ -20,12 +20,17 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlencode
 
 REPO = "stormscope-eu_gtc_berlin_2026_EU_region"
+# Polled directly, not through the proxy: the proxy caches the run list for 30 s, which would
+# give visitors the new init as early as the warmer.
+FLUX = (
+    "https://tiles-edf5beae0d2afdc4.eu-west-1.compute.arraylake.app/v1/services/tiles-eu/gtc-berlin"
+)
 VARIABLES = ["true_color", "airmass"]  # the page's default first
 # What phones and desktops see at the page's initial bounds ([-5, 44, 26, 58]): z2-z4
 # over a box wide enough for a 1920 px screen. Panning and zooming in still miss.
 BOX, ZOOMS = (-25, 35, 45, 65), (2, 3, 4)
-IN_FLIGHT = 8  # one browser's worth; more only queues on Flux
-POLL_S = 20
+IN_FLIGHT = 16  # done in ~20 s, before most visitors' next 60 s poll
+POLL_S = 5
 
 
 def tile_x(lon, z):
@@ -50,10 +55,10 @@ def get(url):
         return r.status, r.headers.get("x-vercel-cache")
 
 
-def run_list(host):
+def run_list():
     """(newest init, leads) from the dataset tree, parsed like loadCoords in index.html."""
     html = (
-        urllib.request.urlopen(f"{host}/flux/_meta/datasets/{REPO}/main/tree", timeout=60)
+        urllib.request.urlopen(f"{FLUX}/_meta/datasets/{REPO}/main/tree", timeout=60)
         .read()
         .decode()
     )
@@ -110,7 +115,7 @@ def main():
     done = None
     while True:
         try:
-            init, leads = run_list(host)
+            init, leads = run_list()
             if init != done:
                 warm(host, init, leads)
                 done = init
