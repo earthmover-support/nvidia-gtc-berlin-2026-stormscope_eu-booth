@@ -263,7 +263,7 @@ Then the same matrix with the service pinned to `min = max = 8` replicas, after 
   in flight to the service; HTTP/1.1 would cap that at 6. (Chrome hides the protocol name for
   these cross-origin tiles, so this is inferred from the count.) It had 12 of 13 frames after
   30 s.
-- **More in flight helps, but not reliably.** The best runs with 20–24 in flight took ~10 s,
+- **On autoscaling 0–8, more in flight helps, but not reliably.** The best runs with 20–24 in flight took ~10 s,
   the doc's old target, against ~22 s with 6. But the spread is wide (9.5–38 s), so a few slow
   tiles still decide when the loop starts. All 260 at once delays the first frame, because the
   service renders requests in any order: load in playback order, a lead at a time, as the page
