@@ -133,6 +133,19 @@ and the token. Differences from the booth:
   `tiles` and `init-<YYYYMMDDHHMM>` (`vercel cache invalidate --tag ...`). The booth's
   `server.py` still fetches tiles straight from Flux. The "Raw tiles" QR code points at the
   proxy URL.
+- **Warm each new run before viewers open it.** The CDN doesn't merge simultaneous misses,
+  so viewers opening a new run together still make Flux render each tile several times.
+  `scripts/warm_presentation_tiles.py` polls `/api/state` and requests the new run's globe
+  tiles (z4 home view plus the composite previews, both variables, every lead: 754 tiles,
+  ~20 s) once through the proxy, with the URLs `tileTemplate` builds. Keep it running while
+  the page gets traffic, pointed at the exact hostname viewers use:
+
+  ```bash
+  uv run --no-project python scripts/warm_presentation_tiles.py https://<this page>.vercel.app
+  ```
+
+  Measured 2026-10-15 on a test deployment: after it ran, a browser opening the page got
+  227/227 tiles as `x-vercel-cache: HIT`. Zooming or panning past the home view still misses.
 - **Windows smaller than 1920 × 1080** show the booth layout zoomed down to fit. At
   1920 × 1080 the booth is unaffected.
 - The vendored libraries are copied into `web/vendor/` at build time (`npm run vendor`),
