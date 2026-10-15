@@ -8,8 +8,7 @@
 <!-- The map waits for the style and its sprite before it adds a frame; fetch them during the MapLibre download. -->
 <link rel="preload" href="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" as="fetch" crossorigin>
 <link rel="preconnect" href="https://tiles.basemaps.cartocdn.com" crossorigin>
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.css">
-<script src="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css">
 <style>
   /* NVIDIA palette */
   :root {
@@ -85,7 +84,10 @@
   </div>
   <div id="status">Loading inits…</div>
 </div>
-<script>
+<script type="module">
+// MapLibre 6 ships ES modules only.
+import * as maplibregl from "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
+
 // Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
 const FLUX = "https://tiles-edf5beae0d2afdc4.eu-west-1.compute.arraylake.app/v1/services/tiles-eu/gtc-berlin";
 // On Vercel (the only https host), go through the /flux rewrite in vercel.json so Vercel's CDN
