@@ -25,8 +25,6 @@ PRs: 🟣 merged, 🟢 open, 🔴 closed without merging. Issues: ✅ closed, �
 ## What's left, by expected impact
 
 1. **Shorter poll (stage 4):** up to 60 s, at the cost of more Data Store searches.
-2. **Several viewers ([#54] ⏳):** rendered tiles aren't shared, so each phone re-renders the
-   run. 8 replicas render ~26 tiles/s, about one full run per 10 s. Untested with more viewers.
 
 ## Sources and reproduce
 
@@ -72,7 +70,6 @@ PRs: 🟣 merged, 🟢 open, 🔴 closed without merging. Issues: ✅ closed, �
 [#33]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/33
 [#81]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/81
 [#11]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/11
-[#54]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/54
 [#62]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/62
 [#30]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/30
 [#31]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/31
