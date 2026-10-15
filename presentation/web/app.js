@@ -166,6 +166,10 @@
         maxZoom: c.camera.max_zoom ?? 8.5,
         attributionControl: { compact: true, customAttribution: FORECAST_ATTR },
         fadeDuration: 0,
+        transformRequest: (url, type) => {
+          if (type === "Tile" && url.startsWith(c.tile_base)) tileUrls.add(url);
+          return { url };
+        },
       });
     } catch (e) {
       showNotice(`Globe failed to start (WebGL?): ${e.message}`);
@@ -285,7 +289,41 @@
       addNext(pending);
       if (complete(pending)) promote(pending);
     }
+    if (!pending && complete(shown)) prefetch(shown);
   }
+
+  // Once the run on screen is complete, fetches the same tiles for every other run and
+  // variable a visitor can pick into the browser cache (snapshot URLs are immutable), so a
+  // pick plays at once: the other variable of this run first, then older runs, newest first.
+  const tileUrls = new Set(); // every forecast tile URL MapLibre requested
+  const prefetched = new Set(); // "init|variable" fetched or on screen
+  let prefetching = false;
+  async function prefetch(set) {
+    prefetched.add(`${set.run.init}|${set.variable}`);
+    if (prefetching || !OPTS.prefetch) return;
+    prefetching = true;
+    // the tiles on screen, as [lead, z, y, x]
+    const tiles = [...tileUrls].flatMap((u) => {
+      const x = new URL(u), q = x.searchParams;
+      if (q.get("time") !== set.run.time || q.get("variables") !== set.variable) return [];
+      return [[parseInt(q.get("lead_time")), ...x.pathname.split("/").slice(-3)]];
+    });
+    const vars = [set.variable, ...Object.keys(S.cfg.variables).filter((v) => v !== set.variable)];
+    const runs = [set.run, ...selectableRuns().filter((r) => r.init !== set.run.init)].slice(0, OPTS.prefetch_runs);
+    for (const run of runs) for (const name of vars) {
+      const key = `${run.init}|${name}`;
+      if (prefetched.has(key) || shown !== set || pending) continue; // a new run or pick goes first
+      prefetched.add(key);
+      const queue = tiles.map(([lead, z, y, x]) =>
+        tileTemplate(run, name, lead, TILE_SIZE).replace("{z}", z).replace("{y}", y).replace("{x}", x));
+      const worker = async () => { while (queue.length) await fetch(queue.shift()).then((r) => r.blob()).catch(() => {}); };
+      await Promise.all(Array.from({ length: 16 }, worker)); // ponytail: fixed 16 in flight, tune if it slows the next run
+    }
+    prefetching = false;
+  }
+  // benchmark switches: ?prefetch=0 turns it off, ?prefetch_runs=1 only the other variable
+  const OPTS = { prefetch: new URLSearchParams(location.search).get("prefetch") !== "0",
+                 prefetch_runs: Number(new URLSearchParams(location.search).get("prefetch_runs") ?? 99) };
 
   function promote(set, pick = false) {
     if (shown) dropSet(shown);
