@@ -9,7 +9,8 @@ QR codes and a live Zax-SQL query. It runs locally on the booth machine and is a
 presentation/
   server.py        booth: stdlib HTTP server + Arraylake/SQL pollers (uv inline deps)
   booth.py         logic shared by server.py and api/: runs, commits, SQL, public config
-  api/             hosted: Vercel Python functions for /api/config, /api/state, /api/sql
+  api/             hosted: Vercel Python functions for /api/config, /api/state, /api/sql;
+                   flux.js, the tile proxy
   requirements.txt hosted: the functions' dependencies
   vercel.json      hosted: build, output directory, function timeout
   config.json      everything tunable: tile service, variables, timings, station, SQL
@@ -123,6 +124,15 @@ and the token. Differences from the booth:
 - **No pollers.** `/api/state` reads commits and the `time` coordinate on each request
   (about 1.5 s warm, 8 s cold) and the CDN caches it for 5 s with
   stale-while-revalidate, so viewers polling every 4 s rarely wait.
+- **Tiles go through a caching proxy.** `/api/config` answers `tile_base: /flux/<repo>`, and
+  `vercel.json` rewrites `/flux/*` to `api/flux.js` (Node.js, pinned to `dub1` next to Flux in
+  eu-west-1; the Python functions keep their default region). It forwards only this repo's
+  tiles (branch or snapshot id) and keeps successful ones for a day in Vercel's CDN and in
+  the Runtime Cache, which every region shares, so viewers share one render per tile instead
+  of each making Flux render it again. Errors such as a `504` are not cached. Tiles are tagged
+  `tiles` and `init-<YYYYMMDDHHMM>` (`vercel cache invalidate --tag ...`). The booth's
+  `server.py` still fetches tiles straight from Flux. The "Raw tiles" QR code points at the
+  proxy URL.
 - **Windows smaller than 1920 × 1080** show the booth layout zoomed down to fit. At
   1920 × 1080 the booth is unaffected.
 - The vendored libraries are copied into `web/vendor/` at build time (`npm run vendor`),
