@@ -1,4 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
+  "rewrites": [
+    {
+      "source": "/flux/:path*",
+      "destination": "/api/flux?path=:path*"
+    }
+  ],
+  "regions": [
+    "dub1"
+  ]
 }
