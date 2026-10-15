@@ -125,9 +125,10 @@ The phone viewer (`site/`) got the same change. Switching it to an unseen init (
 same Chrome window, same 8 replicas) until all 13 frames loaded: one at a time 7.3, 6.8,
 6.4, 11.5 s (mean 8.0 s); 3 in flight 4.1, 3.7, 3.7, 5.3 s (mean 4.2 s).
 
-A run committed seconds earlier cost more: 13.8 s about a minute after its commit, and 25.9 s
-when the page loaded it within seconds of the commit. That load got 34 `504`s for the first 3
-leads, all within 4 s, on the brand-new snapshot. Not yet reported to Earthmover.
+A just-committed run cost more: 13.8 s when loaded ~10 s after its commit, and 25.9 s
+when the page loaded it ~20 s after the commit. That load got 34 `504`s for the first 3
+leads, all within 4 s, on the brand-new snapshot; one tile spent 10.4 s in `apply_query`.
+Seen once, the next run had no errors (#82).
 
 ## Other observations
 
