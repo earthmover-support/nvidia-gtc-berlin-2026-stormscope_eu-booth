@@ -100,10 +100,30 @@ animate. Measured with headless Chrome (1920×1080, cold browser cache, 180 s):
 | all 12 sources added at once | 59–180 s | 1 of 12 |
 | one source at a time, in playback order | 17–25 s | 7–12 of 12 |
 
-The page adds the next lead's source once the previous one has loaded, or after 20 s if a
-tile hangs. The loop holds the first frame until every lead has loaded (or timed out), so it
-never shows a half-drawn frame. A new init loads behind the run on screen, which keeps
-looping until the new run is complete.
+The page keeps 3 leads loading at once, in playback order, and adds the next lead's source
+once one of them has loaded, or after 20 s if a tile hangs. The loop holds the first frame
+until every lead has loaded (or timed out), so it never shows a half-drawn frame. A new init
+loads behind the run on screen, which keeps looping until the new run is complete.
+
+**Leads in flight (2026-10-15, `presentation/`, eu-west-1, SKU S pinned to 8 warm replicas).**
+Local `server.py` in Chrome, 1512 × 749 px, about 20 z4 tiles per lead. Time from page load
+until the loop starts, each on an init no pod or browser had loaded before:
+
+| leads in flight | MapLibre parallel requests | until the loop starts |
+|---|---|---|
+| 1 (before) | 16 (default) | 13.7, 15.3, 17.5, 12.6 s (mean 14.8 s) |
+| 3 (now) | 64 | 9.0, 11.3, 10.9, 7.5 s (mean 9.7 s) |
+
+One at a time, every lead waits for its slowest tile (~1.2 s per lead, so 13 leads ≈ 15 s).
+With 3 in flight those waits overlap. All 13 leads at once was no faster than 3 (9.5–13.2 s
+in three runs) and the first frames arrived later. MapLibre allows only 16 image requests
+in parallel by default, which would cap 3 leads × 20 tiles, so the page raises it to 64. The
+service speaks HTTP/2, so Chrome's 6 connections per host don't limit this (Chrome kept up
+to 64 in flight).
+
+A run committed seconds earlier cost more: 13.8 s about a minute after its commit, and 25.9 s
+when the page loaded it within seconds of the commit. That load got 34 `504`s for the first 3
+leads, all within 4 s, on the brand-new snapshot. Not yet reported to Earthmover.
 
 ## Other observations
 

@@ -124,6 +124,7 @@
   let pending = null; // a newer run loading in the background; replaces `shown` once complete
   let sets = 0;
   const LOAD_TIMEOUT_MS = 20000; // a stuck lead stops blocking the next one after this
+  const LEADS_IN_FLIGHT = 3; // leads loading at once: ~10 s to a full loop, ~15 s one at a time
 
   // Smallest zoom at which the whole panel, swayed and pitched, stays inside
   // camera.cover [west, south, east, north]: the part of Europe the forecast always fills.
@@ -146,6 +147,9 @@
 
   function initGlobe() {
     const c = S.cfg;
+    // MapLibre's default of 16 parallel tile requests would cap LEADS_IN_FLIGHT; the tiles
+    // service speaks HTTP/2, so the browser's 6-per-host limit doesn't apply
+    maplibregl.setMaxParallelImageRequests(64);
     try {
       map = new maplibregl.Map({
         container: "globe",
@@ -250,14 +254,14 @@
   // frame indices whose lead has loaded in `set`, in playback order
   const readyFrames = (set) => (set ? S.cfg.leads.flatMap((l, k) => (set.loaded.has(l) ? [k] : [])) : []);
 
-  // Every lead has been added, and the last one has loaded or timed out.
+  // Every lead has been added, and all have loaded or the last one added timed out.
   const complete = (set) =>
     set.layers.size === S.cfg.leads.length &&
-    (set.loaded.has(S.cfg.leads.at(-1)) || Date.now() - set.addedAt >= LOAD_TIMEOUT_MS);
+    (set.loaded.size === S.cfg.leads.length || Date.now() - set.addedAt >= LOAD_TIMEOUT_MS);
 
   // One raster source per lead time at opacity 0, so the loop never waits on tiles once loaded.
-  // Sources are added one at a time in playback order: the tiles service renders about one
-  // tile per second, so requesting all leads at once leaves every frame half drawn for minutes.
+  // Sources are added in playback order, LEADS_IN_FLIGHT at a time: requesting all leads at
+  // once gets the early frames no sooner, and one at a time waits on each lead's slowest tile.
   // A run or variable the visitor picks (`pick`) replaces the frames on screen at once; a new
   // run found by polling loads behind them, so the loop keeps going until it is complete.
   function syncLayers(pick = false) {
@@ -296,24 +300,26 @@
   }
 
   function addNext(set) {
-    const busy = [...set.layers.keys()].some((l) => !set.loaded.has(l));
-    if (busy && Date.now() - set.addedAt < LOAD_TIMEOUT_MS) return;
-    const lead = S.cfg.leads.find((l) => !set.layers.has(l));
-    if (lead == null) return;
-    const id = `lead-${set.id}-${lead}`;
-    map.addSource(id, {
-      type: "raster",
-      tiles: [tileTemplate(set.run, set.variable, lead, TILE_SIZE)],
-      tileSize: TILE_SIZE,
-      bounds: S.cfg.data_bounds,
-      maxzoom: S.cfg.max_tile_level,
-    });
-    map.addLayer(
-      { id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 } },
-      labelsLayer
-    );
-    set.layers.set(lead, id);
-    set.addedAt = Date.now();
+    for (;;) {
+      const busy = [...set.layers.keys()].filter((l) => !set.loaded.has(l)).length;
+      if (busy >= LEADS_IN_FLIGHT && Date.now() - set.addedAt < LOAD_TIMEOUT_MS) return;
+      const lead = S.cfg.leads.find((l) => !set.layers.has(l));
+      if (lead == null) return;
+      const id = `lead-${set.id}-${lead}`;
+      map.addSource(id, {
+        type: "raster",
+        tiles: [tileTemplate(set.run, set.variable, lead, TILE_SIZE)],
+        tileSize: TILE_SIZE,
+        bounds: S.cfg.data_bounds,
+        maxzoom: S.cfg.max_tile_level,
+      });
+      map.addLayer(
+        { id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-opacity-transition": { duration: 0 }, "raster-fade-duration": 0 } },
+        labelsLayer
+      );
+      set.layers.set(lead, id);
+      set.addedAt = Date.now();
+    }
   }
 
   function showFrame() {
