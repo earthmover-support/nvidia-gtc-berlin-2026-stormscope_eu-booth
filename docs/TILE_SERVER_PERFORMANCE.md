@@ -232,6 +232,26 @@ minutes after the tests it had 2 ready replicas (not polled during them).
 An earlier series the same morning, with other viewers still open, gave the same picture
 (6 in flight 18–26 s, 24 in flight 9–19 s, bypass 103–185 s).
 
+Then the same matrix with the service pinned to `min = max = 8` replicas, after a warm-up of
+2 × 260 tiles. All 8 replicas stayed ready throughout (polled every 30 s):
+
+| case (8 replicas) | full run | first frame | tile p50 / p90 / max | read from storage per tile |
+|---|---|---|---|---|
+| `main`, 6 in flight, HTTP/2 | 18.6, 19.4, 19.7 s | 1.8–2.3 s | 0.41–0.42 / 0.63–0.72 / ≤1.5 s | 2.3–2.4 MB |
+| `main`, 6 in flight, HTTP/1.1 | 17.6, 17.9, 18.2 s | 1.6–2.0 s | 0.37–0.38 / 0.66–0.70 / ≤1.4 s | 2.3–2.4 MB |
+| snapshot id, 6 in flight, HTTP/2 | 18.4, 18.6, 18.8 s | 1.7–1.9 s | 0.40–0.42 / 0.64–0.67 / ≤1.0 s | 2.3–2.6 MB |
+| `main`, 20 in flight, HTTP/2 | 9.5, 10.2, 10.3 s | 1.2–1.4 s | 0.68–0.75 / 0.94–1.08 / ≤1.7 s | 2.3–2.4 MB |
+| `main`, 24 in flight, HTTP/2 | 9.9, 10.5, 10.6 s | 1.6–2.0 s | 0.84–0.91 / 1.20–1.31 / ≤2.0 s | 2.3 MB |
+| `main`, all 260 at once, HTTP/2 | 8.2, 10.4, 10.9 s | 3.4–9.9 s | 3.6–6.0 / 7.4–10.4 / ≤10.9 s | 2.3–2.4 MB |
+| `main`, 6 in flight, `X-Flux-Cache-Bypass: all` | 96.4, 98.5, 98.7 s | 8.2–10.7 s | 2.1–2.2 / 2.8–3.0 / ≤4.2 s | 11.2–11.3 MB |
+
+- **Pinning 8 replicas removes the spread.** On autoscaling 0–8 the same case varied up to
+  4× (20 in flight: 10–38 s) and single tiles took up to 17 s. On 8 pinned replicas every
+  case repeated within ~10 %, and no tile took more than 2 s (outside the all-at-once case).
+  The likely cause of the spread is new pods starting with an empty cache when the autoscaler
+  scales out (see Earthmover's note above). So for the booth: pin `min_replicas`.
+- **With 8 replicas a full run takes ~10 s at 20 in flight**, the doc's old target, against
+  ~18 s at 6. Per tile, 6 in flight is client-bound: ~0.4 s × 260 / 6 ≈ 18 s.
 - **The pod's chunk cache is what makes tiles fast.** With the cache bypassed, every tile read
   ~11 MB from storage and a run took 4–6× longer. With the cache on, neighbouring tiles and
   later leads reuse chunks, and a tile reads only ~2.4 MB. That overturns "nothing is cached
