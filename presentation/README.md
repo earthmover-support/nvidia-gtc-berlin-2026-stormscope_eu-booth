@@ -56,9 +56,12 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
 ## Before the event
 
 1. **Tiles**: `al compute enable gtc-berlin tiles --sku-code s --is-public`, then
-   `al compute update gtc-berlin tiles-4f49272b --min-replicas 8 --max-replicas 8`
+   `al compute update gtc-berlin tiles-eu-8af53d67 --min-replicas 8 --max-replicas 8`
    (see [Viz](../README.md#viz)). The service is public, so browsers and phones fetch
    tiles without a token. Set `--min-replicas 0` again after booth hours.
+   Each pod caches on its own and starts empty, so warm them up before doors open: load
+   the booth page once and let one run play
+   ([TILE_SERVER_PERFORMANCE.md](../docs/TILE_SERVER_PERFORMANCE.md#server-side-caches-and-http2-2026-10-15)).
 2. **Inits**: the page reads `gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region` (root group). The
    pipeline appends every run's init to `time` and never drops one; the page offers the
    newest 12 (`max_runs`). The server re-reads the `time` coordinate whenever `main` moves,

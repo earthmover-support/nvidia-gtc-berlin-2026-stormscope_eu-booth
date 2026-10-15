@@ -92,6 +92,7 @@ const COLORSCALERANGE = "0,255";
 const BOUNDS = [-45.91, 29.8, 67.33, 74.04]; // as reported by the service's tilejson
 const FRAME_MS = 800;
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
+const LEADS_IN_FLIGHT = 3; // frames loading at once; one at a time waits on each frame's slowest tile
 const POLL_MS = 60000; // how often to look for a new init
 
 // Keep tiles across variable switches and reloads; see sw.js.
@@ -131,6 +132,9 @@ let leads = [], variable = "true_color", frame = 0, timer = null, firstLabel, ru
 let run = null; // on screen
 let next = null; // a newer init loading in the background; replaces `run` once complete
 
+// MapLibre's default of 16 parallel tile requests would cap LEADS_IN_FLIGHT; the tiles
+// service speaks HTTP/2, so the browser's 6-per-host limit doesn't apply
+maplibregl.setMaxParallelImageRequests(64);
 const map = new maplibregl.Map({
   container: "map",
   style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
@@ -161,8 +165,8 @@ function tileUrl(r, lead) {
 }
 
 // One raster layer per lead time, all kept loaded; playback only flips opacity.
-// Frames are added one at a time, each once the previous one has loaded (or timed out):
-// the service renders slowly, and asking for every lead at once leaves all frames half drawn.
+// Frames are added in playback order, LEADS_IN_FLIGHT at a time (or once one times out):
+// asking for every lead at once gets the early frames no sooner.
 // A run the visitor picks replaces the one on screen at once; a new init found by polling
 // loads behind it, so the animation keeps going until the new run is complete.
 function startRun(time, background = false) {
@@ -191,9 +195,9 @@ function dropRun(r) {
   }
 }
 
-// Every frame has been added, and the last one has loaded or timed out.
+// Every frame has been added, and all have loaded or the last one added timed out.
 const complete = (r) =>
-  r.added === leads.length && (r.loaded.has(leads.length - 1) || Date.now() - r.addedAt >= LOAD_TIMEOUT_MS);
+  r.added === leads.length && (r.loaded.size === leads.length || Date.now() - r.addedAt >= LOAD_TIMEOUT_MS);
 
 // The background run only loads once the one on screen is complete, so the two never
 // compete for the tiles service.
@@ -208,7 +212,8 @@ function tick() {
 
 function addNext(r) {
   const i = r.added;
-  if (i >= leads.length || (i > 0 && !r.loaded.has(i - 1) && Date.now() - r.addedAt < LOAD_TIMEOUT_MS)) return;
+  const busy = i - r.loaded.size; // added, not yet loaded
+  if (i >= leads.length || (busy >= LEADS_IN_FLIGHT && Date.now() - r.addedAt < LOAD_TIMEOUT_MS)) return;
   const id = fid(r, i);
   map.addSource(id, { type: "raster", tiles: [tileUrl(r, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
   map.addLayer({
@@ -218,6 +223,7 @@ function addNext(r) {
   r.added++;
   r.addedAt = Date.now();
   setTimeout(tick, LOAD_TIMEOUT_MS);
+  addNext(r);
 }
 
 map.on("sourcedata", (e) => {
