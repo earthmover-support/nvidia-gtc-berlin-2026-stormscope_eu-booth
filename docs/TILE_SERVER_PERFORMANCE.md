@@ -20,6 +20,12 @@ Related: [WEB_TILES_SERVICE_REQUIREMENTS.md](WEB_TILES_SERVICE_REQUIREMENTS.md) 
    frame arrives in ~20 s.
 4. **Pyramids (#9) are what would actually close the gap.** More replicas don't shorten a
    single tile, and one browser can't keep more than ~6 requests in flight.
+5. **Update 2026-10-15 (eu-west-1): pin the replicas during booth hours.** On `tiles-eu`
+   (SKU S) with `min = max = 8`, a full run arrives in ~10 s at 20 in flight, and repeats
+   within ~10 %. On autoscaling 0–8 the same load took 10–38 s, with single tiles up to 17 s,
+   because new pods start with an empty cache. The service now speaks HTTP/2, so the ~6
+   request limit above no longer applies. See
+   [Server-side caches and HTTP/2](#server-side-caches-and-http2-2026-10-15).
 
 ## Units
 
@@ -281,17 +287,26 @@ Then the same matrix with the service pinned to `min = max = 8` replicas, after 
    reloads come from the browser cache.
 4. **Service cache settings:** might stop repeat requests from re-reading all their data.
    Untested.
-5. **More replicas / `min_replicas: 1`:** removes cold starts and helps with several screens
-   or phones, not with one browser.
+5. **Pin replicas (`min = max = 8`) during booth hours:** each pod keeps its own cache, and
+   pods the autoscaler adds start empty. Pinned and warmed up, one browser gets a full run in
+   ~10 s, every time (measured 2026-10-15 on `tiles-eu`). Set min back to 0 after hours, since
+   every replica bills while it runs. Warm the pods up after pinning: load the booth page or
+   one run before visitors arrive.
 
 ## Reproduce
 
 ```bash
 # check the service shape and replicas
-uvx --from arraylake al compute status gtc-berlin tiles-4f49272b
-# resize for a test, then restore the booth settings (S, 8 replicas; min 0 outside booth hours)
-uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku xs
-uvx --from arraylake al compute update gtc-berlin tiles-4f49272b --sku s --min-replicas 8 --max-replicas 8
+uvx --from arraylake al compute status gtc-berlin tiles-eu-8af53d67
+# booth hours: pin 8 replicas (all ready ~20 s later)
+uvx --from arraylake al compute update gtc-berlin tiles-eu-8af53d67 --min-replicas 8 --max-replicas 8
+# after hours: back to autoscaling
+uvx --from arraylake al compute update gtc-berlin tiles-eu-8af53d67 --min-replicas 0 --max-replicas 8
+# restart (fresh, cold pods) before a benchmark
+uvx --from arraylake al compute update gtc-berlin tiles-eu-8af53d67 --sku xs
+uvx --from arraylake al compute update gtc-berlin tiles-eu-8af53d67 --sku s
+# cache hit/miss for one tile; add -H "X-Flux-Cache-Bypass: all" to skip the caches
+curl -s -D - -o /dev/null "$TILE_URL" | grep -i "cache-status\|x-flux-inbound"
 ```
 
 Each SKU bills while it runs. The service is deliberately public and deliberately disabled
