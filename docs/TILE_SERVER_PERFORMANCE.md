@@ -213,38 +213,43 @@ this tile), `x-keda-http-cold-start` and `x-multiscale-level`.
 
 A Python script (`httpx`) loaded one full run from `tiles-eu`: 13 leads × the 20 z4 booth
 tiles = 260 tiles, `airmass`, in playback order, with N requests in flight. It ran from Berlin
-on 2026-10-15. Each run used an init that nobody had requested before (hourly inits of
-2026-10-12/13), so no pod held those chunks. `x-keda-http-cold-start` was `false` for every
-tile, so the pods were already up. The replica count is unknown, and other booth traffic may
-have shared the pods.
+on 2026-10-15, with every other viewer of the service closed. Each run used an init nobody had
+requested before (hourly inits of 2026-10-10/11), so no pod held those chunks. The cases ran
+interleaved, three rounds. `x-keda-http-cold-start` was `false` for every tile, so the pods
+were already up. The replica count is unknown (the `al` CLI login had expired).
 
-| case | runs | full run | first frame | tile p50 / p90 | read from storage per tile |
-|---|---|---|---|---|---|
-| `main`, 6 in flight, HTTP/2 | 2 | 19.2, 26.2 s | 1.9, 2.4 s | 0.41–0.56 / 0.67–0.97 s | 2.3 MB |
-| `main`, 6 in flight, HTTP/1.1 | 2 | 17.7, 20.0 s | 1.7, 1.9 s | 0.38–0.42 / 0.69–0.79 s | 2.3 MB |
-| snapshot id, 6 in flight, HTTP/2 | 2 | 20.7, 35.2 s | 1.8, 3.1 s | 0.44–0.77 / 0.73–1.24 s | 2.3 MB |
-| `main`, 20 in flight, HTTP/2 | 2 | 22.3, 28.0 s | 2.2, 2.3 s | 0.97–1.53 / 2.90–3.59 s (max 17 s) | 2.3 MB |
-| `main`, 24 in flight, HTTP/2 | 3 | 9.1, 10.5, 19.0 s | 1.2–3.0 s | 0.79–1.63 / 1.09–2.47 s | 2.3 MB |
-| `main`, all 260 at once, HTTP/2 | 2 | 10.2, 15.2 s | 6.7, 10.1 s | 5.1–8.5 / 9.4–12.7 s | 2.4 MB |
-| `main`, 6 in flight, `X-Flux-Cache-Bypass: all` | 2 | 102.9, 184.7 s | 9.2, 16.4 s | 2.2–4.2 / 3.1–5.3 s | 11.2 MB |
+| case | full run | first frame | tile p50 / p90 | read from storage per tile |
+|---|---|---|---|---|
+| `main`, 6 in flight, HTTP/2 | 21.9, 25.5, 25.9 s | 2.1–4.3 s | 0.41–0.54 / 0.84–0.98 s | 2.4–2.6 MB |
+| `main`, 6 in flight, HTTP/1.1 | 17.4, 21.1, 24.5 s | 1.8–2.2 s | 0.37–0.53 / 0.66–0.97 s | 2.4 MB |
+| snapshot id, 6 in flight, HTTP/2 | 22.7, 25.2, 33.8 s | 2.0–5.7 s | 0.42–0.60 / 0.77–1.31 s | 2.4–2.6 MB |
+| `main`, 20 in flight, HTTP/2 | 10.0, 21.7, 37.9 s | 1.3–8.8 s | 0.68–2.46 / 1.09–4.72 s | 2.4–2.5 MB |
+| `main`, 24 in flight, HTTP/2 | 9.5, 16.7, 20.5 s | 1.2–3.0 s | 0.77–1.44 / 1.30–3.21 s | 2.4 MB |
+| `main`, all 260 at once, HTTP/2 | 10.1, 18.9, 30.8 s | 3.9–18.6 s | 5.1–15.2 / 9.5–27.6 s | 2.4–2.5 MB |
+| `main`, 6 in flight, `X-Flux-Cache-Bypass: all` | 108.6, 130.5, 143.1 s | 8.8–26.3 s | 2.4–3.1 / 3.3–4.5 s | 11.3 MB |
+
+An earlier series the same morning, with other viewers still open, gave the same picture
+(6 in flight 18–26 s, 24 in flight 9–19 s, bypass 103–185 s).
 
 - **The pod's chunk cache is what makes tiles fast.** With the cache bypassed, every tile read
-  ~11 MB from storage and a run took 4–7× longer. With the cache on, neighbouring tiles and
-  later leads reuse chunks, and a tile reads only ~2.3 MB. That overturns "nothing is cached
+  ~11 MB from storage and a run took 4–6× longer. With the cache on, neighbouring tiles and
+  later leads reuse chunks, and a tile reads only ~2.4 MB. That overturns "nothing is cached
   between requests" under [What limits it](#what-limits-it), which was measured on us-east-1
   before these caches existed or were visible. It also means every new pod (scale-out, scale
   from zero, the hourly reset) pays the uncached cost at first.
-- **The service speaks HTTP/2 now**, so the 6-connection limit of HTTP/1.1 no longer has to
-  apply. With 24 in flight, a full run arrived in 9–19 s against 18–26 s with 6. All 260 at
-  once finished as fast, but the first frame came last, because the service renders the
-  requests in any order. Not checked: whether Chrome negotiates HTTP/2 with the service and
-  how many tiles the booth page then keeps in flight. At the same 6 in flight, HTTP/2 was no
-  faster than HTTP/1.1.
+- **The service speaks HTTP/2 now, and the booth page uses it.** In Chrome the
+  [mobile page](https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/) kept up to 16 tiles
+  in flight to the service; HTTP/1.1 would cap that at 6. (Chrome hides the protocol name for
+  these cross-origin tiles, so this is inferred from the count.) It had 12 of 13 frames after
+  30 s.
+- **More in flight helps, but not reliably.** The best runs with 20–24 in flight took ~10 s,
+  the doc's old target, against ~22 s with 6. But the spread is wide (9.5–38 s), so a few slow
+  tiles still decide when the loop starts. All 260 at once delays the first frame, because the
+  service renders requests in any order: load in playback order, a lead at a time, as the page
+  does. At the same 6 in flight, HTTP/2 was no faster than HTTP/1.1.
 - **The branch lookup is cheap.** On `main`, about 1 tile in 100 shows `flux-ref; fwd=miss`
   (the 60 s recheck), and the rest hit. Snapshot URLs remove that lookup but were not faster
   here either (compare PR #67). Their benefit is the month-long browser cache.
-- Noise is high: the two 20-in-flight runs were slower than the 24-in-flight ones, and one
-  had a 17 s tile. Two or three runs per row are not enough to rank cases closer than ~2×.
 
 ## Options, by expected impact
 
