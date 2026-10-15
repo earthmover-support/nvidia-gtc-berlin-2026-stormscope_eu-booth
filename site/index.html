@@ -84,7 +84,10 @@
 </div>
 <script>
 // Flux tiles service, docs.earthmover.io/compute/tiles#maplibremapbox
-const BASE = "https://tiles-edf5beae0d2afdc4.eu-west-1.compute.arraylake.app/v1/services/tiles-eu/gtc-berlin";
+const FLUX = "https://tiles-edf5beae0d2afdc4.eu-west-1.compute.arraylake.app/v1/services/tiles-eu/gtc-berlin";
+// On Vercel (the only https host), go through the /flux rewrite in vercel.json so Vercel's CDN
+// renders each tile once for all visitors; locally, straight to the service.
+const BASE = location.protocol === "https:" ? "/flux" : FLUX;
 const REPO = "stormscope-eu_gtc_berlin_2026_EU_region";
 const REF = "main";
 // The RGB composites are stored as uint8 bytes, hence one colour scale.
