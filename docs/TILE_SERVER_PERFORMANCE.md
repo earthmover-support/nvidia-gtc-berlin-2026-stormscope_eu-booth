@@ -216,7 +216,8 @@ tiles = 260 tiles, `airmass`, in playback order, with N requests in flight. It r
 on 2026-10-15, with every other viewer of the service closed. Each run used an init nobody had
 requested before (hourly inits of 2026-10-10/11), so no pod held those chunks. The cases ran
 interleaved, three rounds. `x-keda-http-cold-start` was `false` for every tile, so the pods
-were already up. The replica count is unknown (the `al` CLI login had expired).
+were already up. Service: SKU S (2 CPU, 4 Gi), autoscaling 0–8, cache settings unset; a few
+minutes after the tests it had 2 ready replicas (not polled during them).
 
 | case | full run | first frame | tile p50 / p90 | read from storage per tile |
 |---|---|---|---|---|
