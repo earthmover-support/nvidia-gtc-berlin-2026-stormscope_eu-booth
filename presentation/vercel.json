@@ -5,6 +5,20 @@
   "buildCommand": "npm run vendor",
   "outputDirectory": "web",
   "functions": {
-    "api/*.py": { "maxDuration": 60, "excludeFiles": "{node_modules/**,web/**,server.py}" }
-  }
+    "api/*.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{node_modules/**,web/**,server.py}"
+    },
+    "api/flux.js": {
+      "regions": [
+        "dub1"
+      ]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/flux/:path*",
+      "destination": "/api/flux?path=:path*"
+    }
+  ]
 }

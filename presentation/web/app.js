@@ -802,7 +802,7 @@
       const q = c.qr_tile;
       const url = tileTemplate(latest, "true_color", c.leads[1], q.size) // leads[0] is the observed frame
         .replace("{z}", q.z).replace("{y}", q.y).replace("{x}", q.x);
-      type = setQR("qrTiles", url);
+      type = setQR("qrTiles", new URL(url, location.href).href); // hosted tile_base is relative
     }
     setQR("qrViewer", c.viewer_url, type);
   }
