@@ -12,7 +12,7 @@ Related: [TILE_SERVER_PERFORMANCE.md](TILE_SERVER_PERFORMANCE.md) (tiles in deta
 |---|---|---|---|---|
 | 1 | Scan | MTG-I1 FCI scans the full disk once per 10-min repeat cycle. Sensing ends at `T`+9:27. | 9.5 min | - none (instrument) |
 | 2 | Listed on Data Store | EUMETSAT processes the FDHSI product (459–1051 MB zip) and lists it in Data Store search. Median after sensing end, so listed at `T`+14.1 min. | 4.7 min | - none (EUMETSAT side) |
-| 3 | Download hold-off | Without the NRT licence, a download of a product less than 1 h past its slot time fails with 403 (measured unlock at `T`+60.1–60.4; hourly :00 slots are free at once, but the 6-frame input window always needs five sub-hourly ones). The pipeline only considers slots older than `MIN_LAG` = 62 min, so it waits from `T`+14 to `T`+62. | 48 min | - `MIN_LAG` 80 → 62 min, boundary measured against slot time instead of sensing end ([#30] 🟣)<br>- EUMETSAT NRT licence: `MIN_LAG` → 0, run ~15 min behind real time (not obtained) |
+| 3 | Download hold-off | Without the NRT licence, a download of a product less than 1 h past its slot time fails with 403 (measured unlock at `T`+60.1–60.4; hourly :00 slots are free at once, but the 6-frame input window always needs five sub-hourly ones). The pipeline only considers slots older than `MIN_LAG` = 62 min, so it waits from `T`+14 to `T`+62. | 48 min | - `MIN_LAG` 80 → 62 min, boundary measured against slot time instead of sensing end ([#30] 🟣)<br>- EUMETSAT commercial (NRT) licence, now obtained: removes this stage, `MIN_LAG` → 0, run ~15 min behind real time and the forecast on screen ~20 min after the scan (`MIN_LAG` in the pipeline not yet lowered) |
 | 4 | Pickup + download + preprocess | From `T`+62 until inference starts: notice the new slot, fetch the six input frames (the newest ~0.9 GB zip is the only new one per cycle). A loop polls every 60 s. Measured with the per-step pipeline, whose `extend schema` commit marked the end of this stage (`T`+81.5–82.1 with the earlier `MIN_LAG` = 80). | 2.1 min | - persistent pipeline that keeps polling [#19] 🟣<br>- model and data source initialised once [#19] 🟣 |
 | 5 | Inference + ingest | StormScope-EU produces the analysis frame (lead 0) and rolls forward 12 × 10 min. Each step's output is turned into the `true_color` / `airmass` composites and uploaded to Icechunk on Arraylake in the background while the next step runs; one commit after the last step publishes the whole init ([#32] 🟣). | 3.6 min (~17 s/step) | - persistent GPU container [#19] 🟣, [#26] 🟣<br>- spatial chunks + zstd so each write is smaller [#7] 🟣<br>- uint8 composites, 4× smaller before compression ([#27] 🟣)<br>- one commit per init, so uploads overlap inference: with a commit per step, each commit waited for its upload and a run took ~1.5 min longer with `--publish-target arraylake` than with `local` ([#31] ✅ closed by [#32] 🟣: a run ~1 min shorter)<br>- co-locate storage with inference compute: the bucket moved to eu-west-1 ([#62] 🟣) |
 | 6 | Visible to tiles service | Flux reads Icechunk directly, so a commit is renderable as soon as it lands. With one commit per init, all 13 leads land at once. | 0 s | - none needed |
@@ -24,12 +24,8 @@ PRs: 🟣 merged, 🟢 open, 🔴 closed without merging. Issues: ✅ closed, �
 
 ## What's left, by expected impact
 
-1. **NRT licence:** ~48 min. Account question with EUMETSAT, not engineering.
-2. **Shorter poll (stage 4):** up to 60 s, at the cost of more Data Store searches.
-3. **504s on a new snapshot ([#82] ⏳):** a booth page that loaded a run ~20 s after its commit
-   got 34 `504`s on its first 3 leads and needed 25.9 s; one tile spent 10.4 s opening the
-   new snapshot. Seen once; the next run had no errors.
-4. **Several viewers ([#54] ⏳):** rendered tiles aren't shared, so each phone re-renders the
+1. **Shorter poll (stage 4):** up to 60 s, at the cost of more Data Store searches.
+2. **Several viewers ([#54] ⏳):** rendered tiles aren't shared, so each phone re-renders the
    run. 8 replicas render ~26 tiles/s, about one full run per 10 s. Untested with more viewers.
 
 ## Sources and reproduce
@@ -75,7 +71,6 @@ PRs: 🟣 merged, 🟢 open, 🔴 closed without merging. Issues: ✅ closed, �
 [#28]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/28
 [#33]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/33
 [#81]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/81
-[#82]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/82
 [#11]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/11
 [#54]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/54
 [#62]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/62

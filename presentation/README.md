@@ -80,7 +80,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
    `config.json` (`sql.host`) or `.env` (`ARRAYLAKE_SQL_HOST=...`, wins). The service
    scales to zero: the first query after a sleep takes ~50 s, later ones ~20 s (each
    lead reads a full 1120 × 2432 frame; 8–16 s measured warm on 2026-10-07). Fire one query before visitors arrive.
-   Panel 05 is a live editor: click a city chip (`sql.places`) or type any single
+   Panel 08 is a live editor: click a city chip (`sql.places`) or type any single
    `SELECT`/`WITH` statement and press ⌘/Ctrl+Enter; Esc leaves the box.
    A city chip fills the editor and runs at once; Reset only fills it. The server runs the
    query (with the token; the browser never sees it), and once by itself for each new init: it
@@ -92,7 +92,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
 5. **Run length**: the strip and scrubber show the observed +0 frame plus 12 steps,
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
-6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 7).
+6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 8).
 7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
    whatever the booth machine or a hosted viewer's browser is set to. Only the SQL
    `WHERE time = TIMESTAMP '{init}'` stays in UTC.
@@ -178,9 +178,9 @@ mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"fr
 Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
 
 
-## Seven-panel scientific narrative
+## Eight-panel scientific narrative
 
-The seven panels introduce the scientific definition of nowcasting, then explain
+The eight panels introduce the scientific definition of nowcasting, then explain
 FCI observations, generative autoregressive prediction,
 recurring Earth2Studio cycles, overlapped uploads and atomic Icechunk publication,
 Compute tiles and SQL, and the complete workflow. Observation cards show real +0
@@ -207,7 +207,7 @@ The panel column retains its original 560 px width at the 1080p booth size.
 Visual spacing is compacted to fit the approved copy and diagrams.
 
 
-Panel navigation includes Pause/Resume and seven directly selectable chapter markers.
+Panel navigation includes Pause/Resume and eight directly selectable chapter markers.
 Manual navigation holds a chapter for 60 s; focusing or using the SQL editor extends
 that hold to 120 s. The visible progress marker follows the same timing as rotation.
 Hidden panels are inert so their buttons, links, and editor stay out of keyboard navigation.
