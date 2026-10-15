@@ -53,8 +53,10 @@ Not measured: `min_replicas: 1`, more than 4 replicas, SKU M.
 - **Full-resolution reads at low zoom.** There's no coarser level to read from, so a z4
   tile reprojects the native 1120 × 2432 grid. Single tiles: z4 cold 9.1 s / 35.5 MB read,
   z4 repeat 1.5 s, z6 0.8 s / 5.3 MB.
-- **One browser, ~6 requests.** The service only speaks HTTP/1.1, so a browser keeps at
-  most ~6 tiles in flight. ~28 tiles/s from one screen would need ~0.2 s per tile.
+- **One browser, ~6 requests.** The service only spoke HTTP/1.1, so a browser kept at
+  most ~6 tiles in flight. ~28 tiles/s from one screen would need ~0.2 s per tile. (Since
+  2026-10-15 the service also offers HTTP/2: see
+  [Server-side caches and HTTP/2](#server-side-caches-and-http2-2026-10-15).)
 - **Scale-out needs more than one browser.** At 6 in flight XS stayed at 1 replica. At 24
   and 96 it reached 3–4 replicas within about a minute, and dropped back to 1 about 2 min
   after the load stopped.
@@ -164,6 +166,85 @@ eu-west-1 had scaled to zero), local server restarted, and the warm-up also sent
   stall looks like the main cause.
 - One run per row. Tile counts vary from 208 to 260 per run at the same viewport, in both
   regions; not investigated.
+
+## Server-side caches and HTTP/2 (2026-10-15)
+
+### From Earthmover (Slack, #C0BR6535GBD)
+
+Samantha Hughes on the per-pod caches, from Earthmover's traces of requests for this dataset
+on the eu-west-1 pods
+([thread](https://earthmoverworkspace.slack.com/archives/C0BR6535GBD/p1791562430384989?thread_ts=1791474690.734569&cid=C0BR6535GBD)):
+
+> Cold steps, and how long each result stays cached:
+> - Open repo: ~335 ms. Kept 1 hour, max 2 repos per pod.
+> - Open a dataset version: ~440 ms. Kept until pushed out by newer ones (32 per pod) or the
+>   hourly repo reset. Every new commit needs a fresh open.
+> - Check a branch for new commits: ~60 ms. Rechecked every 60 s, so new data shows up within
+>   a minute.
+> - Read a chunk: ~20 ms from storage vs ~2.5 ms from memory. Memory cache is sized to the pod
+>   and cleared with the hourly repo reset.
+>
+> Browser caching:
+> - Branch URLs (e.g. `main`): the browser asks again on every view. The service looks up which
+>   snapshot the branch currently points to; if it's the same one the browser already has, it
+>   replies "unchanged" (304) without re-rendering. That's ~50 ms, but still a network round
+>   trip each time.
+> - Snapshot ID URLs: a snapshot can never change, so the browser keeps the tile for a month
+>   and doesn't ask at all. Repeat views are instant, and first views skip the branch lookup on
+>   the server too. Use snapshot IDs when you can.
+>
+> Each pod has its own cache. New pods, scale-ups, and scale-from-zero start fully cold.
+
+And on bypassing the caches
+([thread](https://earthmoverworkspace.slack.com/archives/C0BR6535GBD/p1791570407454749?thread_ts=1791483071.468579&cid=C0BR6535GBD)):
+
+> ```
+> curl -sI -H "X-Flux-Cache-Bypass: all" "$URL" | grep -i cache-status
+> ```
+> Deployed this for y'all, you can bypass most of the cache and get a header with hit/miss for
+> them too.
+
+Each tile response now carries `cache-status` (one entry per cache: `flux-repo`,
+`flux-credentials`, `flux-ref`, `flux-dataset`, `flux-tiles_grid`, each `hit`, `fwd=miss` or
+`fwd=bypass`), `x-flux-inbound-bytes` / `x-flux-inbound-chunks` (data read from storage for
+this tile), `x-keda-http-cold-start` and `x-multiscale-level`.
+
+### Measured
+
+A Python script (`httpx`) loaded one full run from `tiles-eu`: 13 leads × the 20 z4 booth
+tiles = 260 tiles, `airmass`, in playback order, with N requests in flight. It ran from Berlin
+on 2026-10-15. Each run used an init that nobody had requested before (hourly inits of
+2026-10-12/13), so no pod held those chunks. `x-keda-http-cold-start` was `false` for every
+tile, so the pods were already up. The replica count is unknown, and other booth traffic may
+have shared the pods.
+
+| case | runs | full run | first frame | tile p50 / p90 | read from storage per tile |
+|---|---|---|---|---|---|
+| `main`, 6 in flight, HTTP/2 | 2 | 19.2, 26.2 s | 1.9, 2.4 s | 0.41–0.56 / 0.67–0.97 s | 2.3 MB |
+| `main`, 6 in flight, HTTP/1.1 | 2 | 17.7, 20.0 s | 1.7, 1.9 s | 0.38–0.42 / 0.69–0.79 s | 2.3 MB |
+| snapshot id, 6 in flight, HTTP/2 | 2 | 20.7, 35.2 s | 1.8, 3.1 s | 0.44–0.77 / 0.73–1.24 s | 2.3 MB |
+| `main`, 20 in flight, HTTP/2 | 2 | 22.3, 28.0 s | 2.2, 2.3 s | 0.97–1.53 / 2.90–3.59 s (max 17 s) | 2.3 MB |
+| `main`, 24 in flight, HTTP/2 | 3 | 9.1, 10.5, 19.0 s | 1.2–3.0 s | 0.79–1.63 / 1.09–2.47 s | 2.3 MB |
+| `main`, all 260 at once, HTTP/2 | 2 | 10.2, 15.2 s | 6.7, 10.1 s | 5.1–8.5 / 9.4–12.7 s | 2.4 MB |
+| `main`, 6 in flight, `X-Flux-Cache-Bypass: all` | 2 | 102.9, 184.7 s | 9.2, 16.4 s | 2.2–4.2 / 3.1–5.3 s | 11.2 MB |
+
+- **The pod's chunk cache is what makes tiles fast.** With the cache bypassed, every tile read
+  ~11 MB from storage and a run took 4–7× longer. With the cache on, neighbouring tiles and
+  later leads reuse chunks, and a tile reads only ~2.3 MB. That overturns "nothing is cached
+  between requests" under [What limits it](#what-limits-it), which was measured on us-east-1
+  before these caches existed or were visible. It also means every new pod (scale-out, scale
+  from zero, the hourly reset) pays the uncached cost at first.
+- **The service speaks HTTP/2 now**, so the 6-connection limit of HTTP/1.1 no longer has to
+  apply. With 24 in flight, a full run arrived in 9–19 s against 18–26 s with 6. All 260 at
+  once finished as fast, but the first frame came last, because the service renders the
+  requests in any order. Not checked: whether Chrome negotiates HTTP/2 with the service and
+  how many tiles the booth page then keeps in flight. At the same 6 in flight, HTTP/2 was no
+  faster than HTTP/1.1.
+- **The branch lookup is cheap.** On `main`, about 1 tile in 100 shows `flux-ref; fwd=miss`
+  (the 60 s recheck), and the rest hit. Snapshot URLs remove that lookup but were not faster
+  here either (compare PR #67). Their benefit is the month-long browser cache.
+- Noise is high: the two 20-in-flight runs were slower than the 24-in-flight ones, and one
+  had a 17 s tile. Two or three runs per row are not enough to rank cases closer than ~2×.
 
 ## Options, by expected impact
 
