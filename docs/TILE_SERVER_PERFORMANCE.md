@@ -205,7 +205,7 @@ eu-west-1 had scaled to zero), local server restarted, and the warm-up also sent
 
 ### From Earthmover (Slack, #C0BR6535GBD)
 
-Samantha Hughes on the per-pod caches, from Earthmover's traces of requests for this dataset
+On the per-pod caches, from Earthmover's traces of requests for this dataset
 on the eu-west-1 pods
 ([thread](https://earthmoverworkspace.slack.com/archives/C0BR6535GBD/p1791562430384989?thread_ts=1791474690.734569&cid=C0BR6535GBD)):
 
