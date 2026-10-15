@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>StormScope-EU GTC Berlin mobile</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<!-- The map waits for the style and its sprite before it adds a frame; fetch them during the MapLibre download. -->
+<link rel="preload" href="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" as="fetch" crossorigin>
+<link rel="preconnect" href="https://tiles.basemaps.cartocdn.com" crossorigin>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@5.9.0/dist/maplibre-gl.js"></script>
 <style>
@@ -216,7 +219,9 @@ function tick() {
 function addNext(r) {
   const i = r.added;
   const busy = i - r.loaded.size; // added, not yet loaded
-  if (i >= leads.length || (busy >= LEADS_IN_FLIGHT && Date.now() - r.addedAt < LOAD_TIMEOUT_MS)) return;
+  // Frame 0 loads alone, so it gets all the bandwidth and is on screen first.
+  const limit = r.loaded.has(0) ? LEADS_IN_FLIGHT : 1;
+  if (i >= leads.length || (busy >= limit && Date.now() - r.addedAt < LOAD_TIMEOUT_MS)) return;
   const id = fid(r, i);
   map.addSource(id, { type: "raster", tiles: [tileUrl(r, leads[i])], tileSize: 512, bounds: BOUNDS, maxzoom: 7 });
   map.addLayer({
@@ -309,7 +314,8 @@ async function useCoords(pending) {
   return true;
 }
 
-map.on("load", async () => {
+// style.load, not load: load also waits for the basemap tiles, which the frames do not need.
+map.once("style.load", async () => {
   map.setProjection({ type: "globe" });
   firstLabel = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
   if (!(await useCoords(coords))) return;
