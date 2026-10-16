@@ -249,4 +249,4 @@ The result header identifies the queried composite. The final panel uses a thin
 architecture ribbon and prioritizes the viewer QR over developer tiles.
 
 
-Redeployed 2026-10-16 (data-flow slide #94; temporary-demo note #96).
+Redeployed 2026-10-16 (Earthmover and NVIDIA wordmarks, centered headline #100).
