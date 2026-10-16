@@ -58,7 +58,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .logos { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .logos img { width: auto; display: block; }
 .logos .nv-logo { height: 30px; }
-.logos .em-logo { height: 33px; transform: translateY(-16%); } /* wordmark ~10% taller than NVIDIA cap height; shift up onto NVIDIA's baseline */
+.logos .em-logo { height: 36px; transform: translateY(-19%); } /* wordmark ~20% taller than NVIDIA cap height; shift up onto NVIDIA's baseline */
 .x { color: #6B7280; font-size: 18px; }
 .headline { flex: 1; min-width: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .demo-note { font: 400 13px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
