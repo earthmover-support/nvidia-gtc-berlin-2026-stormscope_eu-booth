@@ -540,6 +540,7 @@
     S.cfg.leads.forEach((lead, k) => box.children[k].classList.toggle("now", lead === current));
     const r = $("#scrub");
     r.max = String(S.cfg.leads.length - 1);
+    r.parentElement.style.setProperty("--leads", S.cfg.leads.length);
     if (!scrubbing) r.value = String(S.frame);
   }
 
