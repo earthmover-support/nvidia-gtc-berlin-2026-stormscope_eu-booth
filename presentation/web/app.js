@@ -24,7 +24,7 @@
     return n;
   };
 
-  // blog post about the demo, linked from the hosted page's demo note; hidden while empty
+  // blog post about the demo, linked from the demo note; hidden while empty
   const BLOG_URL = "";
 
   const S = {
@@ -1195,10 +1195,7 @@
     window.addEventListener("resize", fitStage);
     S.cfg = await (await fetch("/api/config")).json();
     setTimezone(S.cfg.timezone);
-    if (!S.cfg.sql_editable) { // hosted page only: the booth TV needs no disclaimer
-      $("#demoNote").hidden = false;
-      if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
-    }
+    if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
     initSqlEditor();
     renderVarToggle();

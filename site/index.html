@@ -84,7 +84,7 @@
     <div class="row"><div id="lead"></div><button id="collapse" aria-controls="panel" aria-expanded="true" title="Collapse panel">▴</button></div>
     <div class="row" style="margin-top: 8px"><button id="play">❚❚</button><input id="slider" type="range" min="0" value="0" step="1"></div>
   </div>
-  <div id="demo" hidden>Temporary demo pipeline for NVIDIA GTC Berlin 2026. It goes offline after the event.<a id="blog" hidden target="_blank" rel="noopener"> Read the blog post</a></div>
+  <div id="demo">Temporary demo pipeline for NVIDIA GTC Berlin 2026. It goes offline after the event.<a id="blog" hidden target="_blank" rel="noopener"> Read the blog post</a></div>
   <div id="status">Loading inits…</div>
 </div>
 <script type="module">
@@ -112,12 +112,8 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catc
 
 const $ = (id) => document.getElementById(id);
 
-// Hosted copy only (Vercel is the only https host): say the demo is temporary.
-const BLOG_URL = ""; // blog post about the demo; the link stays hidden while empty
-if (location.protocol === "https:") {
-  $("demo").hidden = false;
-  if (BLOG_URL) Object.assign($("blog"), { href: BLOG_URL, hidden: false });
-}
+const BLOG_URL = ""; // blog post about the demo, linked from the demo note; hidden while empty
+if (BLOG_URL) Object.assign($("blog"), { href: BLOG_URL, hidden: false });
 
 // Times show in the viewer's own zone, or Berlin's when the browser reports none. Inits are
 // stored in UTC and the selector's option values stay UTC, since they go into tile URLs.
