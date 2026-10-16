@@ -22,16 +22,6 @@ Related: [TILE_SERVER_PERFORMANCE.md](TILE_SERVER_PERFORMANCE.md) (tiles in deta
 
 PRs: 🟣 merged, 🟢 open, 🔴 closed without merging. Issues: ✅ closed, ⏳ open.
 
-## What's left, by expected impact
-
-1. **NRT licence:** ~48 min. Account question with EUMETSAT, not engineering.
-2. **Shorter poll (stage 4):** up to 60 s with the default `--wait-seconds`, at the cost of
-   more Data Store searches. Real-time mode already polls every 15 s.
-3. **504s on a new snapshot ([#82] ⏳):** a booth page that loaded a run ~20 s after its commit
-   got 34 `504`s on its first 3 leads and needed 25.9 s; one tile spent 10.4 s opening the
-   new snapshot. Seen once; the next run had no errors.
-4. **Several viewers ([#54] ⏳):** rendered tiles aren't shared, so each phone re-renders the
-   run. 8 replicas render ~26 tiles/s, about one full run per 10 s. Untested with more viewers.
 
 ## Sources and reproduce
 
@@ -76,9 +66,7 @@ PRs: 🟣 merged, 🟢 open, 🔴 closed without merging. Issues: ✅ closed, �
 [#28]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/28
 [#33]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/33
 [#81]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/81
-[#82]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/82
 [#11]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/11
-[#54]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/54
 [#62]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/62
 [#30]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/pull/30
 [#31]: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth/issues/31

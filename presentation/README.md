@@ -9,7 +9,8 @@ QR codes and a live Zax-SQL query. It runs locally on the booth machine and is a
 presentation/
   server.py        booth: stdlib HTTP server + Arraylake/SQL pollers (uv inline deps)
   booth.py         logic shared by server.py and api/: runs, commits, SQL, public config
-  api/             hosted: Vercel Python functions for /api/config, /api/state, /api/sql
+  api/             hosted: Vercel Python functions for /api/config, /api/state, /api/sql;
+                   flux.js, the tile proxy
   requirements.txt hosted: the functions' dependencies
   vercel.json      hosted: build, output directory, function timeout
   config.json      everything tunable: tile service, variables, timings, station, SQL
@@ -79,7 +80,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
    `config.json` (`sql.host`) or `.env` (`ARRAYLAKE_SQL_HOST=...`, wins). The service
    scales to zero: the first query after a sleep takes ~50 s, later ones ~20 s (each
    lead reads a full 1120 × 2432 frame; 8–16 s measured warm on 2026-10-07). Fire one query before visitors arrive.
-   Panel 05 is a live editor: click a city chip (`sql.places`) or type any single
+   Panel 08 is a live editor: click a city chip (`sql.places`) or type any single
    `SELECT`/`WITH` statement and press ⌘/Ctrl+Enter; Esc leaves the box.
    A city chip fills the editor and runs at once; Reset only fills it. The server runs the
    query (with the token; the browser never sees it), and once by itself for each new init: it
@@ -91,7 +92,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
 5. **Run length**: the strip and scrubber show the observed +0 frame plus 12 steps,
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
-6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 7).
+6. `viewer_url` in `config.json` drives the first QR code on the last panel (slide 8).
 7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
    whatever the booth machine or a hosted viewer's browser is set to. Only the SQL
    `WHERE time = TIMESTAMP '{init}'` stays in UTC.
@@ -123,6 +124,28 @@ and the token. Differences from the booth:
 - **No pollers.** `/api/state` reads commits and the `time` coordinate on each request
   (about 1.5 s warm, 8 s cold) and the CDN caches it for 5 s with
   stale-while-revalidate, so viewers polling every 4 s rarely wait.
+- **Tiles go through a caching proxy.** `/api/config` answers `tile_base: /flux/<repo>`, and
+  `vercel.json` rewrites `/flux/*` to `api/flux.js` (Node.js, pinned to `dub1` next to Flux in
+  eu-west-1; the Python functions keep their default region). It forwards only this repo's
+  tiles (branch or snapshot id) and keeps successful ones for a day in Vercel's CDN and in
+  the Runtime Cache, which every region shares, so viewers share one render per tile instead
+  of each making Flux render it again. Errors such as a `504` are not cached. Tiles are tagged
+  `tiles` and `init-<YYYYMMDDHHMM>` (`vercel cache invalidate --tag ...`). The booth's
+  `server.py` still fetches tiles straight from Flux. The "Raw tiles" QR code points at the
+  proxy URL.
+- **Warm each new run before viewers open it.** The CDN doesn't merge simultaneous misses,
+  so viewers opening a new run together still make Flux render each tile several times.
+  `scripts/warm_presentation_tiles.py` polls `/api/state` and requests the new run's globe
+  tiles (z4 home view plus the composite previews, both variables, every lead: 754 tiles,
+  ~20 s) once through the proxy, with the URLs `tileTemplate` builds. Keep it running while
+  the page gets traffic, pointed at the exact hostname viewers use:
+
+  ```bash
+  uv run --no-project python scripts/warm_presentation_tiles.py https://<this page>.vercel.app
+  ```
+
+  Measured 2026-10-15 on a test deployment: after it ran, a browser opening the page got
+  227/227 tiles as `x-vercel-cache: HIT`. Zooming or panning past the home view still misses.
 - **Windows smaller than 1920 × 1080** show the booth layout zoomed down to fit. At
   1920 × 1080 the booth is unaffected.
 - The vendored libraries are copied into `web/vendor/` at build time (`npm run vendor`),
@@ -155,9 +178,9 @@ mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"fr
 Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
 
 
-## Seven-panel scientific narrative
+## Eight-panel scientific narrative
 
-The seven panels introduce the scientific definition of nowcasting, then explain
+The eight panels introduce the scientific definition of nowcasting, then explain
 FCI observations, generative autoregressive prediction,
 recurring Earth2Studio cycles, overlapped uploads and atomic Icechunk publication,
 Compute tiles and SQL, and the complete workflow. Observation cards show real +0
@@ -184,7 +207,7 @@ The panel column retains its original 560 px width at the 1080p booth size.
 Visual spacing is compacted to fit the approved copy and diagrams.
 
 
-Panel navigation includes Pause/Resume and seven directly selectable chapter markers.
+Panel navigation includes Pause/Resume and eight directly selectable chapter markers.
 Manual navigation holds a chapter for 60 s; focusing or using the SQL editor extends
 that hold to 120 s. The visible progress marker follows the same timing as rotation.
 Hidden panels are inert so their buttons, links, and editor stay out of keyboard navigation.
@@ -226,4 +249,4 @@ The result header identifies the queried composite. The final panel uses a thin
 architecture ribbon and prioritizes the viewer QR over developer tiles.
 
 
-Redeployed 2026-10-15.
+Redeployed 2026-10-16 (data-flow slide #94; temporary-demo note #96).

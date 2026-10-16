@@ -10,7 +10,8 @@
 <link rel="preload" as="font" type="font/ttf" crossorigin href="fonts/NVIDIASans_Bd.ttf">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
 <link rel="stylesheet" href="app.css">
-<script src="/vendor/maplibre/maplibre-gl.js"></script>
+<!-- MapLibre 6 ships ES modules only; app.js (also a module, so it runs after this) uses the global. -->
+<script type="module">import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; window.maplibregl = maplibregl;</script>
 <script src="/vendor/qrcode/qrcode.js"></script>
 </head>
 <body>
@@ -22,7 +23,9 @@
       <span class="x">×</span>
       <img src="img/earthmover.svg" alt="Earthmover" class="em-logo">
     </div>
-    <div class="headline">AI weather nowcasting · from satellite observations to interactive forecasts</div>
+    <div class="headline">AI weather nowcasting · from satellite observations to interactive forecasts
+      <div class="demo-note">Temporary demo pipeline for NVIDIA GTC Berlin 2026. It goes offline after the event.<a id="blogLink" hidden target="_blank" rel="noopener"> Read the blog post</a></div>
+    </div>
     <div class="links">
       <a href="https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth" title="Code on GitHub" target="_blank" rel="noopener">
         <svg viewBox="0 0 16 16" fill="currentColor" aria-label="GitHub">
@@ -153,8 +156,22 @@
         </ol>
       </article>
 
+      <article class="panel nv" data-panel="dataflow">
+        <div class="kicker">05 · DATA FLOW</div>
+        <h2>From satellite to screen in ~20 minutes</h2>
+        <ol class="hops">
+          <li class="eu"><div><b>Meteosat-12</b><span>Scans Europe from orbit</span></div><em>10 min</em></li>
+          <li class="eu"><div><b>EUMETSAT Data Store</b><span>Processes and publishes the scan</span></div><em>+5 min</em></li>
+          <li><div><b>Download</b><span>Earth2Studio fetches the latest frames</span></div><em>~2 min</em></li>
+          <li class="split"><div><b>Inference on NVIDIA H200 GPU saving to Arraylake</b><span>Predicts 2 hours ahead</span></div><em>&lt;4 min</em></li>
+          <li class="em"><div><b>Earthmover Compute</b><span>Renders map tiles straight from the data</span></div><em>~2 s</em></li>
+          <li class="em"><div><b>Your browser</b><span>Loads all 13 frames and plays the loop</span></div><em>~12 s</em></li>
+        </ol>
+        <div class="legend"><span class="eu">EUMETSAT</span><span class="nv">NVIDIA</span><span class="em">Earthmover</span></div>
+      </article>
+
       <article class="panel em" data-panel="arraylake">
-        <div class="kicker"><span>05 · Earthmover Arraylake + Icechunk</span></div>
+        <div class="kicker"><span>06 · Earthmover Arraylake + Icechunk</span></div>
         <h2>Compute and Upload Together. Publish Once.</h2>
         <p>Forecast data is uploaded to Earthmover Arraylake while StormScope-EU generates subsequent predictions on GPUs.</p>
         <p>Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
@@ -196,7 +213,7 @@
       </article>
 
       <article class="panel em" data-panel="compute">
-        <div class="kicker">06 · THE DATA LAKE</div>
+        <div class="kicker">07 · THE DATA LAKE</div>
         <h2>Every forecast run is a commit</h2>
         <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
         <details class="history-reveal" open><summary>Recent published forecasts</summary><div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
@@ -211,7 +228,7 @@
       </article>
 
       <article class="panel em" data-panel="access">
-        <div class="kicker">07 · YOUR TURN</div>
+        <div class="kicker">08 · YOUR TURN</div>
         <h2>Take the forecast with you</h2>
         <div class="two qr">
           <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw tiles</b><span>Latest run, 10-min forecast, served via Earthmover Compute</span></div>
@@ -237,7 +254,7 @@
             <button type="button" id="panelPause" aria-label="Pause panel rotation" aria-pressed="false">Pause</button>
             <button type="button" id="panelPrev" aria-label="Previous panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M15 6l-6 6 6 6"/></svg></button>
-            <span class="panel-count" id="panelCount">1 / 7</span>
+            <span class="panel-count" id="panelCount">1 / 8</span>
             <button type="button" id="panelNext" aria-label="Next panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9 6l6 6-6 6"/></svg></button>
           </div>
@@ -260,6 +277,6 @@
     <div class="last"><div class="eyebrow">LAST COMMIT</div><div class="mono lime" id="lastCommit">—</div></div>
   </footer>
 </div>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

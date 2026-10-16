@@ -24,6 +24,9 @@
     return n;
   };
 
+  // blog post about the demo, linked from the demo note; hidden while empty
+  const BLOG_URL = "";
+
   const S = {
     cfg: null,
     status: "starting",
@@ -802,7 +805,7 @@
       const q = c.qr_tile;
       const url = tileTemplate(latest, "true_color", c.leads[1], q.size) // leads[0] is the observed frame
         .replace("{z}", q.z).replace("{y}", q.y).replace("{x}", q.x);
-      type = setQR("qrTiles", url);
+      type = setQR("qrTiles", new URL(url, location.href).href); // hosted tile_base is relative
     }
     setQR("qrViewer", c.viewer_url, type);
   }
@@ -1192,6 +1195,7 @@
     window.addEventListener("resize", fitStage);
     S.cfg = await (await fetch("/api/config")).json();
     setTimezone(S.cfg.timezone);
+    if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
     initSqlEditor();
     renderVarToggle();
