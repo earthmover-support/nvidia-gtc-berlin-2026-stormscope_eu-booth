@@ -69,4 +69,4 @@ so Vercel skips deploying commits that change nothing under `site/`. The tiles s
 `Access-Control-Allow-Origin: *`, so the page works from any domain. Only `main` deploys to
 production; pushes to other branches make preview deployments.
 
-Redeployed 2026-10-15 (tile cache #87, #89; MapLibre 6 #90).
+Redeployed 2026-10-16 (temporary-demo note #96).
