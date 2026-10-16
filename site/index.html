@@ -24,12 +24,14 @@
   }
   .logos { display: flex; align-items: center; gap: 10px; }
   .logos img { height: 20px; }
+  .logos .em-logo { transform: translateY(-13%); } /* onto NVIDIA's baseline */
   .logos span { color: var(--text-dim); font-size: 16px; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
   .links { display: flex; gap: 8px; padding-top: 3px; }
   .links a { display: block; width: 20px; height: 20px; color: var(--text-dim); opacity: .85; }
   .links a:hover { color: var(--green); opacity: 1; }
   .links svg, .links img { width: 100%; height: 100%; display: block; }
+  .head > div:first-child { flex: 1; text-align: center; }
   .title { font-size: 17px; letter-spacing: -.3px; }
   .subtitle { color: var(--text-dim); margin-top: 2px; }
   .label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
@@ -56,7 +58,7 @@
 <body>
 <div id="map"></div>
 <div id="panel">
-  <div class="logos"><img src="nvidia.svg" alt="NVIDIA"><span>×</span><img src="earthmover.svg" alt="Earthmover"></div>
+  <div class="logos"><img src="nvidia.svg" alt="NVIDIA"><span>×</span><img src="earthmover.svg" alt="Earthmover" class="em-logo"></div>
   <div class="head">
     <div>
       <div class="title">StormScope-EU nowcast</div>
