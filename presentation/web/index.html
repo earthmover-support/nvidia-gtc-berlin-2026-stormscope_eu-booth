@@ -127,7 +127,7 @@
 
       <article class="panel nv" data-panel="nowcasting">
         <div class="kicker">03 · THE AI MODEL</div>
-        <h2>StormScope-EU predicts the next two hours of clouds</h2>
+        <h2><a href="https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/" target="_blank" rel="noopener">StormScope-EU</a> predicts the next two hours of clouds</h2>
         <p>A generative diffusion model from NVIDIA. It forecasts all 16 satellite channels directly in image space, learning how clouds move and grow instead of solving the physics.</p>
         <div class="box flow">
           <div class="label">INPUT · 6 OBSERVED FRAMES</div>
@@ -140,19 +140,19 @@
         <ul class="facts">
           <li>Conditioned on orography and land–sea mask</li>
           <li>Ensemble-of-experts denoising across noise levels</li>
-          <li>NVIDIA H200 · ~<span id="stepSeconds">20</span> s per 10-minute step</li>
+          <li><a href="https://www.nvidia.com/en-us/data-center/h200/" target="_blank" rel="noopener">NVIDIA H200</a> · ~<span id="stepSeconds">20</span> s per 10-minute step</li>
         </ul>
       </article>
 
       <article class="panel nv" data-panel="e2s">
         <div class="kicker"><span>04 · THE PIPELINE</span></div>
-        <h2>Earth2Studio wires data, model and storage together</h2>
+        <h2><a href="https://github.com/NVIDIA/earth2studio" target="_blank" rel="noopener">Earth2Studio</a> wires data, model and storage together</h2>
         <p>NVIDIA's open-source Python package for AI weather and climate. You can swap data sources, models and outputs without rewriting the pipeline.</p>
         <ol class="steps">
           <li><i>1</i><div><b>Fetch</b><span>Latest 6 FCI frames from the EUMETSAT Data Store</span></div></li>
           <li><i>2</i><div><b>Predict</b><span>StormScope-EU rolls forward 12 × 10 min on the GPU</span></div></li>
-          <li class="split"><i>3</i><div><b>Write</b><span>Upload forecasts to Arraylake while GPU runs</span></div></li>
-          <li class="violet"><i>4</i><div><b>Serve</b><span>Map tiles served via Earthmover Compute</span></div></li>
+          <li class="split"><i>3</i><div><b>Write</b><span>Upload forecasts to <a href="https://www.earthmover.io/arraylake" target="_blank" rel="noopener">Arraylake</a> while GPU runs</span></div></li>
+          <li class="violet"><i>4</i><div><b>Serve</b><span>Map tiles served via <a href="https://docs.earthmover.io/compute/tiles" target="_blank" rel="noopener">Earthmover Compute</a></span></div></li>
         </ol>
       </article>
 
@@ -162,16 +162,16 @@
         <ol class="hops">
           <li class="eu"><div><b>Meteosat-12</b><span>Scans Europe from orbit</span></div><em>10 min</em></li>
           <li class="eu"><div><b>EUMETSAT Data Store</b><span>Processes and publishes the scan</span></div><em>+5 min</em></li>
-          <li><div><b>Download</b><span>Earth2Studio fetches the latest frames</span></div><em>~2 min</em></li>
-          <li class="split"><div><b>Inference on NVIDIA H200 GPU saving to Arraylake</b><span>Predicts 2 hours ahead</span></div><em>&lt;4 min</em></li>
-          <li class="em"><div><b>Earthmover Compute</b><span>Renders map tiles straight from the data</span></div><em>~2 s</em></li>
+          <li><div><b>Download</b><span><a href="https://github.com/NVIDIA/earth2studio" target="_blank" rel="noopener">Earth2Studio</a> fetches the latest frames</span></div><em>~2 min</em></li>
+          <li class="split"><div><b>Inference on <a href="https://www.nvidia.com/en-us/data-center/h200/" target="_blank" rel="noopener">NVIDIA H200</a> GPU saving to <a href="https://www.earthmover.io/arraylake" target="_blank" rel="noopener">Arraylake</a></b><span>Predicts 2 hours ahead</span></div><em>&lt;4 min</em></li>
+          <li class="em"><div><b><a href="https://docs.earthmover.io/compute/tiles" target="_blank" rel="noopener">Earthmover Compute</a></b><span>Renders map tiles straight from the data</span></div><em>~2 s</em></li>
           <li class="em"><div><b>Your browser</b><span>Loads all 13 frames and plays the loop</span></div><em>~12 s</em></li>
         </ol>
         <div class="legend"><span class="eu">EUMETSAT</span><span class="nv">NVIDIA</span><span class="em">Earthmover</span></div>
       </article>
 
       <article class="panel em" data-panel="arraylake">
-        <div class="kicker"><span>06 · Earthmover Arraylake + Icechunk</span></div>
+        <div class="kicker"><span>06 · <a href="https://earthmover.io" target="_blank" rel="noopener">Earthmover</a> <a href="https://www.earthmover.io/arraylake" target="_blank" rel="noopener">Arraylake</a> + <a href="https://icechunk.io" target="_blank" rel="noopener">Icechunk</a></span></div>
         <h2>Compute and Upload Together. Publish Once.</h2>
         <p>Forecast data is uploaded to Earthmover Arraylake while StormScope-EU generates subsequent predictions on GPUs.</p>
         <p>Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
@@ -215,7 +215,7 @@
       <article class="panel em" data-panel="compute">
         <div class="kicker">07 · THE DATA LAKE</div>
         <h2>Every forecast run is a commit</h2>
-        <p>Each 10-minute step uploads to Arraylake while the GPU computes the next one, and a single versioned Icechunk commit publishes all 12 at once. Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
+        <p>Each 10-minute step uploads to <a href="https://www.earthmover.io/arraylake" target="_blank" rel="noopener">Arraylake</a> while the GPU computes the next one, and a single versioned <a href="https://icechunk.io" target="_blank" rel="noopener">Icechunk</a> commit publishes all 12 at once. Icechunk atomically publishes each complete forecast as a versioned snapshot.</p>
         <details class="history-reveal" open><summary>Recent published forecasts</summary><div class="history-title"><span>Latest Forecast Publications</span><span id="historyFeedState">—</span></div>
         <div class="publication-timeline" id="publicationTimeline" aria-label="Recent forecast snapshots in publication order; spacing does not represent elapsed time"></div>
         <div class="commits" id="commitList"></div>
@@ -231,11 +231,11 @@
         <div class="kicker">08 · YOUR TURN</div>
         <h2>Take the forecast with you</h2>
         <div class="two qr">
-          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw tiles</b><span>Latest run, 10-min forecast, served via Earthmover Compute</span></div>
-          <div class="qrcard"><div class="qrbox" id="qrViewer"></div><b>Animated viewer</b><span>Every run, every lead time</span></div>
+          <div class="qrcard"><div class="qrbox" id="qrTiles"></div><b>Raw tiles</b><span>Latest run, 10-min forecast, served via <a href="https://docs.earthmover.io/compute/tiles" target="_blank" rel="noopener">Earthmover Compute</a></span></div>
+          <div class="qrcard"><div class="qrbox" id="qrViewer"></div><b>Animated viewer</b><span>Every run, every lead time, served via <a href="https://docs.earthmover.io/compute/tiles" target="_blank" rel="noopener">Earthmover Compute</a></span></div>
         </div>
         <div class="sql">
-          <div class="sql-head"><b>Live SQL</b><span id="sqlStatus">…</span></div>
+          <div class="sql-head"><b>Live <a href="https://docs.earthmover.io/compute/sql" target="_blank" rel="noopener">Zax SQL</a> via <a href="https://docs.earthmover.io/compute" target="_blank" rel="noopener">Earthmover Compute</a></b><span id="sqlStatus">…</span></div>
           <div class="sql-run">
             <div class="sql-places" id="sqlPlaces"></div>
             <button type="button" id="sqlReset">Reset</button>
