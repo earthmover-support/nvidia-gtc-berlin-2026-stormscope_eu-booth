@@ -7,6 +7,10 @@
 #   docker compose up -d --build
 #   docker compose logs -f
 #
+# If the EUMETSAT account holds the NRT licence (real-time data), start it with
+# STORMSCOPE_REALTIME=1 to pass --min-lag 0 --wait-seconds 15; otherwise the script's
+# defaults apply.
+#
 # Arguments after the service name replace the default command, e.g. a one-off pinned run:
 #   docker compose run --rm pipeline python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00
 services:
@@ -17,6 +21,16 @@ services:
     environment:
       STORMSCOPE_PUBLISH_TARGET: ${STORMSCOPE_PUBLISH_TARGET:-arraylake}
       ARRAYLAKE_REPO: ${ARRAYLAKE_REPO:-gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region}
+      STORMSCOPE_REALTIME: ${STORMSCOPE_REALTIME:-0}
+    command:
+      - sh
+      - -c
+      - |
+        case "$$STORMSCOPE_REALTIME" in
+          1) exec python scripts/stormscope_eu_pipeline.py --min-lag 0 --wait-seconds 15 ;;
+          0) exec python scripts/stormscope_eu_pipeline.py ;;
+          *) echo "STORMSCOPE_REALTIME must be 0 or 1, got '$$STORMSCOPE_REALTIME'" >&2; exit 2 ;;
+        esac
     secrets:
       - eumetsat_consumer_key
       - eumetsat_consumer_secret

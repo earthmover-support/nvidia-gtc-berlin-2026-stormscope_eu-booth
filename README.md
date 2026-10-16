@@ -113,8 +113,15 @@ docker compose logs -f
 ```
 
 `STORMSCOPE_PUBLISH_TARGET` and `ARRAYLAKE_REPO` can be overridden from the shell or a
-`.env` next to `compose.yaml`. Arguments after the service name replace the default
-command, e.g. a single pinned run:
+`.env` next to `compose.yaml`. If the EUMETSAT account holds the NRT licence (real-time data),
+set `STORMSCOPE_REALTIME=1` to run with `--min-lag 0 --wait-seconds 15`; the default `0`
+keeps the script's 62-minute lag and 60-second wait:
+
+```bash
+STORMSCOPE_REALTIME=1 docker compose up -d --build
+```
+
+Arguments after the service name replace the default command, e.g. a single pinned run:
 
 ```bash
 docker compose run --rm pipeline python scripts/stormscope_eu_pipeline.py --start-time 2026-06-30T12:00
@@ -155,6 +162,8 @@ uv run python scripts/stormscope_eu_pipeline.py --publish-target arraylake --arr
 | Flag | Default | Notes |
 |---|---|---|
 | `--start-time` | freshest downloadable slot | ISO 8601 UTC on a 10-min boundary. If the Data Store can't be searched, falls back to 2 h behind now. |
+| `--min-lag` | `62` | minutes a slot must be past its slot time to be considered; `0` with the EUMETSAT NRT licence (see `MIN_LAG` in the script) |
+| `--wait-seconds` | `60` | sleep before looking again when there is no new init or a pass failed |
 | `--n-steps` | `12` | 10-min steps |
 | `--output-dir` | `outputs` | local Icechunk store |
 | `--publish-target` | `$STORMSCOPE_PUBLISH_TARGET` or `local` | `local` \| `arraylake` |

@@ -199,7 +199,8 @@ REALTIME_LAG = timedelta(hours=2)  # blind fallback when the Data Store cannot b
 # once, and the 6-frame input window always needs five sub-hourly ones. Measured with
 # scripts/measure_fci_latency.py on 2026-10-06, slots unlocked 60.1-60.4 min after their
 # slot time; 62 min is that boundary plus a margin. Holding the NRT licence lets this go to
-# 0, moving the run to ~15 minutes behind real time.
+# 0, moving the run to ~15 minutes behind real time. This is the default: override it
+# with --min-lag (minutes).
 MIN_LAG = timedelta(minutes=62)
 
 
@@ -221,8 +222,21 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="initial-condition time, ISO 8601 UTC (e.g. 2026-06-30T12:00). "
         "Default: the freshest slot the EUMETSAT Data Store can serve "
-        "this account (see MIN_LAG), falling back to REALTIME_LAG "
+        "this account (see --min-lag), falling back to REALTIME_LAG "
         "behind now if the Data Store can't be searched.",
+    )
+    p.add_argument(
+        "--min-lag",
+        type=float,
+        default=MIN_LAG.total_seconds() / 60,
+        help="minutes a slot must be past its slot time before it is considered for download; "
+        "0 with the EUMETSAT NRT licence",
+    )
+    p.add_argument(
+        "--wait-seconds",
+        type=float,
+        default=60,
+        help="seconds to sleep before looking again when no new init is available or a pass failed",
     )
     p.add_argument("--n-steps", type=int, default=12, help="forecast steps of 10 min (12 = 2 h)")
     p.add_argument("--output-dir", default="outputs", help="where the local Icechunk store goes")
@@ -243,6 +257,11 @@ def parse_args() -> argparse.Namespace:
 
     if args.n_steps < 1:
         p.error("--n-steps must be >= 1")
+    if args.min_lag < 0:
+        p.error("--min-lag must be >= 0")
+    args.min_lag = timedelta(minutes=args.min_lag)
+    if args.wait_seconds < 0:
+        p.error("--wait-seconds must be >= 0")
     if args.start_time is not None:
         try:
             args.start_time = np.datetime64(args.start_time)
@@ -334,12 +353,14 @@ def latest_fci_slot(
     )
 
 
-def resolve_start_time(pinned: np.datetime64 | None, n_frames: int) -> datetime:
+def resolve_start_time(
+    pinned: np.datetime64 | None, n_frames: int, min_lag: timedelta = MIN_LAG
+) -> datetime:
     """The analysis time to run: pinned, else latest available, else `REALTIME_LAG` back."""
     if pinned is not None:
         return floor_to_slot(pinned.astype("datetime64[s]").astype(datetime).replace(tzinfo=UTC))
     try:
-        return latest_fci_slot(n_frames)
+        return latest_fci_slot(n_frames, min_lag=min_lag)
     except Exception as err:  # no credentials, no network, feed gap beyond the lookback
         fallback = floor_to_slot(datetime.now(UTC) - REALTIME_LAG)
         print(f"Data Store search failed ({err!r}); falling back to {REALTIME_LAG} back")
@@ -851,7 +872,7 @@ def main():
     """Load the model once, then run every new init as it becomes available.
 
     Each pass resolves the freshest analysis time (see `resolve_start_time`) and runs
-    it unless it was the last one run, in which case it sleeps `wait_seconds` and
+    it unless it was the last one run, in which case it sleeps `--wait-seconds` and
     looks again. An exception in a pass is printed and the loop carries on. With
     --start-time the pinned init is run once and the loop ends.
     """
@@ -859,12 +880,14 @@ def main():
     pipeline = StormScopeEUPipeline(device=args.device)
 
     last_start = None
-    wait_seconds = 60
+    wait_seconds = args.wait_seconds
 
     while True:
         try:
             analysis_time = resolve_start_time(
-                args.start_time, n_frames=len(pipeline.model.input_coords()["lead_time"])
+                args.start_time,
+                n_frames=len(pipeline.model.input_coords()["lead_time"]),
+                min_lag=args.min_lag,
             )
             lag_min = (datetime.now(UTC) - analysis_time).total_seconds() / 60
             print(
