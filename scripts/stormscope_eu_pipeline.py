@@ -202,6 +202,16 @@ REALTIME_LAG = timedelta(hours=2)  # blind fallback when the Data Store cannot b
 # 0, moving the run to ~15 minutes behind real time. This is the default: override it
 # with --min-lag (minutes).
 MIN_LAG = timedelta(minutes=62)
+# Stored `time` is the FCI slot time plus this. A slot's scan runs south to north over
+# 10 min and reaches Berlin ~7 min after the slot time, so the stored init matches when
+# Berlin was observed. Only the stored coordinates shift: fetching and the model use the
+# slot time, which `MeteosatFCI` requires on the 10-min grid.
+INIT_OFFSET = np.timedelta64(7, "m")
+TIME_ATTRS = {
+    "standard_name": "forecast_reference_time",
+    "long_name": "analysis (nowcast initialisation) time: FCI repeat-cycle slot time "
+    f"+ {INIT_OFFSET.astype(int)} min, when the scan reaches Berlin",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -567,6 +577,7 @@ def step_composites(x_pred: torch.Tensor, coords_pred: OrderedDict, channels: li
     rgb_coords_step = east_positive(
         (dim, values) for dim, values in coords_pred.items() if dim != "variable"
     )
+    rgb_coords_step["time"] = rgb_coords_step["time"] + INIT_OFFSET  # match the stored `time`
     rgb_coords_step["rgb"] = RGB_VALUES
 
     return (
@@ -707,12 +718,7 @@ def create_schema(
         ("time", "lead_time"),
         {"standard_name": "time", "long_name": "valid time (time + lead_time)"},
     )
-    backend.root["time"].attrs.update(
-        {
-            "standard_name": "forecast_reference_time",
-            "long_name": "analysis (nowcast initialisation) time",
-        }
-    )
+    backend.root["time"].attrs.update(TIME_ATTRS)
     backend.root["lead_time"].attrs.update(
         {
             "standard_name": "forecast_period",
@@ -834,11 +840,15 @@ class StormScopeEUPipeline:
 
         backend, location = build_backend(publish_target, output_dir, arraylake_repo)
         lead_time = np.arange(n_steps + 1) * self.model.output_times[0]
-        init = np.datetime_as_string(coords["time"][0], unit="m")
+        # `coords` stays on the slot time for the model; the store gets the shifted one.
+        stored = OrderedDict(coords, time=coords["time"] + INIT_OFFSET)
+        init = np.datetime_as_string(stored["time"][0], unit="m")
         if "true_color" not in backend.root:
-            create_schema(backend, self.model, coords, lead_time)
+            create_schema(backend, self.model, stored, lead_time)
         else:
-            extend_schema(backend, coords["time"], lead_time)
+            extend_schema(backend, stored["time"], lead_time)
+        # Existing repos keep the attrs they were created with.
+        backend.root["time"].attrs.update(TIME_ATTRS)
 
         for step, (x_pred, coords_pred) in enumerate(
             tqdm(self.model.create_iterator(x, coords), total=n_steps + 1)
