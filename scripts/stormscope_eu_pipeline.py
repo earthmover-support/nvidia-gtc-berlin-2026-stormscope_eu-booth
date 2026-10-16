@@ -126,6 +126,11 @@ AIRMASS_CHANNELS = ["fci63wv", "fci73wv", "fci97ir", "fci105ir"]
 # is absent, and the backend leaves a dimension it has no chunk for unsplit, so a chunk
 # holds all three bands. `lat`/`lon` use the same y/x chunks (see add_coord).
 CHUNKS = {"ensemble": 1, "time": 1, "lead_time": 1, "y": 560, "x": 1216}
+# `time` and `valid_time` hold a few bytes per init. With the data arrays' `time` chunk
+# of 1, every init added a chunk to each, and every reader opening a snapshot (the tile
+# service on each commit) read all of them. 4096 inits, ~4 weeks at one per 10 min, fit
+# one chunk; `extend_schema`'s resize then rewrites that one chunk per commit.
+COORD_TIME_CHUNK = 4096
 COMPRESSOR = ZstdCodec(level=3)
 # lat/lon only: Blosc byte-shuffle groups each value's bytes (exponents together,
 # mantissas together) before zstd, which compresses smooth float fields much better.
@@ -397,9 +402,9 @@ def add_coord(
     so it needs no backend subclass.
     """
     values = np.asarray(values.detach().cpu() if torch.is_tensor(values) else values, dtype=dtype)
-    # y/x split like the data arrays; any other dim stays whole
+    # y/x split like the data arrays, `time` sized for many inits; any other dim stays whole
     chunks = tuple(
-        CHUNKS[dim] if dim in ("y", "x") else size
+        CHUNKS[dim] if dim in ("y", "x") else COORD_TIME_CHUNK if dim == "time" else size
         for dim, size in zip(dims, values.shape, strict=True)
     )
     if name not in backend.root:
@@ -610,7 +615,10 @@ def create_schema(
     )
     rgb_coords = OrderedDict(**total_coords, rgb=RGB_VALUES)
 
-    backend.add_array(rgb_coords, [])  # coordinate arrays only
+    # `time` first, so `add_array` skips it rather than chunking it at this run's length.
+    add_coord(backend, "time", total_coords["time"], ("time",))
+    backend.coords["time"] = total_coords["time"]
+    backend.add_array(rgb_coords, [])  # other coordinate arrays only
     # Created directly: `add_array` takes its dtype from initial data only, and passing
     # data would write every chunk of the cube.
     for name in ("true_color", "airmass"):
