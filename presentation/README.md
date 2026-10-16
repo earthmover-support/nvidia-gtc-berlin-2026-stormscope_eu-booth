@@ -249,4 +249,4 @@ The result header identifies the queried composite. The final panel uses a thin
 architecture ribbon and prioritizes the viewer QR over developer tiles.
 
 
-Redeployed 2026-10-15 (tile cache #87, #89; MapLibre 6 #90).
+Redeployed 2026-10-16 (data-flow slide #94; temporary-demo note #96).
