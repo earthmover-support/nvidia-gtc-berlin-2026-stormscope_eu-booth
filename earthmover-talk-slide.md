@@ -9,6 +9,7 @@
 - GitHub repo: https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth
 - Arraylake repo: https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region
 - Tiles service: https://app.earthmover.io/gtc-berlin/services/tiles-eu-8af53d67?period=last15Minutes
+- Blog post: https://docs.google.com/document/d/1R612opaoPsznfEx18c4Jn0-uRbzuFSKMmlTsG0sznN0/edit?tab=t.9a1zznladyrq
 
 ## Delivery
 
