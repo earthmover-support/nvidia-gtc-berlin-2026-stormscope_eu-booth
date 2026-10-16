@@ -529,13 +529,15 @@
 
   function renderTicks(current) {
     const box = $("#ticks");
-    box.replaceChildren();
-    S.cfg.leads.forEach((lead, k) => {
-      const d = el("div", lead ? null : "obs", lead ? `+${lead}` : "+0 · sat");
-      if (lead === current) d.classList.add("now");
-      d.addEventListener("click", () => scrubTo(k));
-      box.append(d);
-    });
+    // built once: replacing a tick between pointerdown and pointerup swallows the click
+    if (box.children.length !== S.cfg.leads.length) {
+      box.replaceChildren(...S.cfg.leads.map((lead, k) => {
+        const d = el("div", lead ? "fc" : "obs", lead ? `+${lead}` : "+0 · sat");
+        d.addEventListener("click", () => scrubTo(k));
+        return d;
+      }));
+    }
+    S.cfg.leads.forEach((lead, k) => box.children[k].classList.toggle("now", lead === current));
     const r = $("#scrub");
     r.max = String(S.cfg.leads.length - 1);
     if (!scrubbing) r.value = String(S.frame);
@@ -558,13 +560,16 @@
 
   // top left: the valid time of the frame on screen, big; the init line below is renderInits'
   function renderValid(run, lead, suffix) {
+    const badge = $("#validEyebrow");
+    badge.classList.toggle("obs", lead === 0);
+    badge.classList.toggle("fc", !!lead);
     if (!run || lead == null) {
-      $("#validEyebrow").textContent = "Forecast";
+      badge.textContent = "Forecast";
       $("#validTitle").textContent = "waiting for the first frame…";
       return;
     }
     const t = new Date(initDate(run.init).getTime() + lead * 60000);
-    $("#validEyebrow").textContent = (lead ? `Forecast · +${lead} min` : "Observed · Satellite") + suffix;
+    badge.textContent = (lead ? `AI forecast · +${lead} min` : "Observed · Meteosat-12 satellite") + suffix;
     $("#validTitle").textContent = `${ymdhm(t)} ${tzName(t)}`;
     renderCompositePreviews();
 
@@ -865,14 +870,15 @@
 
   function renderSqlPlaces() {
     const places = $("#sqlPlaces");
-    const running = S.sql && S.sql.status === "running";
-    places.replaceChildren(...[
-      ...Object.keys(S.cfg.sql_places).map((name) => {
-        const b = el("button", name === S.sqlPlace ? "on" : "", name);
+    const names = [...Object.keys(S.cfg.sql_places), MY];
+    // built once: rebuilding on every poll swallowed clicks; a click while a query runs
+    // replaces it (newest wins)
+    if (places.children.length !== names.length) {
+      places.replaceChildren(...names.map((name) => {
+        const b = el("button", null, name);
         b.type = "button";
-        b.disabled = !!running;
         b.addEventListener("click", () => {
-          if (S.sql && S.sql.status === "running") return; // ignore clicks while a query runs
+          if (name === MY) return useMyLocation();
           S.sqlPlace = name;
           S.myCoords = null;
           const query = sqlFor(name);
@@ -881,17 +887,16 @@
           runSql(query); // no Run button: chips run immediately
         });
         return b;
-      }),
-      (() => {
-        const b = el("button", S.sqlPlace === MY ? "on" : "", S.locating ? "Locating…" : `📍 ${MY}`);
-        b.type = "button";
-        b.title = "Use browser geolocation";
-        b.disabled = !!S.locating || !!running;
-        b.setAttribute("aria-pressed", String(S.sqlPlace === MY));
-        b.addEventListener("click", () => useMyLocation());
-        return b;
-      })(),
-    ]);
+      }));
+      places.lastChild.title = "Use browser geolocation";
+    }
+    names.forEach((name, k) => {
+      const b = places.children[k];
+      b.classList.toggle("on", name === S.sqlPlace);
+      b.setAttribute("aria-pressed", String(name === S.sqlPlace));
+    });
+    places.lastChild.textContent = S.locating ? "Locating…" : `📍 ${MY}`;
+    places.lastChild.disabled = !!S.locating;
     $("#sqlFoot").textContent =
       S.sqlPlace === MY && S.myCoords
         ? `How cloudy over ${MY} (${fmtCoords(S.myCoords.lat, S.myCoords.lon)}), next 2 h · PostgreSQL wire protocol`
@@ -900,16 +905,21 @@
           : "Your query · PostgreSQL wire protocol";
   }
 
+  // shown in place of the bars until the next query runs
+  function setSqlWarn(msg) {
+    $("#sqlWarn").hidden = !msg;
+    $("#sqlWarn").textContent = msg || "";
+    $("#sqlBars").hidden = !!msg;
+  }
+
   function myLocationError(msg) {
     S.locating = false;
-    S.sql = { status: "error", query: sqlBox().value, error: msg };
-    renderSqlPlaces(); // re-enable the button first; renderSql then overwrites the foot with the error
-    renderSql();
+    renderSqlPlaces();
+    setSqlWarn(msg);
   }
 
   function useMyLocation() {
     holdPanel();
-    if (S.sql && S.sql.status === "running") return; // ignore clicks while a query runs
     if (!("geolocation" in navigator)) {
       myLocationError("Geolocation is not available in this browser – try Berlin, Paris or London.");
       return;
@@ -952,8 +962,8 @@
   };
 
   async function runSql(query) {
-    if (S.sql && S.sql.status === "running") return; // ignore clicks while a query runs
     holdPanel();
+    setSqlWarn("");
     S.sqlDirty = false;
     if (!S.cfg.sql_editable) return runPlaceSql();
     try {
@@ -976,6 +986,7 @@
 
   // hosted page: the server runs only a city chip's query (or a coordinate inside
   // data_bounds for My location), for the newest init
+  let placeAbort = null;
   async function runPlaceSql() {
     const run = latestShown();
     if (!run) return;
@@ -986,15 +997,20 @@
           ? { place: S.sqlPlace, init: run.time }
           : null;
     if (!params) return;
+    placeAbort?.abort(); // a newer pick replaces the query still running
+    const ctl = (placeAbort = new AbortController());
     S.sql = { ...(S.sql || {}), status: "running", ran_at: null };
     renderSql();
+    let out;
     try {
-      const res = await fetch(`/api/sql?${new URLSearchParams(params)}`);
+      const res = await fetch(`/api/sql?${new URLSearchParams(params)}`, { signal: ctl.signal });
       const cache = res.headers.get("x-vercel-cache");
-      S.sql = { ...(await res.json()), cached: cache === "HIT" || cache === "STALE" };
+      out = { ...(await res.json()), cached: cache === "HIT" || cache === "STALE" };
     } catch (e) {
-      S.sql = { status: "error", error: String(e) };
+      out = { status: "error", error: String(e) };
     }
+    if (ctl !== placeAbort) return;
+    S.sql = out;
     renderSql();
   }
 
@@ -1077,7 +1093,6 @@
       else if (e.key === "Escape") box.blur();
     });
     $("#sqlReset").addEventListener("click", () => {
-      if (S.sql && S.sql.status === "running") return; // ignore clicks while a query runs
       S.sqlPlace = placeOf(defaultSql());
       S.myCoords = null;
       S.sqlDirty = true; // filled in, not run
