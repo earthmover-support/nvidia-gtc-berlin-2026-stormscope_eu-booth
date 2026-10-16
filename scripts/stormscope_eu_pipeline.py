@@ -227,6 +227,12 @@ def parse_args() -> argparse.Namespace:
         help="minutes a slot must be past its slot time before it is considered for download; "
         "0 with the EUMETSAT NRT licence",
     )
+    p.add_argument(
+        "--wait-seconds",
+        type=float,
+        default=60,
+        help="seconds to sleep before looking again when no new init is available or a pass failed",
+    )
     p.add_argument("--n-steps", type=int, default=12, help="forecast steps of 10 min (12 = 2 h)")
     p.add_argument("--output-dir", default="outputs", help="where the local Icechunk store goes")
     p.add_argument(
@@ -249,6 +255,8 @@ def parse_args() -> argparse.Namespace:
     if args.min_lag < 0:
         p.error("--min-lag must be >= 0")
     args.min_lag = timedelta(minutes=args.min_lag)
+    if args.wait_seconds < 0:
+        p.error("--wait-seconds must be >= 0")
     if args.start_time is not None:
         try:
             args.start_time = np.datetime64(args.start_time)
@@ -856,7 +864,7 @@ def main():
     """Load the model once, then run every new init as it becomes available.
 
     Each pass resolves the freshest analysis time (see `resolve_start_time`) and runs
-    it unless it was the last one run, in which case it sleeps `wait_seconds` and
+    it unless it was the last one run, in which case it sleeps `--wait-seconds` and
     looks again. An exception in a pass is printed and the loop carries on. With
     --start-time the pinned init is run once and the loop ends.
     """
@@ -864,7 +872,7 @@ def main():
     pipeline = StormScopeEUPipeline(device=args.device)
 
     last_start = None
-    wait_seconds = 60
+    wait_seconds = args.wait_seconds
 
     while True:
         try:
