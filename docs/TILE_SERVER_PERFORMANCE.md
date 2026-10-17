@@ -293,7 +293,7 @@ Then the same matrix with the service pinned to `min = max = 8` replicas, after 
   before these caches existed or were visible. It also means every new pod (scale-out, scale
   from zero, the hourly reset) pays the uncached cost at first.
 - **The service speaks HTTP/2 now, and the booth page uses it.** In Chrome the
-  [mobile page](https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/) kept up to 16 tiles
+  [mobile page](https://nvidia-gtc-berlin-2026-viewer.earthmover.io/) kept up to 16 tiles
   in flight to the service; HTTP/1.1 would cap that at 6. (Chrome hides the protocol name for
   these cross-origin tiles, so this is inferred from the count.) It had 12 of 13 frames after
   30 s.
