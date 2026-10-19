@@ -13,6 +13,7 @@
  * one raster layer per (init time, lead time) selected with the `time` and
  * `lead_time` query parameters on the branch (or pinned to a snapshot id).
  */
+import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 ships ES modules only
 (() => {
   "use strict";
 
