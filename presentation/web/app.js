@@ -53,11 +53,13 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
   // seconds each forecast frame stays on screen
   const SPEEDS = { slow: 1, medium: 0.5, fast: 0.25 };
 
-  // Recording mode (record_video.sh): ?alternate=N flips the variable after every N full loops,
-  // and a newer init only comes on screen at that flip. ?variable= picks the first variable.
-  // ?start=<epoch ms> restarts the panels at slide 01 when the capture begins.
+  // Recording mode (record_video.sh): ?alternate=N flips the variable after every N full loops.
+  // The other variable preloads behind the one on screen, and a newer init only comes on screen
+  // at a flip. ?variable= is the first variable; at ?start=<epoch ms>, when the capture begins,
+  // the page goes back to it at +0 and to slide 01.
   const URLP = new URLSearchParams(location.search);
   const ALTERNATE = Number(URLP.get("alternate")) || 0;
+  const FIRST_VAR = URLP.get("variable");
   const START = Number(URLP.get("start")) || 0;
   let loopsDone = 0;
 
@@ -146,7 +148,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
   // where `layers` maps lead -> MapLibre source/layer id and `loaded` holds the leads whose
   // source has finished loading once.
   let shown = null; // on screen
-  let pending = null; // a newer run loading in the background; replaces `shown` once complete
+  let pending = null; // a newer run loading in the background; replaces `shown` once complete (recording mode: the other variable)
   let sets = 0;
   const LOAD_TIMEOUT_MS = 20000; // a stuck lead stops blocking the next one after this
   const LEADS_IN_FLIGHT = 3; // leads loading at once: ~12 s to a full loop, ~17 s one at a time
@@ -289,28 +291,36 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
   // once gets the early frames no sooner, and one at a time waits on each lead's slowest tile.
   // A run or variable the visitor picks (`pick`) replaces the frames on screen at once; a new
   // run found by polling loads behind them, so the loop keeps going until it is complete.
+  // Recording mode preloads the other variable instead and only promotes it at a flip.
   function syncLayers(pick = false) {
     if (!mapReady) return;
     const run = selectedRun();
     if (!run) return;
-    const same = (set) => set?.run.init === run.init && set.variable === S.variable;
-    if (!same(pending)) {
-      if (pending) dropSet(pending);
-      pending = null;
-    }
-    if (!pending && !same(shown)) {
-      pending = { id: sets++, run, variable: S.variable, layers: new Map(), loaded: new Set(), addedAt: 0 };
-    }
+    const same = (set, variable) => set?.run.init === run.init && set.variable === variable;
+    const newSet = (variable) => ({ id: sets++, run, variable, layers: new Map(), loaded: new Set(), addedAt: 0 });
     // a pick goes on screen at once, keeping any frames the set loaded behind
-    if (pending && (pick || !shown)) promote(pending, pick);
+    if ((pick || !shown) && !same(shown, S.variable)) {
+      if (!same(pending, S.variable)) {
+        if (pending) dropSet(pending);
+        pending = newSet(S.variable);
+      }
+      promote(pending, pick);
+    }
+    const behind = ALTERNATE ? otherVariable() : S.variable;
+    if (!same(pending, behind)) {
+      if (pending) dropSet(pending);
+      pending = same(shown, behind) ? null : newSet(behind);
+    }
     addNext(shown);
     // the background set only loads once the one on screen is complete, so the two never
     // compete for the tiles service
-    if (pending && complete(shown) && !ALTERNATE) {
+    if (pending && complete(shown)) {
       addNext(pending);
-      if (complete(pending)) promote(pending);
+      if (complete(pending) && !ALTERNATE) promote(pending);
     }
   }
+
+  const otherVariable = () => Object.keys(S.cfg.variables).find((v) => v !== S.variable);
 
   function promote(set, pick = false) {
     if (shown) dropSet(shown);
@@ -381,7 +391,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
       }
       if (next == null && ALTERNATE && ++loopsDone % ALTERNATE === 0) {
         S.frame = 0;
-        setVariable(Object.keys(S.cfg.variables).find((v) => v !== S.variable));
+        setVariable(otherVariable());
         scheduleAnim();
         return;
       }
@@ -530,7 +540,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
       box.replaceChildren(sel);
     }
     const labels = runs.map((run, k) => {
-      const loading = pending?.run.init === run.init ? ` · ${pending.loaded.size}/${S.cfg.leads.length}` : "";
+      const loading = pending?.run.init === run.init && pending.variable === S.variable ? ` · ${pending.loaded.size}/${S.cfg.leads.length}` : "";
       return `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${loading}`;
     });
     if (labels.join("|") !== sel.dataset.labels) { // rebuild only when the list changes, so an open menu stays open
@@ -739,7 +749,15 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     $("#panelPrev").addEventListener("click", () => step(-1));
     $("#panelNext").addEventListener("click", () => step(1));
     showPanel(0);
-    if (START > Date.now()) setTimeout(() => showPanel(0), START - Date.now());
+  }
+
+  function startRecording() {
+    loopsDone = 0;
+    S.frame = 0;
+    if (FIRST_VAR in S.cfg.variables) setVariable(FIRST_VAR);
+    showFrame();
+    scheduleAnim();
+    showPanel(0);
   }
 
   function showPanel(i) {
@@ -1242,7 +1260,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     setTimezone(S.cfg.timezone);
     if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
-    S.variable = URLP.get("variable") in S.cfg.variables ? URLP.get("variable") : defaultVariable();
+    S.variable = FIRST_VAR in S.cfg.variables ? FIRST_VAR : defaultVariable();
     initSqlEditor();
     renderVarToggle();
     renderVarCards();
@@ -1267,6 +1285,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     initStrip();
     initKeys();
     initAttractReset();
+    if (START > Date.now()) setTimeout(startRecording, START - Date.now());
     await refreshState();
     setInterval(refreshState, 4000);
     if (S.cfg.sql_editable) {

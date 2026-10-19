@@ -11,9 +11,8 @@
 # Knobs (env): DURATION_S=1200 SCREEN="Capture screen 1" WINDOW_X=1512 WARMUP_S=60 PORT=8765 CRF=22 SCALE=1920:1080 FIRST_VAR=true_color LOOPS=2
 #   SCREEN    avfoundation device name or index, see: ffmpeg -f avfoundation -list_devices true -i ""
 #   WINDOW_X  left edge of that monitor in points (Chrome opens fullscreen there)
-#   SCALE     final size for ffmpeg scale=, e.g. 1920:-2 keeps a 16:10 built-in screen's aspect
-#   FIRST_VAR variable shown first; the page flips to the other one after every LOOPS full
-#             playback loops of one init (app.js ?alternate=LOOPS&variable=FIRST_VAR)
+#   SCALE     final size as ffmpeg W:H, e.g. 1920:-2 keeps a 16:10 built-in screen's aspect
+#   FIRST_VAR, LOOPS  passed to the page as ?variable= and ?alternate=, see app.js recording mode
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -24,9 +23,10 @@ FIRST_VAR="${FIRST_VAR:-true_color}" LOOPS="${LOOPS:-2}"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 TMP="$(mktemp -d)"
 RAW="$TMP/raw.mp4"
+# checked now: a bad size would only fail the final encode, after the take is recorded
+[[ "$SCALE" =~ ^-?[0-9]+:-?[0-9]+$ ]] || { echo "SCALE must be W:H, e.g. 1920:1080 or 1920:-2" >&2; exit 1; }
 
 cleanup() {
-  [[ -n "${FFMPEG_PID:-}" ]] && kill "$FFMPEG_PID" 2>/dev/null || true
   [[ -n "${CHROME_PID:-}" ]] && kill "$CHROME_PID" 2>/dev/null || true
   [[ -n "${SERVER_PID:-}" ]] && kill "$SERVER_PID" 2>/dev/null || true
   rm -rf "$TMP"
@@ -59,10 +59,7 @@ sleep "$WARMUP_S"
 echo "recording ${DURATION_S}s from screen $SCREEN (starting at $FIRST_VAR, flipping every $LOOPS loops)..."
 ffmpeg -hide_banner -loglevel warning -stats \
   -f avfoundation -pixel_format uyvy422 -capture_cursor 0 -framerate 30 -i "$SCREEN:none" \
-  -t "$DURATION_S" -fps_mode cfr -r 30 -c:v libx264 -preset ultrafast -crf 12 -pix_fmt yuv420p "$RAW" &
-FFMPEG_PID=$!
-wait "$FFMPEG_PID" || true
-FFMPEG_PID=""
+  -t "$DURATION_S" -fps_mode cfr -r 30 -c:v libx264 -preset ultrafast -crf 12 -pix_fmt yuv420p "$RAW" || true
 
 kill "$CHROME_PID" "$SERVER_PID" 2>/dev/null || true
 

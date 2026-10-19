@@ -40,10 +40,11 @@ at the repo root, and `presentation/node_modules` (`cd presentation && npm ci`).
 6. Watch the result once from start to end, then copy it to the booth laptop *and* a USB stick.
 
 Knobs, all set through env variables: `DURATION_S=1200`, `SCREEN="Capture screen 1"`, `WINDOW_X=1512`, `WARMUP_S=60`,
-`PORT=8765`, `CRF=22`, `SCALE=1920:1080`, `FIRST_VAR=true_color`, `LOOPS=2`. The page itself flips between
-true_color and airmass after every `LOOPS` full playback loops (`?alternate=LOOPS`), and only picks up a newer init
-at a flip, so each variable plays whole loops of one init. The info panels restart at slide 01 when capture begins. Without an external monitor, record the built-in screen with
-`SCREEN="Capture screen 0" WINDOW_X=0 SCALE=1920:-2` (keeps its 16:10 aspect) and don't touch the Mac. For a quick trial, use `DURATION_S=30 WARMUP_S=20`.
+`PORT=8765`, `CRF=22`, `SCALE=1920:1080`, `FIRST_VAR=true_color`, `LOOPS=2`. The page switches variables itself,
+after every `LOOPS` full loops (recording mode in `app.js`), and starts on `FIRST_VAR` at +0 and slide 01 when capture
+begins. Without an external monitor, record the built-in screen with
+`SCREEN="Capture screen 0" WINDOW_X=0 SCALE=1920:-2` (keeps its 16:10 aspect) and don't touch the Mac.
+For a quick trial, use `DURATION_S=30 WARMUP_S=20`.
 
 ## What the script does
 
@@ -71,4 +72,4 @@ A screen grab can't be bigger than the screen it captures, and macOS won't make 
 its screen. On the recording Mac, the external monitor is 1920x1080 and the built-in Retina panel is
 1512x982 points. Headless Chrome could render 4K, but its screencast only delivers about 10-20 fps,
 which makes the globe and playback choppy. To get real 4K, run the same script on a 4K monitor and
-change the `scale=` in the final encode.
+set `SCALE=3840:2160`.
