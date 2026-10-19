@@ -53,6 +53,12 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
   // seconds each forecast frame stays on screen
   const SPEEDS = { slow: 1, medium: 0.5, fast: 0.25 };
 
+  // Recording mode (record_video.sh): ?alternate=N flips the variable after every N full loops,
+  // and a newer init only comes on screen at that flip. ?variable= picks the first variable.
+  const URLP = new URLSearchParams(location.search);
+  const ALTERNATE = Number(URLP.get("alternate")) || 0;
+  let loopsDone = 0;
+
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
   const initDate = (init) => new Date(init + ":00Z"); // inits are stored in UTC
@@ -298,7 +304,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     addNext(shown);
     // the background set only loads once the one on screen is complete, so the two never
     // compete for the tiles service
-    if (pending && complete(shown)) {
+    if (pending && complete(shown) && !ALTERNATE) {
       addNext(pending);
       if (complete(pending)) promote(pending);
     }
@@ -369,6 +375,12 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
         S.animPaused = true;
         renderPlayback();
         renderInits();
+        return;
+      }
+      if (next == null && ALTERNATE && ++loopsDone % ALTERNATE === 0) {
+        S.frame = 0;
+        setVariable(Object.keys(S.cfg.variables).find((v) => v !== S.variable));
+        scheduleAnim();
         return;
       }
       if (ready.length) S.frame = next ?? ready[0];
@@ -1171,7 +1183,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     const touch = () => { lastInput = Date.now(); };
     for (const type of ["keydown", "pointerdown", "wheel"]) window.addEventListener(type, touch, { passive: true, capture: true });
     const secs = S.cfg.attract_reset_s;
-    if (!secs) return;
+    if (!secs || ALTERNATE) return;
     setInterval(() => {
       if (Date.now() - lastInput < secs * 1000) return;
       const dirty = !S.loop || S.animPaused || S.rotatePaused || S.selInit || S.variable !== defaultVariable() ||
@@ -1227,7 +1239,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     setTimezone(S.cfg.timezone);
     if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
-    S.variable = defaultVariable();
+    S.variable = URLP.get("variable") in S.cfg.variables ? URLP.get("variable") : defaultVariable();
     initSqlEditor();
     renderVarToggle();
     renderVarCards();
