@@ -1,13 +1,15 @@
 # nvidia-gtc-berlin-2026-stormscope_eu-booth
 
 StormScope-EU nowcasting on MTG-I1 FCI, streamed into Arraylake — the booth demo for
-NVIDIA GTC Berlin 2026.
+NVIDIA GTC Berlin 2026. Note that the deployed pipeline will go offline after the event.
 
 ## Links
 
-- https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/
-- https://hackmd.io/@ukEyv-C_TnK1RVN9gH211w/BkSIAjzOGl
-- https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region
+- Earth2Studio example https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/
+- Arraylake repo https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region
+- dashboard deployment: https://nvidia-gtc-berlin-2026.earthmover.io/
+- mobile deployment: https://nvidia-gtc-berlin-2026-viewer.earthmover.io/
+
 
 [`scripts/stormscope_eu_pipeline.py`](scripts/stormscope_eu_pipeline.py) runs
 [`StormScopeMeteosatEU`](https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/)
@@ -17,9 +19,6 @@ it is produced. By default it initialises from the freshest slot this account ma
 (~80–90 min behind real time — downloading anything fresher needs the EUMETSAT NRT licence;
 see `MIN_LAG` in the script), so it can be run on a schedule as is. See
 [Pipeline script](#pipeline-script).
-
-**Ingest target:**
-[gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region)
 
 ## Deployments
 
@@ -192,19 +191,3 @@ float.
 
   Each is clipped to 0–1, gamma 1. The ranges are within ~1.5 K of EUMETSAT's (−25…0 K,
   −40…+5 K, 243→208 K).
-
-Georeference follows #3, so Flux tiles render north of ~50°N. Both composites name a CF
-geostationary grid mapping, `fci_geos_projection` (`sweep_angle_axis="y"`), in their
-`grid_mapping` attribute. `x` is stored positive east: earth2studio's FCI `x` is positive
-west, so it is negated in the schema and in every write. `x`/`y` get CF
-`projection_*_coordinate` attributes, and the 2-D `lat`/`lon` stay as coordinates. `time`, `lead_time` and `ensemble` carry the CF standard names `forecast_reference_time`, `forecast_period` and `realization`. A 2-D `valid_time(time, lead_time)` = `time + lead_time` carries standard name `time`.
-The same CRS is also written with the [GeoZarr](https://geozarr.org/conventions.html) `proj`
-and `spatial` conventions (v0.1) on the dataset (root group attributes): `proj:wkt2`,
-`proj:projjson`, and an affine `spatial:transform` in metres (scan angle × satellite height),
-south-up because `y` runs south to north. Chunks
-are one `(ensemble, time, lead_time)` by 560 × 1216 pixels (2 × 2 per frame), all three
-`rgb` bands in one chunk, zstd-compressed; `lat`/`lon` share the y/x chunks, stored as
-float32 with Blosc zstd + byte shuffle.
-
-Each run appends its init time to the repo's root group. The model checkpoint (`nvidia/stormscope-meteosat`
-on Hugging Face) is downloaded on first run.
