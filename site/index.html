@@ -107,6 +107,8 @@ const FRAME_MS = 800;
 const LOAD_TIMEOUT_MS = 20000; // a stuck frame stops blocking the next one after this
 const LEADS_IN_FLIGHT = 3; // frames loading at once; one at a time waits on each frame's slowest tile
 const POLL_MS = 60000; // how often to look for a new init
+const INITS = 144; // the selector offers the past 24 h, one init every 10 min
+const BERLIN = [52.5, 13.38]; // decides day or night for the starting composite
 
 // Keep tiles across variable switches and reloads; see sw.js.
 // Service workers need https or localhost; opened as a file:// page, tiles aren't cached.
@@ -142,7 +144,19 @@ function tzName(d) {
   return /^(GMT|UTC)[+-]/.test(gb) ? name("en-US") : gb;
 }
 $("tz").textContent = tzName(new Date());
-let leads = [], variable = "true_color", frame = 0, timer = null, firstLabel, runs = 0;
+// Sun above the horizon at (lat, lon) at time t; low-precision solar position, good to ~1°.
+function sunUp(lat, lon, t = new Date()) {
+  const r = Math.PI / 180, d = t / 864e5 - 10957.5; // days since J2000.0
+  const g = (357.529 + 0.98560028 * d) * r;
+  const L = (280.459 + 0.98564736 * d + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * r;
+  const e = (23.439 - 3.6e-7 * d) * r;
+  const dec = Math.asin(Math.sin(e) * Math.sin(L));
+  const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+  const H = (280.46061837 + 360.98564736629 * d + lon) * r - ra; // local hour angle
+  return Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(H) > 0;
+}
+// True colour is black at night, so a page opened while Berlin is dark starts on Airmass
+let leads = [], variable = sunUp(...BERLIN) ? "true_color" : "airmass", frame = 0, timer = null, firstLabel, runs = 0;
 // A run is one init and variable: { id, time, variable, added, addedAt, loaded }, where
 // `loaded` holds the indices of frames whose tiles have all arrived.
 let run = null; // on screen
@@ -165,8 +179,13 @@ async function loadCoords() {
   const html = await (await fetch(`${BASE}/_meta/datasets/${REPO}/${REF}/tree`, { cache: "no-store" })).text();
   const pres = [...html.matchAll(/<pre>(array\(\[[^\[][\s\S]*?\))<\/pre>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
   const values = (s) => s.slice(s.indexOf("[") + 1, s.indexOf("]")).split(",").map((v) => v.trim().replace(/'/g, "")).filter((v) => v !== "...");
+  const times = values(pres.find((s) => s.includes("datetime64"))).map((t) => t.slice(0, 19));
+  // The repo holds far more than 200 inits, so only the newest is known: count back from it.
+  // ponytail: assumes no init is missing; a gap shows blank frames, list the real times if that bites
+  const newest = utc(times.at(-1)).getTime();
   return {
-    times: values(pres.find((s) => s.includes("datetime64"))).map((t) => t.slice(0, 19)),
+    times: Array.from({ length: INITS }, (_, k) => new Date(newest - (INITS - 1 - k) * 600000).toISOString().slice(0, 19))
+      .filter((t) => t >= times[0]),
     leads: values(pres.find((s) => s.includes("timedelta64[m]"))).map(Number),
   };
 }
@@ -331,6 +350,7 @@ map.once("style.load", async () => {
   if (!(await useCoords(coords))) return;
   $("init").onchange = () => startRun($("init").value);
   const pills = document.querySelectorAll(".pill");
+  for (const p of pills) p.classList.toggle("active", p.dataset.var === variable);
   for (const b of pills) b.onclick = () => {
     for (const p of pills) p.classList.toggle("active", p === b);
     variable = b.dataset.var;

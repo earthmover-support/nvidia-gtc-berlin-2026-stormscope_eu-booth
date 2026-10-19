@@ -16,7 +16,7 @@
   "lead_step_min": 10,
   "run_interval_min": 10,
   "run_phases_s": { "ic": 100, "step": 17, "commit": 6 },
-  "max_runs": 12,
+  "max_runs": 144,
   "poll_seconds": 5,
   "history_depth": 120,
 

@@ -65,7 +65,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
    ([TILE_SERVER_PERFORMANCE.md](../docs/TILE_SERVER_PERFORMANCE.md#server-side-caches-and-http2-2026-10-15)).
 2. **Inits**: the page reads `gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region` (root group). The
    pipeline appends every run's init to `time` and never drops one; the page offers the
-   newest 12 (`max_runs`). The server re-reads the `time` coordinate whenever `main` moves,
+   newest 144, the past 24 h (`max_runs`). The server re-reads the `time` coordinate whenever `main` moves,
    and each tile picks its frame with `time=` + `lead_time=` on the newest snapshot holding
    that run, so the browser can cache it.
    The pipeline commits each init once, with all its leads, so every init in `time` is
