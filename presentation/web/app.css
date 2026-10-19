@@ -152,7 +152,7 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 .panel.nv p.muted { color: #9A9A9A; }
 
 .panel.em { background: var(--em-bg); }
-.panel.em .kicker { color: var(--lime); }
+.panel.em .kicker { color: var(--em-lav); }
 .panel.em h2 { color: #F5F5F5; }
 .panel.em p { color: var(--em-text); }
 
@@ -659,7 +659,6 @@ body { background: var(--ground); color: var(--text); font-family: var(--sans); 
 
 /* Slide 06: deployed main-branch Earthmover Data Lake palette and proportions. */
 .panels [data-panel="compute"].panel.em { background: #201F2C; color: #D9D6E8; }
-.panels [data-panel="compute"] .kicker { color: #B7E400; }
 .panels [data-panel="compute"] h2 { color: #F5F5F5; }
 .panels [data-panel="compute"] p { color: #D9D6E8; }
 [data-panel="compute"] .commits { display: flex; flex-direction: column; gap: 8px; }
