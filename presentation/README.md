@@ -249,4 +249,5 @@ The result header identifies the queried composite. The final panel uses a thin
 architecture ribbon and prioritizes the viewer QR over developer tiles.
 
 
-Redeployed 2026-10-16 (booth-page click freezes fixed, observed vs forecast frames #101).
+Redeployed 2026-10-19 (booth page startup race fixed #112, init time stored 10 min after
+the FCI slot #111).

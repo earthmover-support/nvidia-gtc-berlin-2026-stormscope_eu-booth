@@ -69,4 +69,5 @@ so Vercel skips deploying commits that change nothing under `site/`. The tiles s
 `Access-Control-Allow-Origin: *`, so the page works from any domain. Only `main` deploys to
 production; pushes to other branches make preview deployments.
 
-Redeployed 2026-10-16 (booth-page click freezes fixed, observed vs forecast frames #101).
+Redeployed 2026-10-19 (booth page startup race fixed #112, init time stored 10 min after
+the FCI slot #111).
