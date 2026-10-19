@@ -88,6 +88,19 @@
     if (s < 3600) return `${Math.floor(s / 60)} min`;
     return `${Math.floor(s / 3600)} h`;
   };
+  // Sun above the horizon at (lat, lon) at time t; low-precision solar position, good to ~1°.
+  function sunUp(lat, lon, t = new Date()) {
+    const r = Math.PI / 180, d = t / 864e5 - 10957.5; // days since J2000.0
+    const g = (357.529 + 0.98560028 * d) * r;
+    const L = (280.459 + 0.98564736 * d + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * r;
+    const e = (23.439 - 3.6e-7 * d) * r;
+    const dec = Math.asin(Math.sin(e) * Math.sin(L));
+    const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+    const H = (280.46061837 + 360.98564736629 * d + lon) * r - ra; // local hour angle
+    return Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(H) > 0;
+  }
+  // True Color is black at night, so the page starts (and resets) on Air Mass while Berlin is dark
+  const defaultVariable = () => (sunUp(S.cfg.station.lat, S.cfg.station.lon) ? "true_color" : "airmass");
   const selectableRuns = () => S.runs.slice(0, S.cfg.max_runs);
   // "Latest" = newest init; the pipeline commits each init whole, so every run has all leads
   const latestShown = () => selectableRuns()[0] || null;
@@ -1160,7 +1173,7 @@
     if (!secs) return;
     setInterval(() => {
       if (Date.now() - lastInput < secs * 1000) return;
-      const dirty = !S.loop || S.animPaused || S.rotatePaused || S.selInit || S.variable !== "true_color" ||
+      const dirty = !S.loop || S.animPaused || S.rotatePaused || S.selInit || S.variable !== defaultVariable() ||
         S.speed !== (S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "slow") || $(".app").classList.contains("strip-collapsed");
       if (!dirty) return;
       lastInput = Date.now();
@@ -1168,7 +1181,7 @@
       S.animPaused = false; S.rotatePaused = false; S.selInit = null;
       S.speed = S.cfg.playback_speed in SPEEDS ? S.cfg.playback_speed : "slow";
       setStripCollapsed(false);
-      if (S.variable !== "true_color") setVariable("true_color"); else syncLayers(true);
+      if (S.variable !== defaultVariable()) setVariable(defaultVariable()); else syncLayers(true);
       renderPlayback(); renderInits(); showFrame(); scheduleAnim(); showPanel(S.panel);
     }, 1000);
   }
@@ -1213,6 +1226,7 @@
     setTimezone(S.cfg.timezone);
     if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
+    S.variable = defaultVariable();
     initSqlEditor();
     renderVarToggle();
     renderVarCards();
