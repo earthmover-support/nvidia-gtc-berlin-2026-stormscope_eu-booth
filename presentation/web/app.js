@@ -55,8 +55,10 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
 
   // Recording mode (record_video.sh): ?alternate=N flips the variable after every N full loops,
   // and a newer init only comes on screen at that flip. ?variable= picks the first variable.
+  // ?start=<epoch ms> restarts the panels at slide 01 when the capture begins.
   const URLP = new URLSearchParams(location.search);
   const ALTERNATE = Number(URLP.get("alternate")) || 0;
+  const START = Number(URLP.get("start")) || 0;
   let loopsDone = 0;
 
   // ------------------------------------------------------------------ helpers
@@ -737,6 +739,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     $("#panelPrev").addEventListener("click", () => step(-1));
     $("#panelNext").addEventListener("click", () => step(1));
     showPanel(0);
+    if (START > Date.now()) setTimeout(() => showPanel(0), START - Date.now());
   }
 
   function showPanel(i) {

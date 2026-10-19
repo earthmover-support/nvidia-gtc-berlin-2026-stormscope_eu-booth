@@ -42,7 +42,7 @@ at the repo root, and `presentation/node_modules` (`cd presentation && npm ci`).
 Knobs, all set through env variables: `DURATION_S=1200`, `SCREEN="Capture screen 1"`, `WINDOW_X=1512`, `WARMUP_S=60`,
 `PORT=8765`, `CRF=22`, `SCALE=1920:1080`, `FIRST_VAR=true_color`, `LOOPS=2`. The page itself flips between
 true_color and airmass after every `LOOPS` full playback loops (`?alternate=LOOPS`), and only picks up a newer init
-at a flip, so each variable plays whole loops of one init. Without an external monitor, record the built-in screen with
+at a flip, so each variable plays whole loops of one init. The info panels restart at slide 01 when capture begins. Without an external monitor, record the built-in screen with
 `SCREEN="Capture screen 0" WINDOW_X=0 SCALE=1920:-2` (keeps its 16:10 aspect) and don't touch the Mac. For a quick trial, use `DURATION_S=30 WARMUP_S=20`.
 
 ## What the script does

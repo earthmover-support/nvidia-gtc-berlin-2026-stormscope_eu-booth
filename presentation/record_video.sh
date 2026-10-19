@@ -49,7 +49,7 @@ curl -sf "http://127.0.0.1:$PORT/api/config" >/dev/null || { echo "server did no
 # fresh profile: no restore bubbles, extensions or sign-in prompts in the shot
 "$CHROME" --user-data-dir="$TMP/chrome" --no-first-run --no-default-browser-check \
   --disable-session-crashed-bubble --disable-features=Translate \
-  --window-position="$WINDOW_X,0" --kiosk "http://127.0.0.1:$PORT/?alternate=$LOOPS&variable=$FIRST_VAR" >/dev/null 2>&1 &
+  --window-position="$WINDOW_X,0" --kiosk "http://127.0.0.1:$PORT/?alternate=$LOOPS&variable=$FIRST_VAR&start=$(( ($(date +%s) + WARMUP_S) * 1000 ))" >/dev/null 2>&1 &
 CHROME_PID=$!
 
 echo "warming up ${WARMUP_S}s so the first tiles are loaded..."
