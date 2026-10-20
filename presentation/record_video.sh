@@ -8,15 +8,20 @@
 #   brew install ffmpeg      # once; also allow Screen Recording for your terminal app
 #   presentation/record_video.sh [out.mp4]
 #
-# Knobs (env): DURATION_S=1200 SCREEN="Capture screen 1" WINDOW_X=1512 WARMUP_S=60 PORT=8765 CRF=22 SCALE=1920:1080 FIRST_VAR=true_color LOOPS=2
+# Knobs (env): DURATION_S=1200 SCREEN="Capture screen 1" WINDOW_X=1512 WARMUP_S=60 PORT=8765 CRF=22 SCALE=1920:1080 FIRST_VAR=true_color LOOPS=2 PANEL_S=""
 #   SCREEN    avfoundation device name or index, see: ffmpeg -f avfoundation -list_devices true -i ""
 #   WINDOW_X  left edge of that monitor in points (Chrome opens fullscreen there)
 #   SCALE     final size as ffmpeg W:H, e.g. 1920:-2 keeps a 16:10 built-in screen's aspect
 #   FIRST_VAR, LOOPS  passed to the page as ?variable= and ?alternate=, see app.js recording mode
+#   PANEL_S   seconds per explainer panel (?panel_seconds=); DURATION_S then defaults to one pass
+#             of all panels. Slide review on the built-in screen:
+#             PANEL_S=5 SCREEN="Capture screen 0" WINDOW_X=0 SCALE=1920:-2 presentation/record_video.sh
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="${1:-$HERE/booth-offline-$(date +%Y%m%d-%H%M).mp4}"
+PANEL_S="${PANEL_S:-}"
+[[ -n "$PANEL_S" && -z "${DURATION_S:-}" ]] && DURATION_S=$(( $(grep -c '<article class="panel ' "$HERE/web/index.html") * PANEL_S ))
 DURATION_S="${DURATION_S:-1200}" SCREEN="${SCREEN:-Capture screen 1}" WINDOW_X="${WINDOW_X:-1512}"
 WARMUP_S="${WARMUP_S:-60}" PORT="${PORT:-8765}" CRF="${CRF:-22}" SCALE="${SCALE:-1920:1080}"
 FIRST_VAR="${FIRST_VAR:-true_color}" LOOPS="${LOOPS:-2}"
@@ -49,7 +54,7 @@ curl -sf "http://127.0.0.1:$PORT/api/config" >/dev/null || { echo "server did no
 # fresh profile: no restore bubbles, extensions or sign-in prompts in the shot
 "$CHROME" --user-data-dir="$TMP/chrome" --no-first-run --no-default-browser-check \
   --disable-session-crashed-bubble --disable-features=Translate \
-  --window-position="$WINDOW_X,0" --kiosk "http://127.0.0.1:$PORT/?alternate=$LOOPS&variable=$FIRST_VAR&start=$(( ($(date +%s) + WARMUP_S) * 1000 ))" >/dev/null 2>&1 &
+  --window-position="$WINDOW_X,0" --kiosk "http://127.0.0.1:$PORT/?alternate=$LOOPS&variable=$FIRST_VAR&start=$(( ($(date +%s) + WARMUP_S) * 1000 ))${PANEL_S:+&panel_seconds=$PANEL_S}" >/dev/null 2>&1 &
 CHROME_PID=$!
 
 echo "warming up ${WARMUP_S}s so the first tiles are loaded..."

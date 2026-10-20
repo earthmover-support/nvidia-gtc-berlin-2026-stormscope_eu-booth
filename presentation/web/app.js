@@ -56,11 +56,12 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
   // Recording mode (record_video.sh): ?alternate=N flips the variable after every N full loops.
   // The other variable preloads behind the one on screen, and a newer init only comes on screen
   // at a flip. ?variable= is the first variable; at ?start=<epoch ms>, when the capture begins,
-  // the page goes back to it at +0 and to slide 01.
+  // the page goes back to it at +0 and to slide 01. ?panel_seconds= overrides config.json.
   const URLP = new URLSearchParams(location.search);
   const ALTERNATE = Number(URLP.get("alternate")) || 0;
   const FIRST_VAR = URLP.get("variable");
   const START = Number(URLP.get("start")) || 0;
+  const PANEL_S = Number(URLP.get("panel_seconds")) || 0;
   let loopsDone = 0;
 
   // ------------------------------------------------------------------ helpers
@@ -1085,7 +1086,6 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     status.classList.remove("err");
     status.title = "";
     $(".sql").classList.toggle("running", !!running);
-    if (running) holdPanel();
     // never overwrite what someone is typing
     if (r && r.query && !S.sqlDirty && document.activeElement !== box) {
       box.value = r.query;
@@ -1257,6 +1257,7 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     fitStage();
     window.addEventListener("resize", fitStage);
     S.cfg = await (await fetch("/api/config")).json();
+    if (PANEL_S) S.cfg.panel_seconds = PANEL_S;
     setTimezone(S.cfg.timezone);
     if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
