@@ -37,6 +37,7 @@ cleanup() {
   rm -rf "$TMP"
 }
 trap cleanup EXIT
+caffeinate -dimsu -w $$ & # no display or system sleep mid-take, also on battery
 
 # without the Screen Recording permission avfoundation hangs silently instead of failing
 perl -e 'alarm 15; exec @ARGV' ffmpeg -v error -f avfoundation -pixel_format uyvy422 -framerate 30 -i "$SCREEN:none" \
@@ -51,10 +52,12 @@ SERVER_PID=$!
 for _ in $(seq 60); do curl -sf "http://127.0.0.1:$PORT/api/config" >/dev/null && break; sleep 1; done
 curl -sf "http://127.0.0.1:$PORT/api/config" >/dev/null || { echo "server did not start" >&2; exit 1; }
 
+# avfoundation delivers its first frame ~1.5 s after ffmpeg starts: the page resets to +0 and
+# slide 01 at WARMUP_S + 2 s; the final encode starts 0.5 s in, so it opens on that reset
 # fresh profile: no restore bubbles, extensions or sign-in prompts in the shot
 "$CHROME" --user-data-dir="$TMP/chrome" --no-first-run --no-default-browser-check \
   --disable-session-crashed-bubble --disable-features=Translate \
-  --window-position="$WINDOW_X,0" --kiosk "http://127.0.0.1:$PORT/?alternate=$LOOPS&variable=$FIRST_VAR&start=$(( ($(date +%s) + WARMUP_S) * 1000 ))${PANEL_S:+&panel_seconds=$PANEL_S}" >/dev/null 2>&1 &
+  --window-position="$WINDOW_X,0" --kiosk "http://127.0.0.1:$PORT/?alternate=$LOOPS&variable=$FIRST_VAR&start=$(( ($(date +%s) + WARMUP_S + 2) * 1000 ))${PANEL_S:+&panel_seconds=$PANEL_S}" >/dev/null 2>&1 &
 CHROME_PID=$!
 
 echo "warming up ${WARMUP_S}s so the first tiles are loaded..."
@@ -64,13 +67,13 @@ sleep "$WARMUP_S"
 echo "recording ${DURATION_S}s from screen $SCREEN (starting at $FIRST_VAR, flipping every $LOOPS loops)..."
 ffmpeg -hide_banner -loglevel warning -stats \
   -f avfoundation -pixel_format uyvy422 -capture_cursor 0 -framerate 30 -i "$SCREEN:none" \
-  -t "$DURATION_S" -fps_mode cfr -r 30 -c:v libx264 -preset ultrafast -crf 12 -pix_fmt yuv420p "$RAW" || true
+  -t "$(( DURATION_S + 1 ))" -fps_mode cfr -r 30 -c:v libx264 -preset ultrafast -crf 12 -pix_fmt yuv420p "$RAW" || true
 
 kill "$CHROME_PID" "$SERVER_PID" 2>/dev/null || true
 
 # final: mostly static UI compresses well; long GOP + slow preset keeps the size down
 echo "encoding $OUT..."
-ffmpeg -hide_banner -loglevel warning -stats -y -i "$RAW" \
+ffmpeg -hide_banner -loglevel warning -stats -y -ss 0.5 -t "$DURATION_S" -i "$RAW" \
   -vf "scale=$SCALE:flags=lanczos" -c:v libx264 -preset slow -crf "$CRF" \
   -g 300 -pix_fmt yuv420p -movflags +faststart -an "$OUT"
 
