@@ -58,8 +58,8 @@ uv run --no-project python -m http.server 8765 --directory site
 ```
 
 Then open http://localhost:8765. The tiles service must be up and public (see
-[Viz](../README.md#viz) in the top-level README). The first frames take a while because the XS service
-renders slowly.
+[Viz](../README.md#viz) in the top-level README). The first frames take a while when the service
+starts from zero replicas or its pods are still cold.
 
 ## Hosting
 
@@ -68,6 +68,3 @@ framework preset "Other" and no build command. `vercel.json` sets an ignored bui
 so Vercel skips deploying commits that change nothing under `site/`. The tiles service sends
 `Access-Control-Allow-Origin: *`, so the page works from any domain. Only `main` deploys to
 production; pushes to other branches make preview deployments.
-
-Redeployed 2026-10-19 (booth page startup race fixed #112, init time stored 10 min after
-the FCI slot #111).
