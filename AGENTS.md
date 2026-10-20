@@ -21,6 +21,7 @@ through the Earthmover Flux tiles service.
 
 ## docs/
 
+- `CACHING.md`: the cache layers between Flux and the screen (device, Vercel CDN, Runtime Cache and Flux pods), their keys and TTLs, and the tile warmers.
 - `END2END_NEARREALTIME_PERFORMANCE.md`: latency of each stage from satellite scan to the forecast playing in the browser, initial vs current, and the PRs that cut it.
 - `VIDEO_FALLBACK.md`: recipe for the 20-min offline video of the booth page (`presentation/record_video.sh`), looped if the booth has no internet.
 - `TILE_SERVER_PERFORMANCE.md`: how fast the Flux tiles service renders what the booth globe needs, and how the page works around it.
