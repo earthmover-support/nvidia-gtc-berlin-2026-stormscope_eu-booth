@@ -191,3 +191,9 @@ float.
 
   Each is clipped to 0–1, gamma 1. The ranges are within ~1.5 K of EUMETSAT's (−25…0 K,
   −40…+5 K, 243→208 K).
+
+## License
+
+The code in this repository is released under the [Apache License 2.0](LICENSE). The StormScope-EU
+model weights, the EUMETSAT FCI data and the vendored front-end libraries keep their own
+licenses and terms of use.
