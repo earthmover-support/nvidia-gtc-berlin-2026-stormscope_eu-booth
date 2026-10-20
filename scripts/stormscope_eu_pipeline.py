@@ -196,9 +196,9 @@ REALTIME_LAG = timedelta(hours=2)  # blind fallback when the Data Store cannot b
 # an hour past its *slot time* requires the EUMETSAT NRT licence on the account -- without
 # it the search still returns the slot and `fetch_data` then fails with a 403
 # "NRTLicense required to access this collection". Only the hourly :00 slots are free at
-# once, and the 6-frame input window always needs five sub-hourly ones. Measured with
-# scripts/measure_fci_latency.py on 2026-10-06, slots unlocked 60.1-60.4 min after their
-# slot time; 62 min is that boundary plus a margin. Holding the NRT licence lets this go to
+# once, and the 6-frame input window always needs five sub-hourly ones. Measured on
+# 2026-10-06 by polling the Data Store (scripts/measure_fci_latency.py, since removed):
+# slots unlocked 60.1-60.4 min after their slot time; 62 min is that boundary plus a margin. Holding the NRT licence lets this go to
 # 0, moving the run to ~15 minutes behind real time. This is the default: override it
 # with --min-lag (minutes).
 MIN_LAG = timedelta(minutes=62)

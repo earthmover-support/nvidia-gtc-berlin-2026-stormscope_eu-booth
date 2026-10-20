@@ -25,9 +25,11 @@ PRs: 🟣 merged, 🟢 open, 🔴 closed without merging. Issues: ✅ closed, �
 
 ## Sources and reproduce
 
-- Stages 1–2: `uv run python scripts/measure_fci_latency.py history --hours 24`, run
+- Stages 1–3 were measured with `scripts/measure_fci_latency.py`, since removed from the
+  repo (last in commit 54fec40).
+- Stages 1–2: its `history --hours 24` mode, run
   2026-10-06 (143 slots; listed after slot min / median / p95 = 13.4 / 14.1 / 14.6 min).
-- Stage 3: `uv run python scripts/measure_fci_latency.py poll`, a 70-min run on 2026-10-06
+- Stage 3: its `poll` mode, a 70-min run on 2026-10-06
   (sub-hourly slots first downloadable 60.1–60.4 min after slot time).
 - Stages 4–5: Arraylake commit timestamps on `main` of
   `gtc-berlin/stormscope-eu_gtc_berlin_2026` (`repo.ancestry(branch="main")`): init
