@@ -194,6 +194,6 @@ float.
 
 ## License
 
-The code in this repository is released under the [MIT License](LICENSE). The StormScope-EU
+The code in this repository is released under the [Apache License 2.0](LICENSE). The StormScope-EU
 model weights, the EUMETSAT FCI data and the vendored front-end libraries keep their own
 licenses and terms of use.
