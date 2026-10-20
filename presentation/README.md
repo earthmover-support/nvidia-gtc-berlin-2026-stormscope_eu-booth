@@ -3,7 +3,7 @@
 Web app for the GTC Berlin booth: a MapLibre globe fixed on Europe showing the
 latest StormScope-EU run from Arraylake, rotating explainer panels, a live ingest strip,
 QR codes and a live Zax-SQL query. It runs locally on the booth machine and is also
-[hosted on Vercel](#hosted-on-vercel) for internal sharing, with the SQL editor locked.
+[hosted on Vercel](#hosted-on-vercel) for sharing outside the booth, with the SQL editor locked.
 
 ```
 presentation/
@@ -111,7 +111,7 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
 
 ## Hosted on Vercel
 
-The same page, for internal sharing at an unlisted URL. Earthmover owns the Vercel project
+The same page, for sharing outside the booth. Earthmover owns the Vercel project
 and the token. Differences from the booth:
 
 - **SQL is locked.** `/api/config` answers `sql_editable: false`: the editor is read-only,
@@ -178,76 +178,44 @@ mkdir "$B/.vercel" && echo '{"projectId":"local","orgId":"local","settings":{"fr
 Each function's `.vc-config.json` lists the files it ships with (`filePathMap`).
 
 
-## Eight-panel scientific narrative
+## Panels
 
-The eight panels introduce the scientific definition of nowcasting, then explain
-FCI observations, generative autoregressive prediction,
-recurring Earth2Studio cycles, overlapped uploads and atomic Icechunk publication,
-Compute tiles and SQL, and the complete workflow. Observation cards show real +0
-composite tiles over the configured Berlin tile and switch the globe layer when
-clicked; unavailable previews retain an explicit fallback.
+Eight panels: the definition of nowcasting, FCI observations, generative autoregressive
+prediction, recurring Earth2Studio cycles, overlapped uploads and atomic Icechunk
+publication, Compute tiles and SQL, and the complete workflow. Observation cards show real
++0 composite tiles over the configured Berlin tile and switch the globe layer when clicked;
+unavailable previews keep an explicit fallback.
 
-All booth timestamps default to Europe/Berlin; only the SQL init stays UTC. The persistent map status shows the displayed
-run's observation/initialization time, matching snapshot publication time, observation
-age, and forecast horizon **from initialization**. The API reports publications, not
-GPU progress: the bottom strip's countdown and phase activity are labeled estimates.
-A publication more than two configured run intervals old is marked overdue; this does
-not diagnose the pipeline. Demo and offline replay clearly identify simulated timing.
-SQL reports mean brightness -- high means cloudy, low means sunny or dark.
-
-The model feedback, recurring-cycle, upload, delivery, and architecture diagrams are
-schematics, not live measurements. Viewer and raw-tile QR codes share one grid
-version and quiet-zone style so both scan the same way.
-
-The opening panel introduces observation-based nowcasting and the end-to-end demo.
-The approved seven-panel wording is implemented with minor typo corrections and an
-initial-condition sentence completed from its unfinished draft. Headings retain readable
-Title Case and 24 px bold numbered titles; scientific acronyms keep established casing.
-The panel column retains its original 560 px width at the 1080p booth size.
-Visual spacing is compacted to fit the approved copy and diagrams.
-
-
-Panel navigation includes Pause/Resume and eight directly selectable chapter markers.
-Manual navigation holds a chapter for 60 s; focusing or using the SQL editor extends
-that hold to 120 s. The visible progress marker follows the same timing as rotation.
-Hidden panels are inert so their buttons, links, and editor stay out of keyboard navigation.
-The header labels the current wall clock; forecast valid time stays on the globe.
-Body copy uses 16 px text at the 1080p booth size, with 15–18 px diagram labels.
-
-
-The persistent forecast-cycle status includes separate observation, initialization,
-valid, and publication times (shown in Europe/Berlin); displayed forecast lead; and snapshot ID. The observation
-is the newest input frame of the displayed published run, which defines its initialization.
-Incoming uncommitted satellite scans are not reported by the dashboard API. The valid
-and lead fields follow playback and scrubbing, while the snapshot follows run selection.
-Publication history explicitly labels each committed snapshot Published.
-
-
-## Shared-reference visual refresh
-
-Font Awesome Free 6.7.2 symbols are served as `web/img/fontawesome.svg`; no icon CDN
-or icon font is needed. `npm run icons` regenerates the selected SVG symbols and
-copies the package license. `npm run vendor` also performs this step for hosted builds.
-Rounded diagrams consistently distinguish observations (slate), NVIDIA compute
-(NVIDIA green), Arraylake I/O and atomic publication (Earthmover lavender), with text labels.
-
-The model panel loads actual snapshot-pinned +0 thumbnails from published runs whose
-initialization matches each required observed timestamp, and forecast thumbnails from
-the displayed run's published lead array. Missing observations are never substituted
-with predictions; availability counts remain visible. Thumbnails load when their panel
-is active. The shifting context is an illustration, paused with panel rotation and
-suppressed when reduced motion is requested, rather than GPU progress telemetry.
-
-The Earth2Studio panel shows three separate published runs with observation-window,
-initialization, horizon, and publication times. It does not infer exact scheduling
-cadence from satellite scan frequency. Publication history adds absolute publication
-time (Europe/Berlin) alongside status, snapshot, and age, and highlights genuinely new commit IDs.
-
-Compute shows a snapshot-pinned map tile beside live SQL results. The editable query
-remains available through Inspect / Edit SQL; hosted read-only queries use Inspect SQL.
-The result header identifies the queried composite. The final panel uses a thin
-architecture ribbon and prioritizes the viewer QR over developer tiles.
-
-
-Redeployed 2026-10-19 (booth page startup race fixed #112, init time stored 10 min after
-the FCI slot #111).
+- **Navigation**: Pause/Resume and eight directly selectable chapter markers. Manual
+  navigation holds a chapter for 60 s; focusing or using the SQL editor extends that to
+  120 s. The progress marker follows the same timing. Hidden panels are inert, so their
+  buttons, links and editor stay out of keyboard navigation.
+- **Times**: everything on screen is in Europe/Berlin; only the SQL init stays UTC. The
+  persistent status shows the displayed run's observation, initialization, valid and
+  publication times, forecast lead, observation age, horizon from initialization and
+  snapshot ID. The observation is the newest input frame of the displayed published run;
+  uncommitted scans are not reported by the API. Valid time and lead follow playback,
+  the snapshot follows run selection. The header shows the current wall clock.
+- **Estimates, not telemetry**: the API reports publications, not GPU progress, so the
+  strip's countdown and phase activity are labeled estimates. A publication more than two
+  run intervals old is marked overdue; this does not diagnose the pipeline. Demo and
+  offline replay identify simulated timing. The model feedback, cycle, upload, delivery
+  and architecture diagrams are schematics.
+- **Thumbnails**: the model panel loads snapshot-pinned +0 thumbnails from the published
+  runs whose initialization matches each observed timestamp, and forecast thumbnails from
+  the displayed run's leads. Missing observations are never replaced by predictions.
+  Thumbnails load when their panel is active.
+- **Earth2Studio panel**: three separate published runs with observation window,
+  initialization, horizon and publication times. Publication history shows absolute
+  publication time, status, snapshot and age, and highlights new commit IDs.
+- **Compute panel**: a snapshot-pinned map tile beside live SQL results. SQL reports mean
+  brightness: high means cloudy, low means sunny or dark. The query opens through Inspect /
+  Edit SQL (Inspect SQL when hosted, read-only).
+- **Last panel**: a thin architecture ribbon; the viewer QR is larger than the raw-tile QR.
+  Both QR codes share one grid version and quiet-zone style.
+- **Layout**: 560 px panel column at 1080p, 24 px bold numbered titles, 16 px body text,
+  15 to 18 px diagram labels.
+- **Icons**: Font Awesome Free 6.7.2 symbols are served as `web/img/fontawesome.svg`, no
+  icon CDN or font. `npm run icons` regenerates them and copies the license; `npm run
+  vendor` also runs it for hosted builds. Diagrams color observations slate, NVIDIA compute
+  green and Arraylake I/O and publication Earthmover lavender, always with text labels.
