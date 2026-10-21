@@ -56,3 +56,13 @@ extend-exclude = ["presentation/node_modules"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501"]  # long strings/comments are common in the CF metadata
+
+[dependency-groups]
+notebook = [
+    "coiled>=1.135.6",
+    "dask>=2026.8.0",
+    "distributed>=2026.8.0",
+    "jupyterlab>=4.6.4",
+    "matplotlib>=3.11.2",
+    "xskillscore>=0.0.29",
+]
