@@ -93,7 +93,8 @@ sticks for the day. `config.json` is read when `server.py` starts: restart it af
    +10 to +120 min (`lead_steps`, `lead_step_min`). Keep the commit-message format in the ingest: `stormscope-eu <init> ...`,
    one commit per init.
 6. `viewer_url` in `config.json` drives the viewer QR code on the last panel (slide 8) and the
-   viewer QR in the strip's bottom right corner; `github_url` drives the GitHub QR next to it.
+   viewer QR in the strip's bottom right corner; `github_url` and `blog_url` drive the GitHub
+   and blog QR codes next to it. `blog_url` also shows the "Read the blog post" link in the header.
 7. **Time zone**: every time on screen is shown in `timezone` (`config.json`, `Europe/Berlin`),
    whatever the booth machine or a hosted viewer's browser is set to. Only the SQL
    `WHERE time = TIMESTAMP '{init}'` stays in UTC.
@@ -214,9 +215,10 @@ unavailable previews keep an explicit fallback.
   Edit SQL (Inspect SQL when hosted, read-only).
 - **Last panel**: a thin architecture ribbon; the viewer QR is larger than the raw-tile QR.
   Both QR codes share one grid version and quiet-zone style.
-- **Corner QR codes**: the right end of the ingest strip carries a viewer and a GitHub QR on
-  every panel (92 px, level M, no logo, so the modules stay as large as possible). They hide
-  when the strip is collapsed (C).
+- **Corner QR codes**: the right end of the ingest strip carries viewer, GitHub and blog QR
+  codes on every panel (100 px, no logo, each at its smallest version so the modules stay as
+  large as possible; level M, the long blog URL level L). They hide when the strip is
+  collapsed (C).
 - **Layout**: 560 px panel column at 1080p, 24 px bold numbered titles, 16 px body text,
   15 to 18 px diagram labels.
 - **Icons**: Font Awesome Free 6.7.2 symbols are served as `web/img/fontawesome.svg`, no

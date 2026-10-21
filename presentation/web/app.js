@@ -25,9 +25,6 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     return n;
   };
 
-  // blog post about the demo, linked from the demo note; hidden while empty
-  const BLOG_URL = "";
-
   const S = {
     cfg: null,
     status: "starting",
@@ -862,11 +859,15 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
       type = setQR("qrTiles", new URL(url, location.href).href); // hosted tile_base is relative
     }
     setQR("qrViewer", c.viewer_url, type);
-    // corner pair: the viewer borrows the GitHub code's version, as above
-    const t = setQR("qrCornerGithub", c.github_url, 0, "M", "");
-    setQR("qrCornerViewer", c.viewer_url, t, "M", "");
-    if (c.github_url) $("#cornerGithubLink").href = c.github_url;
-    if (c.viewer_url) $("#cornerViewerLink").href = c.viewer_url;
+    // corner codes: each takes its own smallest version, so short URLs keep larger modules;
+    // the long blog URL drops to level L to stay at version 5 (37 modules)
+    setQR("qrCornerViewer", c.viewer_url, 0, "M", "");
+    setQR("qrCornerGithub", c.github_url, 0, "M", "");
+    setQR("qrCornerBlog", c.blog_url, 0, "L", "");
+    for (const [id, url] of [["cornerViewerLink", c.viewer_url], ["cornerGithubLink", c.github_url], ["cornerBlogLink", c.blog_url]]) {
+      if (url) $(`#${id}`).href = url;
+      $(`#${id}`).hidden = !url;
+    }
   }
 
   // ------------------------------------------------------------------ SQL
@@ -1264,7 +1265,8 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     window.addEventListener("resize", fitStage);
     S.cfg = await (await fetch("/api/config")).json();
     setTimezone(S.cfg.timezone);
-    if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
+    // blog post about the demo, linked from the demo note; hidden while empty
+    if (S.cfg.blog_url) Object.assign($("#blogLink"), { href: S.cfg.blog_url, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
     S.variable = FIRST_VAR in S.cfg.variables ? FIRST_VAR : defaultVariable();
     initSqlEditor();

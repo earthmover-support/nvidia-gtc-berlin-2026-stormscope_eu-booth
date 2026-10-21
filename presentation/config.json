@@ -32,6 +32,7 @@
 
   "viewer_url": "https://nvidia-gtc-berlin-2026-viewer.earthmover.io/",
   "github_url": "https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth",
+  "blog_url": "https://www.earthmover.io/blog/building-a-low-latency-earth-2-nowcasting-pipeline-with-earthmover",
   "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
 
   "sql": {
