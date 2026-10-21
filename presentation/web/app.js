@@ -25,9 +25,6 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     return n;
   };
 
-  // blog post about the demo, linked from the demo note; hidden while empty
-  const BLOG_URL = "";
-
   const S = {
     cfg: null,
     status: "starting",
@@ -835,17 +832,18 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
   // ------------------------------------------------------------------ QR codes
   // Level H leaves room for the logo; the viewer QR borrows the tile QR's version so both
   // codes have the same grid.
+  // The corner codes are small, so they use level M without a logo: fewer, larger modules.
   const qrCache = {};
-  function setQR(id, text, type = 0) {
+  function setQR(id, text, type = 0, level = "H", logo = "img/earthmover-mark.svg") {
     const box = document.getElementById(id);
     if (!text) { if (qrCache[id]?.key !== "") { box.textContent = "[QR]"; qrCache[id] = { key: "", type: 0 }; } return 0; }
-    const key = `${type} ${text}`;
+    const key = `${type} ${level} ${text}`;
     if (qrCache[id]?.key === key) return qrCache[id].type;
-    const qr = qrcode(type, "H");
+    const qr = qrcode(type, level);
     qr.addData(text);
     qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) +
-      '<img src="img/earthmover-mark.svg" alt="">';
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: logo ? 2 : 1, scalable: true }) +
+      (logo ? `<img src="${logo}" alt="">` : "");
     qrCache[id] = { key, type: (qr.getModuleCount() - 17) / 4 };
     return qrCache[id].type;
   }
@@ -861,6 +859,15 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
       type = setQR("qrTiles", new URL(url, location.href).href); // hosted tile_base is relative
     }
     setQR("qrViewer", c.viewer_url, type);
+    // corner codes: each takes its own smallest version, so short URLs keep larger modules;
+    // the long blog URL drops to level L to stay at version 5 (37 modules)
+    setQR("qrCornerViewer", c.viewer_url, 0, "M", "");
+    setQR("qrCornerGithub", c.github_url, 0, "M", "");
+    setQR("qrCornerBlog", c.blog_url, 0, "L", "");
+    for (const [id, url] of [["cornerViewerLink", c.viewer_url], ["cornerGithubLink", c.github_url], ["cornerBlogLink", c.blog_url]]) {
+      if (url) $(`#${id}`).href = url;
+      $(`#${id}`).hidden = !url;
+    }
   }
 
   // ------------------------------------------------------------------ SQL
@@ -1258,7 +1265,8 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
     window.addEventListener("resize", fitStage);
     S.cfg = await (await fetch("/api/config")).json();
     setTimezone(S.cfg.timezone);
-    if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
+    // blog post about the demo, linked from the demo note; hidden while empty
+    if (S.cfg.blog_url) Object.assign($("#blogLink"), { href: S.cfg.blog_url, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
     S.variable = FIRST_VAR in S.cfg.variables ? FIRST_VAR : defaultVariable();
     initSqlEditor();

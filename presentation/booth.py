@@ -221,6 +221,8 @@ def public_config(sql_editable: bool) -> dict:
         "station",
         "camera",
         "viewer_url",
+        "github_url",
+        "blog_url",
         "qr_tile",
         "branch",
     ]
