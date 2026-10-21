@@ -31,6 +31,7 @@
               "cover": [-12, 34, 40, 64], "min_zoom": 2, "max_zoom": 8.5, "idle_reset_s": 30 },
 
   "viewer_url": "https://nvidia-gtc-berlin-2026-viewer.earthmover.io/",
+  "github_url": "https://github.com/earthmover-support/nvidia-gtc-berlin-2026-stormscope_eu-booth",
   "qr_tile": { "z": 5, "x": 17, "y": 10, "size": 512 },
 
   "sql": {

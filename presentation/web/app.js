@@ -835,17 +835,18 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
   // ------------------------------------------------------------------ QR codes
   // Level H leaves room for the logo; the viewer QR borrows the tile QR's version so both
   // codes have the same grid.
+  // The corner codes are small, so they use level M without a logo: fewer, larger modules.
   const qrCache = {};
-  function setQR(id, text, type = 0) {
+  function setQR(id, text, type = 0, level = "H", logo = "img/earthmover-mark.svg") {
     const box = document.getElementById(id);
     if (!text) { if (qrCache[id]?.key !== "") { box.textContent = "[QR]"; qrCache[id] = { key: "", type: 0 }; } return 0; }
-    const key = `${type} ${text}`;
+    const key = `${type} ${level} ${text}`;
     if (qrCache[id]?.key === key) return qrCache[id].type;
-    const qr = qrcode(type, "H");
+    const qr = qrcode(type, level);
     qr.addData(text);
     qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) +
-      '<img src="img/earthmover-mark.svg" alt="">';
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: logo ? 2 : 1, scalable: true }) +
+      (logo ? `<img src="${logo}" alt="">` : "");
     qrCache[id] = { key, type: (qr.getModuleCount() - 17) / 4 };
     return qrCache[id].type;
   }
@@ -861,6 +862,11 @@ import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 sh
       type = setQR("qrTiles", new URL(url, location.href).href); // hosted tile_base is relative
     }
     setQR("qrViewer", c.viewer_url, type);
+    // corner pair: the viewer borrows the GitHub code's version, as above
+    const t = setQR("qrCornerGithub", c.github_url, 0, "M", "");
+    setQR("qrCornerViewer", c.viewer_url, t, "M", "");
+    if (c.github_url) $("#cornerGithubLink").href = c.github_url;
+    if (c.viewer_url) $("#cornerViewerLink").href = c.viewer_url;
   }
 
   // ------------------------------------------------------------------ SQL
