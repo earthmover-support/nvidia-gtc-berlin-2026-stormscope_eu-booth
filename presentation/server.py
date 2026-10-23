@@ -33,13 +33,11 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import gzip
-import html
 import itertools
 import json
 import logging
 import math
 import os
-import re
 import threading
 import time
 import urllib.error
@@ -200,7 +198,6 @@ def poll_demo(stop: threading.Event) -> None:
 #   tiles/<ref>/<variable>/<lead>/<z>/<y>/<x>.png
 #   sql/<ref>/<place>.json                     default query per run and place
 #   basemap/style.json, sprite*, tiles/<z>/<x>/<y>.pbf, fonts/<fontstack>/<range>.pbf
-#   fonts/fonts.css, *.woff2                   Geist, as index.html loads it from Google
 
 
 def tile_xy(lon: float, lat: float, z: int) -> tuple[int, int]:
@@ -281,9 +278,10 @@ def basemap_jobs() -> list[tuple[str, Path]]:
     """
     out = OFFLINE / "basemap"
     style = json.loads(get(CARTO_STYLE))
-    src = style["sources"]["carto"]
-    tilejson = json.loads(get(src["url"]))
-    style["sources"]["carto"] = {
+    # the one vector source: Carto renamed it carto -> protomaps and inlined its tiles (2026-10)
+    ((name, src),) = style["sources"].items()
+    tilejson = src if "tiles" in src else json.loads(get(src["url"]))
+    style["sources"][name] = {
         "type": "vector",
         "tiles": ["{origin}/offline/basemap/tiles/{z}/{x}/{y}.pbf"],
         "maxzoom": OFFLINE_ZOOM,
@@ -322,32 +320,8 @@ def basemap_jobs() -> list[tuple[str, Path]]:
     return jobs
 
 
-def google_fonts_href() -> str:
-    """The Google Fonts stylesheet index.html links."""
-    m = re.search(
-        r'href="(https://fonts\.googleapis\.com/css2[^"]+)"', (WEB / "index.html").read_text()
-    )
-    return m[1]
-
-
-def font_jobs() -> list[tuple[str, Path]]:
-    """Save the Geist stylesheet with local URLs; return its woff2 files to fetch."""
-    out = OFFLINE / "fonts"
-    jobs = []
-
-    def local(m):
-        name = m[1].rsplit("/", 1)[-1]
-        jobs.append((m[1], out / name))
-        return f"url(/offline/fonts/{name})"
-
-    css = re.sub(r"url\((https://[^)]+)\)", local, get(html.unescape(google_fonts_href())).decode())
-    out.mkdir(parents=True, exist_ok=True)
-    (out / "fonts.css").write_text(css)
-    return jobs
-
-
 def fetch_offline() -> None:
-    """Save the newest runs, the basemap, fonts and SQL results for --offline."""
+    """Save the newest runs, the basemap and SQL results for --offline."""
     repo = open_repo()
     commits = read_commits(repo)
     runs = build_runs(read_times(repo), commits)[:OFFLINE_RUNS]
@@ -369,7 +343,7 @@ def fetch_offline() -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(result, default=str))
 
-    jobs = font_jobs() + basemap_jobs()
+    jobs = basemap_jobs()
     frames = itertools.product(runs, CONFIG["variables"], all_leads())
     for run, variable, lead in frames:
         for z, x, y in tiles_in(CONFIG["data_bounds"], range(OFFLINE_ZOOM + 1)):
@@ -532,11 +506,6 @@ class Handler(SimpleHTTPRequestHandler):
             if MODE == "offline":
                 return send_json(self, self.offline_config())
             return send_json(self, public_config(sql_editable=True))
-        if MODE == "offline" and path in ("/", "/index.html"):
-            page = (WEB / "index.html").read_text()
-            return self.send_text(
-                page.replace(google_fonts_href(), "/offline/fonts/fonts.css"), "text/html"
-            )
         if MODE == "offline" and path == "/offline/basemap/style.json":
             style = (OFFLINE / "basemap" / "style.json").read_text()
             return self.send_text(style.replace("{origin}", self.origin()), "application/json")
