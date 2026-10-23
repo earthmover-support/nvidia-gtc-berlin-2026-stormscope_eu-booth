@@ -16,7 +16,7 @@ NVIDIA GTC Berlin 2026. Note that the deployed pipeline will go offline after th
 end to end: fetch six consecutive FCI frames from the EUMETSAT Data Store, roll the model
 forward autoregressively in 10-minute steps, and write each step to Icechunk on Arraylake as
 it is produced. By default it initialises from the freshest slot this account may download
-(~80–90 min behind real time — downloading anything fresher needs the EUMETSAT NRT licence;
+(slots at least 62 min old — downloading anything fresher needs the EUMETSAT NRT licence;
 see `MIN_LAG` in the script), so it can be run on a schedule as is. See
 [Pipeline script](#pipeline-script).
 
@@ -27,8 +27,8 @@ The forecasts reach screens in three ways:
 | | Runs as | Live SQL | Audience | Link |
 |---|---|---|---|---|
 | **Booth presentation** ([`presentation/`](presentation/)) | `uv run presentation/server.py` on the booth machine, full screen on the TV | editable | GTC Berlin visitors | |
-| **Hosted presentation** ([`presentation/`](presentation/)) | Vercel project, root directory `presentation` | fixed: the Berlin / Paris / London queries only, cached per init | internal sharing, unlisted public URL | [nvidia-gtc-berlin-2026.earthmover.io](https://nvidia-gtc-berlin-2026.earthmover.io/) (also [nvidia-gtc-berlin-2026-stormscope-e.vercel.app](https://nvidia-gtc-berlin-2026-stormscope-e.vercel.app/); [Vercel project](https://vercel.com/earthmover/nvidia-gtc-berlin-2026-stormscope-eu-booth)) |
-| **Mobile site** ([`site/`](site/)) | Vercel project, root directory `site`, static | none | phones, via the booth QR code | [nvidia-gtc-berlin-2026-viewer.earthmover.io](https://nvidia-gtc-berlin-2026-viewer.earthmover.io/) (also [nvidia-gtc-berlin-2026-stormscopeeu.vercel.app](https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/); [Vercel project](https://vercel.com/earthmover/nvidia-gtc-berlin-2026-stormscope_eu-booth-site)) |
+| **Hosted presentation** ([`presentation/`](presentation/)) | Vercel project, root directory `presentation` | fixed: the Berlin / Paris / London queries only, cached per init | sharing outside the booth | [nvidia-gtc-berlin-2026.earthmover.io](https://nvidia-gtc-berlin-2026.earthmover.io/) (also [nvidia-gtc-berlin-2026-stormscope-e.vercel.app](https://nvidia-gtc-berlin-2026-stormscope-e.vercel.app/)) |
+| **Mobile site** ([`site/`](site/)) | Vercel project, root directory `site`, static | none | phones, via the booth QR code | [nvidia-gtc-berlin-2026-viewer.earthmover.io](https://nvidia-gtc-berlin-2026-viewer.earthmover.io/) (also [nvidia-gtc-berlin-2026-stormscopeeu.vercel.app](https://nvidia-gtc-berlin-2026-stormscopeeu.vercel.app/)) |
 
 Both presentation deployments serve the same `presentation/web/` page and the same logic in
 `presentation/booth.py`. The difference is the `sql_editable` flag in `/api/config`: `server.py`
@@ -45,7 +45,7 @@ as it is shared.
 [Browse the dataset on Arraylake](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region)
 — needs a login with `gtc-berlin` access.
 
-Tiles are served by the org's Flux service `tiles-4f49272b`, which is **public on purpose
+Tiles are served by the org's Flux service `tiles-eu-8af53d67` (eu-west-1), which is **public on purpose
 and normally left disabled** between events (billing is per node-hour, and a public endpoint
 left idle gets woken by crawlers). Public, because the booth screen and phones fetch tiles
 straight from the browser, which can't attach an `Authorization` header; rendered tiles are
@@ -53,13 +53,13 @@ reachable by anyone holding the URL, the underlying chunks stay private. Bring i
 
 ```
 al compute enable gtc-berlin tiles --sku-code s --is-public
-al compute update gtc-berlin tiles-4f49272b --min-replicas 8 --max-replicas 8
+al compute update gtc-berlin tiles-eu-8af53d67 --min-replicas 8 --max-replicas 8
 ```
 
 It reaches `available` in about a minute. While the booth is showing it, run it on S
-(2× the tile throughput of XS) with 8 replicas pinned, as agreed with Earthmover, so
+(2× the tile throughput of XS) with 8 replicas pinned, so
 nothing waits on a cold start or a scale-up. After booth hours set `--min-replicas 0`, and
-tear it down after the event with `al compute disable gtc-berlin tiles-4f49272b`. The deployment id
+tear it down after the event with `al compute disable gtc-berlin tiles-eu-8af53d67`. The deployment id
 and hostname are deterministic, so they survive the cycle.
 
 Render parameters that matter for `true_color` and `airmass`:
@@ -191,3 +191,9 @@ float.
 
   Each is clipped to 0–1, gamma 1. The ranges are within ~1.5 K of EUMETSAT's (−25…0 K,
   −40…+5 K, 243→208 K).
+
+## License
+
+The code in this repository is released under the [Apache License 2.0](LICENSE). The StormScope-EU
+model weights, the EUMETSAT FCI data and the vendored front-end libraries keep their own
+licenses and terms of use.

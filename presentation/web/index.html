@@ -10,8 +10,6 @@
 <link rel="preload" as="font" type="font/ttf" crossorigin href="fonts/NVIDIASans_Bd.ttf">
 <link rel="stylesheet" href="/vendor/maplibre/maplibre-gl.css">
 <link rel="stylesheet" href="app.css">
-<!-- MapLibre 6 ships ES modules only; app.js (also a module, so it runs after this) uses the global. -->
-<script type="module">import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; window.maplibregl = maplibregl;</script>
 <script src="/vendor/qrcode/qrcode.js"></script>
 </head>
 <body>
@@ -279,6 +277,12 @@
       <div class="cells" id="cells"></div>
     </div>
     <div class="last"><div class="eyebrow">LAST COMMIT</div><div class="mono lime" id="lastCommit">—</div></div>
+    <!-- corner QR codes: on screen whatever panel is showing -->
+    <div class="corner-qr">
+      <a class="mini-qr" id="cornerViewerLink" target="_blank" rel="noopener"><div class="qrbox" id="qrCornerViewer"></div><span><b>Viewer</b>on your phone</span></a>
+      <a class="mini-qr" id="cornerGithubLink" target="_blank" rel="noopener"><div class="qrbox" id="qrCornerGithub"></div><span><b>Code</b>on GitHub</span></a>
+      <a class="mini-qr" id="cornerBlogLink" target="_blank" rel="noopener"><div class="qrbox" id="qrCornerBlog"></div><span><b>Blog</b>how it works</span></a>
+    </div>
   </footer>
 </div>
 <script type="module" src="app.js"></script>

@@ -203,40 +203,36 @@ eu-west-1 had scaled to zero), local server restarted, and the warm-up also sent
 
 ## Server-side caches and HTTP/2 (2026-10-15)
 
-### From Earthmover (Slack, #C0BR6535GBD)
+### How the service caches (from Earthmover, 2026-10-15)
 
-On the per-pod caches, from Earthmover's traces of requests for this dataset
-on the eu-west-1 pods
-([thread](https://earthmoverworkspace.slack.com/archives/C0BR6535GBD/p1791562430384989?thread_ts=1791474690.734569&cid=C0BR6535GBD)):
+Earthmover traced requests for this dataset on the eu-west-1 pods. Cold steps, and how long
+each result stays cached:
 
-> Cold steps, and how long each result stays cached:
-> - Open repo: ~335 ms. Kept 1 hour, max 2 repos per pod.
-> - Open a dataset version: ~440 ms. Kept until pushed out by newer ones (32 per pod) or the
->   hourly repo reset. Every new commit needs a fresh open.
-> - Check a branch for new commits: ~60 ms. Rechecked every 60 s, so new data shows up within
->   a minute.
-> - Read a chunk: ~20 ms from storage vs ~2.5 ms from memory. Memory cache is sized to the pod
->   and cleared with the hourly repo reset.
->
-> Browser caching:
-> - Branch URLs (e.g. `main`): the browser asks again on every view. The service looks up which
->   snapshot the branch currently points to; if it's the same one the browser already has, it
->   replies "unchanged" (304) without re-rendering. That's ~50 ms, but still a network round
->   trip each time.
-> - Snapshot ID URLs: a snapshot can never change, so the browser keeps the tile for a month
->   and doesn't ask at all. Repeat views are instant, and first views skip the branch lookup on
->   the server too. Use snapshot IDs when you can.
->
-> Each pod has its own cache. New pods, scale-ups, and scale-from-zero start fully cold.
+- Open repo: ~335 ms. Kept 1 hour, max 2 repos per pod.
+- Open a dataset version: ~440 ms. Kept until pushed out by newer ones (32 per pod) or the
+  hourly repo reset. Every new commit needs a fresh open.
+- Check a branch for new commits: ~60 ms. Rechecked every 60 s, so new data shows up within
+  a minute.
+- Read a chunk: ~20 ms from storage vs ~2.5 ms from memory. The memory cache is sized to the
+  pod and cleared with the hourly repo reset.
 
-And on bypassing the caches
-([thread](https://earthmoverworkspace.slack.com/archives/C0BR6535GBD/p1791570407454749?thread_ts=1791483071.468579&cid=C0BR6535GBD)):
+Browser caching:
 
-> ```
-> curl -sI -H "X-Flux-Cache-Bypass: all" "$URL" | grep -i cache-status
-> ```
-> Deployed this for y'all, you can bypass most of the cache and get a header with hit/miss for
-> them too.
+- Branch URLs (e.g. `main`): the browser asks again on every view. The service looks up which
+  snapshot the branch points to; if it's the one the browser already has, it replies 304
+  without re-rendering. That's ~50 ms, but still a network round trip each time.
+- Snapshot ID URLs: a snapshot never changes, so the browser keeps the tile for a month and
+  doesn't ask at all. Repeat views are instant, and first views skip the branch lookup on the
+  server too.
+
+Each pod has its own cache. New pods, scale-ups and scale-from-zero start fully cold.
+
+Earthmover also added a header that bypasses most of the caches and reports hit/miss per
+cache:
+
+```
+curl -sI -H "X-Flux-Cache-Bypass: all" "$URL" | grep -i cache-status
+```
 
 Each tile response now carries `cache-status` (one entry per cache: `flux-repo`,
 `flux-credentials`, `flux-ref`, `flux-dataset`, `flux-tiles_grid`, each `hit`, `fwd=miss` or

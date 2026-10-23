@@ -13,6 +13,7 @@
  * one raster layer per (init time, lead time) selected with the `time` and
  * `lead_time` query parameters on the branch (or pinned to a snapshot id).
  */
+import * as maplibregl from "/vendor/maplibre/maplibre-gl.mjs"; // MapLibre 6 ships ES modules only
 (() => {
   "use strict";
 
@@ -23,9 +24,6 @@
     if (text != null) n.textContent = text;
     return n;
   };
-
-  // blog post about the demo, linked from the demo note; hidden while empty
-  const BLOG_URL = "";
 
   const S = {
     cfg: null,
@@ -51,6 +49,16 @@
 
   // seconds each forecast frame stays on screen
   const SPEEDS = { slow: 1, medium: 0.5, fast: 0.25 };
+
+  // Recording mode (record_video.sh): ?alternate=N flips the variable after every N full loops.
+  // The other variable preloads behind the one on screen, and a newer init only comes on screen
+  // at a flip. ?variable= is the first variable; at ?start=<epoch ms>, when the capture begins,
+  // the page goes back to it at +0 and to slide 01.
+  const URLP = new URLSearchParams(location.search);
+  const ALTERNATE = Number(URLP.get("alternate")) || 0;
+  const FIRST_VAR = URLP.get("variable");
+  const START = Number(URLP.get("start")) || 0;
+  let loopsDone = 0;
 
   // ------------------------------------------------------------------ helpers
   const pad = (n) => String(n).padStart(2, "0");
@@ -137,7 +145,7 @@
   // where `layers` maps lead -> MapLibre source/layer id and `loaded` holds the leads whose
   // source has finished loading once.
   let shown = null; // on screen
-  let pending = null; // a newer run loading in the background; replaces `shown` once complete
+  let pending = null; // a newer run loading in the background; replaces `shown` once complete (recording mode: the other variable)
   let sets = 0;
   const LOAD_TIMEOUT_MS = 20000; // a stuck lead stops blocking the next one after this
   const LEADS_IN_FLIGHT = 3; // leads loading at once: ~12 s to a full loop, ~17 s one at a time
@@ -280,28 +288,36 @@
   // once gets the early frames no sooner, and one at a time waits on each lead's slowest tile.
   // A run or variable the visitor picks (`pick`) replaces the frames on screen at once; a new
   // run found by polling loads behind them, so the loop keeps going until it is complete.
+  // Recording mode preloads the other variable instead and only promotes it at a flip.
   function syncLayers(pick = false) {
     if (!mapReady) return;
     const run = selectedRun();
     if (!run) return;
-    const same = (set) => set?.run.init === run.init && set.variable === S.variable;
-    if (!same(pending)) {
-      if (pending) dropSet(pending);
-      pending = null;
-    }
-    if (!pending && !same(shown)) {
-      pending = { id: sets++, run, variable: S.variable, layers: new Map(), loaded: new Set(), addedAt: 0 };
-    }
+    const same = (set, variable) => set?.run.init === run.init && set.variable === variable;
+    const newSet = (variable) => ({ id: sets++, run, variable, layers: new Map(), loaded: new Set(), addedAt: 0 });
     // a pick goes on screen at once, keeping any frames the set loaded behind
-    if (pending && (pick || !shown)) promote(pending, pick);
+    if ((pick || !shown) && !same(shown, S.variable)) {
+      if (!same(pending, S.variable)) {
+        if (pending) dropSet(pending);
+        pending = newSet(S.variable);
+      }
+      promote(pending, pick);
+    }
+    const behind = ALTERNATE ? otherVariable() : S.variable;
+    if (!same(pending, behind)) {
+      if (pending) dropSet(pending);
+      pending = same(shown, behind) ? null : newSet(behind);
+    }
     addNext(shown);
     // the background set only loads once the one on screen is complete, so the two never
     // compete for the tiles service
     if (pending && complete(shown)) {
       addNext(pending);
-      if (complete(pending)) promote(pending);
+      if (complete(pending) && !ALTERNATE) promote(pending);
     }
   }
+
+  const otherVariable = () => Object.keys(S.cfg.variables).find((v) => v !== S.variable);
 
   function promote(set, pick = false) {
     if (shown) dropSet(shown);
@@ -368,6 +384,12 @@
         S.animPaused = true;
         renderPlayback();
         renderInits();
+        return;
+      }
+      if (next == null && ALTERNATE && ++loopsDone % ALTERNATE === 0) {
+        S.frame = 0;
+        setVariable(otherVariable());
+        scheduleAnim();
         return;
       }
       if (ready.length) S.frame = next ?? ready[0];
@@ -515,7 +537,7 @@
       box.replaceChildren(sel);
     }
     const labels = runs.map((run, k) => {
-      const loading = pending?.run.init === run.init ? ` · ${pending.loaded.size}/${S.cfg.leads.length}` : "";
+      const loading = pending?.run.init === run.init && pending.variable === S.variable ? ` · ${pending.loaded.size}/${S.cfg.leads.length}` : "";
       return `${k === 0 ? "Latest " : ""}${hhmm(run.init)}${loading}`;
     });
     if (labels.join("|") !== sel.dataset.labels) { // rebuild only when the list changes, so an open menu stays open
@@ -726,6 +748,15 @@
     showPanel(0);
   }
 
+  function startRecording() {
+    loopsDone = 0;
+    S.frame = 0;
+    if (FIRST_VAR in S.cfg.variables) setVariable(FIRST_VAR);
+    showFrame();
+    scheduleAnim();
+    showPanel(0);
+  }
+
   function showPanel(i) {
     const ps = panels();
     S.panel = (i + ps.length) % ps.length;
@@ -801,17 +832,18 @@
   // ------------------------------------------------------------------ QR codes
   // Level H leaves room for the logo; the viewer QR borrows the tile QR's version so both
   // codes have the same grid.
+  // The corner codes are small, so they use level M without a logo: fewer, larger modules.
   const qrCache = {};
-  function setQR(id, text, type = 0) {
+  function setQR(id, text, type = 0, level = "H", logo = "img/earthmover-mark.svg") {
     const box = document.getElementById(id);
     if (!text) { if (qrCache[id]?.key !== "") { box.textContent = "[QR]"; qrCache[id] = { key: "", type: 0 }; } return 0; }
-    const key = `${type} ${text}`;
+    const key = `${type} ${level} ${text}`;
     if (qrCache[id]?.key === key) return qrCache[id].type;
-    const qr = qrcode(type, "H");
+    const qr = qrcode(type, level);
     qr.addData(text);
     qr.make();
-    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) +
-      '<img src="img/earthmover-mark.svg" alt="">';
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: logo ? 2 : 1, scalable: true }) +
+      (logo ? `<img src="${logo}" alt="">` : "");
     qrCache[id] = { key, type: (qr.getModuleCount() - 17) / 4 };
     return qrCache[id].type;
   }
@@ -827,6 +859,15 @@
       type = setQR("qrTiles", new URL(url, location.href).href); // hosted tile_base is relative
     }
     setQR("qrViewer", c.viewer_url, type);
+    // corner codes: each takes its own smallest version, so short URLs keep larger modules;
+    // the long blog URL drops to level L to stay at version 5 (37 modules)
+    setQR("qrCornerViewer", c.viewer_url, 0, "M", "");
+    setQR("qrCornerGithub", c.github_url, 0, "M", "");
+    setQR("qrCornerBlog", c.blog_url, 0, "L", "");
+    for (const [id, url] of [["cornerViewerLink", c.viewer_url], ["cornerGithubLink", c.github_url], ["cornerBlogLink", c.blog_url]]) {
+      if (url) $(`#${id}`).href = url;
+      $(`#${id}`).hidden = !url;
+    }
   }
 
   // ------------------------------------------------------------------ SQL
@@ -1170,7 +1211,7 @@
     const touch = () => { lastInput = Date.now(); };
     for (const type of ["keydown", "pointerdown", "wheel"]) window.addEventListener(type, touch, { passive: true, capture: true });
     const secs = S.cfg.attract_reset_s;
-    if (!secs) return;
+    if (!secs || ALTERNATE) return;
     setInterval(() => {
       if (Date.now() - lastInput < secs * 1000) return;
       const dirty = !S.loop || S.animPaused || S.rotatePaused || S.selInit || S.variable !== defaultVariable() ||
@@ -1224,9 +1265,10 @@
     window.addEventListener("resize", fitStage);
     S.cfg = await (await fetch("/api/config")).json();
     setTimezone(S.cfg.timezone);
-    if (BLOG_URL) Object.assign($("#blogLink"), { href: BLOG_URL, hidden: false });
+    // blog post about the demo, linked from the demo note; hidden while empty
+    if (S.cfg.blog_url) Object.assign($("#blogLink"), { href: S.cfg.blog_url, hidden: false });
     if (S.cfg.playback_speed in SPEEDS) S.speed = S.cfg.playback_speed;
-    S.variable = defaultVariable();
+    S.variable = FIRST_VAR in S.cfg.variables ? FIRST_VAR : defaultVariable();
     initSqlEditor();
     renderVarToggle();
     renderVarCards();
@@ -1251,6 +1293,7 @@
     initStrip();
     initKeys();
     initAttractReset();
+    if (START > Date.now()) setTimeout(startRecording, START - Date.now());
     await refreshState();
     setInterval(refreshState, 4000);
     if (S.cfg.sql_editable) {
