@@ -29,7 +29,7 @@ In the [Brev Console](https://brev.nvidia.com), open **Launchables → Create La
 |---|---|
 | Software configuration | **VM Mode**, Jupyter off. Setup script: paste the full contents of `scripts/brev_setup.sh`. |
 | Source | **I don't have any code files.** The setup script clones the repo itself, to a fixed path. |
-| Default hardware configuration | 1x **H200 on Nebius** (`gpu-h200-sxm.1gpu-16vcpu-200gb`, driver 580 with CUDA forward compatibility, 256 GiB disk, any location). It should keep up with every 10-min FCI slot (per-step time not measured yet) and was in stock when the L40S was not. Cheaper: 1x L40S on Nebius (`gpu-l40s-d.1gpu-16vcpu-96gb`, eu-north1 only, often out of stock). Any GPU with BF16, 16 GB or more, and NVIDIA driver 580 or newer works; the NGC 26.08 container needs CUDA 13.2. Avoid Crusoe's L40S (driver 565, no CDI spec). |
+| Default hardware configuration | 1x **H200 on Nebius** (`gpu-h200-sxm.1gpu-16vcpu-200gb`, driver 580 with CUDA forward compatibility, 256 GiB disk, any location). It should keep up with every 10-min FCI slot (per-step time not measured yet) and was in stock when the L40S was not. Cheaper: 1x L40S on Nebius (`gpu-l40s-d.1gpu-16vcpu-96gb`, eu-north1 only, often out of stock). Any GPU with BF16, 16 GB or more, and NVIDIA driver 580 or newer works; the NGC 26.08 container needs CUDA 13.2. Avoid Crusoe's L40S (driver 565, no CDI spec). **Recommended for the lowest latency: a B200**, as used at the GTC Berlin booth. |
 | Network | Nothing to expose. The pipeline only makes outgoing connections. |
 | Launch parameters | The setup values below. |
 

@@ -43,6 +43,9 @@ To run it on a GPU VM, use [Docker](#docker) or a Brev launchable
 
    Set `EUMETSAT_CONSUMER_KEY`, `EUMETSAT_CONSUMER_SECRET`, `ARRAYLAKE_API_TOKEN` and
    `ARRAYLAKE_REPO` (`<org>/<repo>`); the other setup values can keep their defaults.
+   The launchable runs on an **H200** by default. For the lowest latency, pick a **B200**
+   under **Compute → Change compute**, as the GTC Berlin booth did. An L40S is cheaper but
+   slower (see step 7).
 7. About 45 min later, the first forecast arrives in your repo (measured on an L40S:
    ~14 min image build, ~15 min to download the six ~1 GB FCI input frames, ~13 min
    rollout). After that, a new forecast follows the freshest FCI slot, about 62 min behind
