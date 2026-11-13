@@ -6,7 +6,7 @@ NVIDIA GTC Berlin 2026. Note that the deployed pipeline will go offline after th
 ## Links
 
 - Earth2Studio example https://nvidia.github.io/earth2studio/main/modules/generated/models/px/StormScopeMeteosatEU/
-- Arraylake repo https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region
+- Arraylake repo https://app.earthmover.io/nvidia/stormscope_eu_gtc_berlin_2026_EU_region
 - dashboard deployment: https://nvidia-gtc-berlin-2026.earthmover.io/
 - mobile deployment: https://nvidia-gtc-berlin-2026-viewer.earthmover.io/
 
@@ -42,7 +42,7 @@ as it is shared.
 
 ## Viz
 
-[Browse the dataset on Arraylake](https://app.earthmover.io/gtc-berlin/stormscope-eu_gtc_berlin_2026_EU_region)
+[Browse the dataset on Arraylake](https://app.earthmover.io/nvidia/stormscope_eu_gtc_berlin_2026_EU_region)
 — needs a login with `gtc-berlin` access.
 
 Tiles are served by the org's Flux service `tiles-eu-8af53d67` (eu-west-1), which is **public on purpose
