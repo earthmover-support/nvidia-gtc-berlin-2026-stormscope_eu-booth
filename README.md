@@ -1,5 +1,7 @@
 # nvidia-gtc-berlin-2026-stormscope_eu-booth
 
+[![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=env-3M33AJBa0VaEWvYuthGc4TdPB44)
+
 StormScope-EU nowcasting on MTG-I1 FCI, streamed into Arraylake — the booth demo for
 NVIDIA GTC Berlin 2026. Note that the deployed pipeline will go offline after the event.
 
@@ -19,8 +21,57 @@ it is produced. By default it initialises from the freshest slot this account ma
 (slots at least 62 min old — downloading anything fresher needs the EUMETSAT NRT licence;
 see `MIN_LAG` in the script), so it can be run on a schedule as is. See
 [Pipeline script](#pipeline-script).
+To run it on a GPU VM, use [Docker](#docker) or a Brev launchable
+([docs/BREV.md](docs/BREV.md)).
 
-## Deployments
+## Get real-time forecasts in your Arraylake bucket deploying on Brev in under 45 min
+
+1. Get the Earthmover **Community** tier: https://docs.earthmover.io/pricing
+2. Create an Arraylake org and an empty repo, either in
+   [your own bucket](https://docs.earthmover.io/setup/manage-storage#bring-your-own-bucket)
+   or in
+   [Earthmover-managed storage](https://docs.earthmover.io/setup/manage-storage#earthmover-managed-storage).
+   The pipeline writes the schema on its first run.
+3. Create an `ARRAYLAKE_API_TOKEN` with write access to that repo:
+   https://docs.earthmover.io/setup/org-access#creating-and-managing-api-keys
+4. Get an EUMETSAT Data Store consumer key and secret (see [EUMETSAT account](#eumetsat-account)).
+5. Get a [Brev](https://brev.nvidia.com) account. Launching an instance requires credit
+   card details.
+6. Start the launchable:
+
+   [![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=env-3M33AJBa0VaEWvYuthGc4TdPB44)
+
+   Set `EUMETSAT_CONSUMER_KEY`, `EUMETSAT_CONSUMER_SECRET`, `ARRAYLAKE_API_TOKEN` and
+   `ARRAYLAKE_REPO` (`<org>/<repo>`); the other setup values can keep their defaults.
+   The launchable runs on an **H200** by default. For the lowest latency, pick a **B200**
+   under **Compute → Change compute**, as the GTC Berlin booth did. An L40S is cheaper but
+   slower (see step 7).
+7. About 45 min later, the first forecast arrives in your repo (measured on an L40S:
+   ~14 min image build, ~15 min to download the six ~1 GB FCI input frames, ~13 min
+   rollout). After that, a new forecast follows the freshest FCI slot, about 62 min behind
+   real time without the EUMETSAT NRT licence. An L40S needs ~1 min per 10-min step, so it
+   publishes about every 20 min; an H200 or B200 should keep up with every slot. Inspect the data in the Arraylake
+   web app (`https://app.earthmover.io/<org>/<repo>`). To follow progress on the VM, use
+   the [Brev CLI](https://docs.nvidia.com/brev/latest/cli/getting-started)
+   (`brev login`, then `brev ls` for the instance name):
+
+   ```bash
+   brev exec <instance> 'sudo docker compose --project-directory /opt/stormscope-eu logs --tail 50'  # one look
+   brev shell <instance>  # then: cd /opt/stormscope-eu && sudo docker compose logs -f
+   ```
+
+   See [docs/BREV.md](docs/BREV.md) for more commands.
+
+### EUMETSAT account
+
+The model input comes from the EUMETSAT Data Store. Register for a free account at the
+[EUMETSAT EO Portal](https://eoportal.eumetsat.int/), then create a consumer key and
+secret at https://api.eumetsat.int/api-key/. With the free account, the data reaches you
+about 1 h late: the pipeline uses slots at least 62 min old, so forecasts start about an
+hour behind real time. Real-time data needs the EUMETSAT near-real-time (NRT) licence;
+with it, set `STORMSCOPE_REALTIME=1`.
+
+## Frontend Deployments
 
 The forecasts reach screens in three ways:
 

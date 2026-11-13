@@ -1,7 +1,7 @@
 # Caching
 
 How a tile or API response is cached between the Flux tiles service and the screen showing it,
-for the three deployments in the [README](../README.md#deployments). There are three layers:
+for the three deployments in the [README](../README.md#frontend-deployments). There are three layers:
 
 1. **Device**: the viewer's browser (service worker or HTTP cache). Private to one browser.
 2. **Vercel shared**: Vercel's CDN. Shared by every viewer of one hostname in one edge region.
