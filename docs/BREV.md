@@ -29,7 +29,7 @@ In the [Brev Console](https://brev.nvidia.com), open **Launchables → Create La
 |---|---|
 | Software configuration | **VM Mode**, Jupyter off. Setup script: paste the full contents of `scripts/brev_setup.sh`. |
 | Source | **I don't have any code files.** The setup script clones the repo itself, to a fixed path. |
-| Default hardware configuration | 1x L40S on **Nebius** (`gpu-l40s-d.1gpu-16vcpu-96gb`, driver 580). Any GPU with BF16, 16 GB or more, and NVIDIA driver 580 or newer works; the NGC 26.08 container needs CUDA 13.2. If an L40S breaks (an old driver such as Crusoe's 565, or a missing CDI spec), deploy on an **H200 or B200** instead. Prefer a European location when offered: the EUMETSAT Data Store is in Europe. Disk: 100 GB or more (the image is about 25 GB). |
+| Default hardware configuration | 1x **H200 on Nebius** (`gpu-h200-sxm.1gpu-16vcpu-200gb`, driver 580 with CUDA forward compatibility, 256 GiB disk, any location). It keeps up with every 10-min FCI slot and was in stock when the L40S was not. Cheaper: 1x L40S on Nebius (`gpu-l40s-d.1gpu-16vcpu-96gb`, eu-north1 only, often out of stock). Any GPU with BF16, 16 GB or more, and NVIDIA driver 580 or newer works; the NGC 26.08 container needs CUDA 13.2. Avoid Crusoe's L40S (driver 565, no CDI spec). |
 | Network | Nothing to expose. The pipeline only makes outgoing connections. |
 | Launch parameters | The setup values below. |
 
@@ -51,9 +51,8 @@ launchable itself.
 ## Deploy and watch
 
 Deploy the launchable and fill in the setup values. If the Console says **"This instance
-type is currently out of stock"**, open **Compute → Change compute** and pick another GPU,
-e.g. an H200 on Nebius (driver 580, tested). The launchable's Nebius L40S exists only in
-eu-north1 and often runs out. `brev launch <launchable-id>` from the CLI reports the same
+type is currently out of stock"**, open **Compute → Change compute** and pick another GPU
+(see the hardware row above). The Nebius L40S exists only in eu-north1 and often runs out. `brev launch <launchable-id>` from the CLI reports the same
 condition only as `Internal Server Error`, so deploy from the Console when it fails.
 
 The setup log ends with
@@ -66,7 +65,7 @@ brev exec <instance> 'sudo docker compose --project-directory /opt/stormscope-eu
 brev shell <instance>   # then: cd /opt/stormscope-eu && sudo docker compose logs -f
 ```
 
-Measured on 2026-11-13 on a Nebius L40S (`gpu-l40s-d.1gpu-16vcpu-96gb`, driver 580):
+First start measured on 2026-11-13 on a Nebius L40S (`gpu-l40s-d.1gpu-16vcpu-96gb`, driver 580):
 
 | Stage | Time |
 |---|---|
@@ -79,7 +78,7 @@ Measured on 2026-11-13 on a Nebius L40S (`gpu-l40s-d.1gpu-16vcpu-96gb`, driver 5
 At ~62 s per 10-minute step, a 12-step rollout takes longer than the 10-minute FCI
 cadence, so an L40S skips slots and publishes about every 20 min, each time from the
 freshest slot. Later inits download only the newest frame. An H200 or B200 is several times
-faster per step and keeps up with every slot.
+faster per step and keeps up with every slot; on an H200 the image build took ~8 min.
 
 | Task | Command on the VM, in `/opt/stormscope-eu` |
 |---|---|
