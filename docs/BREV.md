@@ -60,8 +60,20 @@ brev exec <instance> 'sudo docker compose --project-directory /opt/stormscope-eu
 brev shell <instance>   # then: cd /opt/stormscope-eu && sudo docker compose logs -f
 ```
 
-The first start builds the image (about 10–15 min). After that, each new FCI slot gives a
-published init.
+Measured on 2026-11-13 on a Nebius L40S (`gpu-l40s-d.1gpu-16vcpu-96gb`, driver 580):
+
+| Stage | Time |
+|---|---|
+| Setup script, mostly the image build (25 GB base image pull) | 14 min |
+| Download of the six FCI input frames, ~1 GB each from the EUMETSAT Data Store | 15 min (1.1–3.4 min each) |
+| Rollout, 12 steps (first step includes torch.compile) | 12.5 min (~62 s per step) |
+| Commit to Arraylake | seconds |
+| **Setup start to first published init** | **43 min** |
+
+At ~62 s per 10-minute step, a 12-step rollout takes longer than the 10-minute FCI
+cadence, so an L40S skips slots and publishes about every 20 min, each time from the
+freshest slot. Later inits download only the newest frame. An H200 or B200 is several times
+faster per step and keeps up with every slot.
 
 | Task | Command on the VM, in `/opt/stormscope-eu` |
 |---|---|

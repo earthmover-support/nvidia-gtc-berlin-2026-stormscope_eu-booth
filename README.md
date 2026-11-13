@@ -24,7 +24,7 @@ see `MIN_LAG` in the script), so it can be run on a schedule as is. See
 To run it on a GPU VM, use [Docker](#docker) or a Brev launchable
 ([docs/BREV.md](docs/BREV.md)).
 
-## Get real-time forecasts in your Arraylake bucket deploying on Brev in under 30 min
+## Get real-time forecasts in your Arraylake bucket deploying on Brev in under 45 min
 
 1. Get the Earthmover **Community** tier: https://docs.earthmover.io/pricing
 2. Create an Arraylake org and an empty repo, either in
@@ -43,9 +43,11 @@ To run it on a GPU VM, use [Docker](#docker) or a Brev launchable
 
    Set `EUMETSAT_CONSUMER_KEY`, `EUMETSAT_CONSUMER_SECRET`, `ARRAYLAKE_API_TOKEN` and
    `ARRAYLAKE_REPO` (`<org>/<repo>`); the other setup values can keep their defaults.
-7. Less than 30 min later, fresh forecasts arrive in your repo. The first start builds the
-   container image; after that, a new forecast follows each new FCI slot (about 62 min
-   behind real time without the EUMETSAT NRT licence). Inspect the data in the Arraylake
+7. About 45 min later, the first forecast arrives in your repo (measured on an L40S:
+   ~14 min image build, ~15 min to download the six ~1 GB FCI input frames, ~13 min
+   rollout). After that, a new forecast follows the freshest FCI slot, about 62 min behind
+   real time without the EUMETSAT NRT licence. An L40S needs ~1 min per 10-min step, so it
+   publishes about every 20 min; an H200 or B200 keeps up with every slot. Inspect the data in the Arraylake
    web app (`https://app.earthmover.io/<org>/<repo>`). To follow progress on the VM, use
    the [Brev CLI](https://docs.nvidia.com/brev/latest/cli/getting-started)
    (`brev login`, then `brev ls` for the instance name):

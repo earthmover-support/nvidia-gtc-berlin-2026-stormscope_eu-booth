@@ -97,6 +97,6 @@ ARRAYLAKE_REPO=${ARRAYLAKE_REPO:-unset/unset}
 STORMSCOPE_REALTIME=$REALTIME
 "
 
-step "docker compose up (first start builds the image, ~10-15 min)"
+step "docker compose up (first start builds the image, ~15 min)"
 $SUDO docker compose --project-directory "$APP_DIR" up -d --build
 step "started; logs: sudo docker compose --project-directory $APP_DIR logs -f"
