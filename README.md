@@ -34,7 +34,7 @@ To run it on a GPU VM, use [Docker](#docker) or a Brev launchable
    The pipeline writes the schema on its first run.
 3. Create an `ARRAYLAKE_API_TOKEN` with write access to that repo:
    https://docs.earthmover.io/setup/org-access#creating-and-managing-api-keys
-4. Get an EUMETSAT Data Store consumer key and secret: https://api.eumetsat.int/api-key/
+4. Get an EUMETSAT Data Store consumer key and secret (see [EUMETSAT account](#eumetsat-account)).
 5. Get a [Brev](https://brev.nvidia.com) account. Launching an instance requires credit
    card details.
 6. Start the launchable:
@@ -56,6 +56,15 @@ To run it on a GPU VM, use [Docker](#docker) or a Brev launchable
    ```
 
    See [docs/BREV.md](docs/BREV.md) for more commands.
+
+### EUMETSAT account
+
+The model input comes from the EUMETSAT Data Store. Register for a free account at the
+[EUMETSAT EO Portal](https://eoportal.eumetsat.int/), then create a consumer key and
+secret at https://api.eumetsat.int/api-key/. With the free account, the data reaches you
+about 1 h late: the pipeline uses slots at least 62 min old, so forecasts start about an
+hour behind real time. Real-time data needs the EUMETSAT near-real-time (NRT) licence;
+with it, set `STORMSCOPE_REALTIME=1`.
 
 ## Frontend Deployments
 
