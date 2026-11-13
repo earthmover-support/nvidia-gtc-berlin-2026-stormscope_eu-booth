@@ -50,10 +50,28 @@ done
 
 step "host GPU"
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv
+# The NGC PhysicsNeMo 26.08 image (CUDA 13.2) needs driver 610+, or 580/595 with CUDA
+# forward compatibility. Driver 565 (Crusoe's L40S image) has neither, and the model then
+# has no GPU.
+driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | cut -d. -f1)
+[ "$driver" -ge 580 ] 2>/dev/null \
+    || die "NVIDIA driver $driver is too old for the CUDA 13.2 container; pick another provider (e.g. Nebius)"
 command -v docker >/dev/null || die "docker not found; use VM Mode"
 $SUDO docker compose version >/dev/null 2>&1 || die "docker compose plugin not found"
 $SUDO docker info --format '{{json .Runtimes}}' | grep -q nvidia \
     || echo "[brev-setup] WARNING: docker lists no nvidia runtime; the GPU reservation may fail"
+# Some Brev images (seen on Crusoe L40S, toolkit 1.20.1, driver 565) set the NVIDIA runtime
+# to CDI mode without a CDI spec, so every GPU container fails with "unresolvable CDI devices
+# nvidia.com/gpu=all", and `nvidia-ctk cdi generate` crashes there. Generate the spec; if
+# that fails, switch the runtime to legacy mode.
+if command -v nvidia-ctk >/dev/null && ! ls /etc/cdi/*.yaml /var/run/cdi/*.yaml >/dev/null 2>&1 \
+    && grep -q '^mode = "cdi"' /etc/nvidia-container-runtime/config.toml 2>/dev/null; then
+    step "no CDI spec: generate one, else use the legacy NVIDIA runtime mode"
+    if ! $SUDO nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml >/dev/null 2>&1; then
+        $SUDO rm -f /etc/cdi/nvidia.yaml
+        $SUDO nvidia-ctk config --set nvidia-container-runtime.mode=legacy --in-place
+    fi
+fi
 
 step "checkout $GIT_REF -> $APP_DIR"
 $SUDO mkdir -p "$APP_DIR"
