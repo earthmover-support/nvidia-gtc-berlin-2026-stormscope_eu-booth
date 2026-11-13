@@ -29,7 +29,7 @@ In the [Brev Console](https://brev.nvidia.com), open **Launchables → Create La
 |---|---|
 | Software configuration | **VM Mode**, Jupyter off. Setup script: paste the full contents of `scripts/brev_setup.sh`. |
 | Source | **I don't have any code files.** The setup script clones the repo itself, to a fixed path. |
-| Default hardware configuration | 1x L40S (or any GPU with BF16 and 16 GB or more). Prefer a European location when offered: the EUMETSAT Data Store is in Europe. Disk: 200 GiB (the image is about 25 GB). |
+| Default hardware configuration | 1x L40S on **Nebius** (`gpu-l40s-d.1gpu-16vcpu-96gb`, driver 580). Any GPU with BF16, 16 GB or more, and NVIDIA driver 580 or newer works; the NGC 26.08 container needs CUDA 13.2. If an L40S breaks (an old driver such as Crusoe's 565, or a missing CDI spec), deploy on an **H200 or B200** instead. Prefer a European location when offered: the EUMETSAT Data Store is in Europe. Disk: 100 GB or more (the image is about 25 GB). |
 | Network | Nothing to expose. The pipeline only makes outgoing connections. |
 | Launch parameters | The setup values below. |
 
