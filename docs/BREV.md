@@ -50,7 +50,13 @@ launchable itself.
 
 ## Deploy and watch
 
-Deploy the launchable and fill in the setup values. The setup log ends with
+Deploy the launchable and fill in the setup values. If the Console says **"This instance
+type is currently out of stock"**, open **Compute → Change compute** and pick another GPU,
+e.g. an H200 on Nebius (driver 580, tested). The launchable's Nebius L40S exists only in
+eu-north1 and often runs out. `brev launch <launchable-id>` from the CLI reports the same
+condition only as `Internal Server Error`, so deploy from the Console when it fails.
+
+The setup log ends with
 `[brev-setup] ... started`. Then, from your machine with the
 [Brev CLI](https://docs.nvidia.com/brev/latest/cli/getting-started) (`brev login`, then
 `brev ls` for the instance name):
