@@ -47,7 +47,7 @@ To run it on a GPU VM, use [Docker](#docker) or a Brev launchable
    ~14 min image build, ~15 min to download the six ~1 GB FCI input frames, ~13 min
    rollout). After that, a new forecast follows the freshest FCI slot, about 62 min behind
    real time without the EUMETSAT NRT licence. An L40S needs ~1 min per 10-min step, so it
-   publishes about every 20 min; an H200 or B200 keeps up with every slot. Inspect the data in the Arraylake
+   publishes about every 20 min; an H200 or B200 should keep up with every slot. Inspect the data in the Arraylake
    web app (`https://app.earthmover.io/<org>/<repo>`). To follow progress on the VM, use
    the [Brev CLI](https://docs.nvidia.com/brev/latest/cli/getting-started)
    (`brev login`, then `brev ls` for the instance name):
