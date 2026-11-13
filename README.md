@@ -1,6 +1,6 @@
 # nvidia-gtc-berlin-2026-stormscope_eu-booth
 
-[![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=LAUNCHABLE_ID)
+[![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=env-3M33AJBa0VaEWvYuthGc4TdPB44)
 
 StormScope-EU nowcasting on MTG-I1 FCI, streamed into Arraylake — the booth demo for
 NVIDIA GTC Berlin 2026. Note that the deployed pipeline will go offline after the event.
@@ -39,7 +39,7 @@ To run it on a GPU VM, use [Docker](#docker) or a Brev launchable
    card details.
 6. Start the launchable:
 
-   [![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=LAUNCHABLE_ID)
+   [![Launch on Brev](https://brev-assets.s3.us-west-1.amazonaws.com/nv-lb-dark.svg)](https://brev.nvidia.com/launchable/deploy?launchableID=env-3M33AJBa0VaEWvYuthGc4TdPB44)
 
    Set `EUMETSAT_CONSUMER_KEY`, `EUMETSAT_CONSUMER_SECRET`, `ARRAYLAKE_API_TOKEN` and
    `ARRAYLAKE_REPO` (`<org>/<repo>`); the other setup values can keep their defaults.
